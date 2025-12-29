@@ -147,6 +147,11 @@ supabase/.temp
 database-backups/
 
 # ----------------------------------------
+# ESA/EBA Data Files (large, download separately)
+# ----------------------------------------
+data/
+
+# ----------------------------------------
 # Uploaded Files (if local storage)
 # ----------------------------------------
 uploads/
