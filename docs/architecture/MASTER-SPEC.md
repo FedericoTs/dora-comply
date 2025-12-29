@@ -27,7 +27,11 @@
 
 ### 1.1 Product Vision
 
-**DORA Compliance Platform (DCP)** is an AI-powered Third-Party Risk Management solution purpose-built for EU financial institutions facing DORA (Digital Operational Resilience Act) compliance.
+**DORA Comply** is an AI-powered Third-Party Risk Management solution purpose-built for EU financial institutions facing DORA (Digital Operational Resilience Act) compliance.
+
+> **Related Documents:**
+> - [AUTH-SPECIFICATION.md](./AUTH-SPECIFICATION.md) - Industry-standard authentication workflow
+> - [LANDING-PAGE-SPECIFICATION.md](../design/LANDING-PAGE-SPECIFICATION.md) - Premium landing page design
 
 ### 1.2 Key Value Propositions
 
@@ -874,11 +878,20 @@ interface APIError {
 ### 5.3 Complete Endpoint List
 
 ```
-AUTHENTICATION
-POST   /api/auth/signup              Create account
-POST   /api/auth/login               Login
-POST   /api/auth/logout              Logout
-POST   /api/auth/reset-password      Request password reset
+AUTHENTICATION (See AUTH-SPECIFICATION.md for full details)
+POST   /api/auth/signup              Create account (email verification sent)
+POST   /api/auth/login               Login (returns session, may require MFA)
+POST   /api/auth/logout              Logout (revoke session)
+POST   /api/auth/reset-password      Request password reset email
+GET    /api/auth/callback            OAuth callback handler
+GET    /api/auth/session             Get current session
+DELETE /api/auth/session             Revoke current session
+GET    /api/auth/sessions            List all active sessions
+DELETE /api/auth/sessions/[id]       Revoke specific session
+POST   /api/auth/mfa/enroll          Start MFA enrollment (TOTP)
+POST   /api/auth/mfa/verify          Verify MFA code
+POST   /api/auth/mfa/disable         Disable MFA (requires verification)
+GET    /api/auth/recovery-codes      Get recovery codes
 
 VENDORS
 GET    /api/vendors                  List vendors
@@ -947,9 +960,14 @@ PUT    /api/settings/profile         Update profile
 
 | Screen | Route | Priority | Module |
 |--------|-------|----------|--------|
+| **Landing Page** | `/` | P0 | Marketing |
 | **Login** | `/login` | P0 | Auth |
 | **Register** | `/register` | P0 | Auth |
-| **Dashboard** | `/` | P0 | Core |
+| **MFA Setup** | `/mfa/setup` | P0 | Auth |
+| **MFA Verify** | `/mfa/verify` | P0 | Auth |
+| **Onboarding** | `/onboarding` | P0 | Auth |
+| **Password Reset** | `/reset-password` | P0 | Auth |
+| **Dashboard** | `/dashboard` | P0 | Core |
 | **Vendor List** | `/vendors` | P0 | Vendors |
 | **Vendor Detail** | `/vendors/[id]` | P0 | Vendors |
 | **Vendor Create** | `/vendors/new` | P0 | Vendors |
@@ -969,43 +987,64 @@ PUT    /api/settings/profile         Update profile
 
 ### 6.2 Design System
 
-**Color Palette (Pastel Premium):**
+> **Full specification:** [LANDING-PAGE-SPECIFICATION.md](../design/LANDING-PAGE-SPECIFICATION.md)
+> **Live preview:** `/theme` route in the application
+
+**Color Palette (Premium Coral Theme):**
 
 ```css
 :root {
-  /* Primary - Soft teal/cyan */
-  --primary: 175 60% 45%;
-  --primary-foreground: 0 0% 100%;
+  /* Primary - Warm Coral (brand color) */
+  --primary: #E07A5F;
+  --primary-foreground: #FFFFFF;
 
-  /* Secondary - Warm coral */
-  --secondary: 15 70% 65%;
-
-  /* Accent - Lavender */
-  --accent: 260 50% 70%;
-
-  /* Status colors */
-  --success: 142 55% 45%;
-  --warning: 38 85% 55%;
-  --destructive: 0 72% 51%;
+  /* Status Colors */
+  --success: #10B981;    /* Green */
+  --warning: #F59E0B;    /* Amber */
+  --error: #EF4444;      /* Red */
+  --info: #3B82F6;       /* Blue */
 
   /* Neutrals */
-  --background: 0 0% 99%;
-  --foreground: 220 20% 15%;
-  --muted: 220 15% 96%;
-  --border: 220 13% 91%;
+  --background: #FAFAFA;        /* Off-white */
+  --foreground: #1A1A2E;        /* Near-black */
+  --muted: #F4F4F5;             /* Light gray */
+  --muted-foreground: #71717A;  /* Medium gray */
+  --border: #E4E4E7;            /* Border gray */
+
+  /* Sidebar */
+  --sidebar: #FAFAFA;
+  --sidebar-border: #E4E4E7;
+
+  /* Premium Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08);
+  --shadow-premium: 0 20px 40px -12px rgb(0 0 0 / 0.15);
 }
 ```
 
 **Typography:**
-- Headings: `font-serif` (e.g., Instrument Serif)
-- Body: `font-sans` (e.g., Inter)
-- Monospace: `font-mono` (e.g., JetBrains Mono)
+- Display & Headings: `Plus Jakarta Sans` (font-weight: 600-700)
+- Body: `Plus Jakarta Sans` (font-weight: 400-500)
+- Monospace: `JetBrains Mono` (for code, data)
 
 **Component Patterns:**
-- Cards with subtle shadows, no harsh borders
-- Generous padding (p-6 for cards)
-- Rounded corners (rounded-lg, rounded-xl)
-- Micro-animations on hover/focus
+- Cards with premium shadows (`card-premium` class)
+- Generous padding (p-6 to p-8 for cards)
+- Rounded corners (rounded-lg: 8px, rounded-xl: 12px, rounded-2xl: 16px)
+- Micro-animations on hover/focus (translate-y, shadow transitions)
+- Staggered entry animations for lists
+- Glass morphism effects for overlays
+
+**Key Component Classes:**
+```css
+.card-premium     /* Elevated card with hover effect */
+.btn-primary      /* Coral primary button */
+.btn-secondary    /* Outline/ghost button */
+.badge-*          /* Status badges (success, warning, error) */
+.input-premium    /* Styled input fields */
+.stat-card        /* Metric display cards */
+```
 
 ---
 
@@ -1094,13 +1133,22 @@ Week 12: Incident Reporting Complete + Public Launch
 
 ### 9.2 Security Requirements
 
+> **Full specification:** [AUTH-SPECIFICATION.md](./AUTH-SPECIFICATION.md)
+
 | Requirement | Implementation |
 |-------------|----------------|
-| **Authentication** | Supabase Auth, MFA enforced for admins |
+| **Authentication** | Supabase Auth with PKCE flow |
+| **Multi-Factor Auth** | TOTP mandatory for admins, recommended for all |
+| **OAuth/SSO** | Microsoft Entra ID, Google Workspace (P1) |
+| **Password Policy** | 12+ chars, zxcvbn score 3+, HIBP check |
+| **Session Management** | JWT (1h) + refresh token (7d), max 5 sessions |
 | **Authorization** | Row-Level Security on all tables |
+| **RBAC** | Owner > Admin > Member > Viewer hierarchy |
 | **Encryption at Rest** | AES-256 (Supabase default) |
-| **Encryption in Transit** | TLS 1.3 |
-| **Audit Logging** | All mutations logged with user/timestamp |
+| **Encryption in Transit** | TLS 1.3, HSTS enabled |
+| **Rate Limiting** | 5 login attempts/15min, progressive lockout |
+| **Audit Logging** | All auth events logged with 2-year retention |
+| **Security Headers** | CSP, X-Frame-Options, X-Content-Type-Options |
 | **Penetration Testing** | External pen test before GA |
 
 ### 9.3 Performance Targets
