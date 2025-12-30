@@ -23,6 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { getDocumentWithVendor } from '@/lib/documents/queries';
+import { getContractAnalysis } from '@/lib/ai/actions';
+import { getVendorContracts } from '@/lib/contracts/actions';
 import {
   DOCUMENT_TYPE_INFO,
   PARSING_STATUS_INFO,
@@ -32,6 +34,7 @@ import {
   type DocumentType,
 } from '@/lib/documents/types';
 import { DocumentActions } from './document-actions';
+import { DocumentAIAnalysisCard } from '@/components/documents';
 
 interface DocumentDetailPageProps {
   params: Promise<{ id: string }>;
@@ -68,6 +71,12 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
   if (!document) {
     notFound();
   }
+
+  // Fetch existing analysis and vendor contracts in parallel
+  const [existingAnalysis, vendorContracts] = await Promise.all([
+    getContractAnalysis(id),
+    document.vendor_id ? getVendorContracts(document.vendor_id) : Promise.resolve([]),
+  ]);
 
   const typeInfo = DOCUMENT_TYPE_INFO[document.type];
   const statusInfo = PARSING_STATUS_INFO[document.parsing_status];
@@ -337,51 +346,18 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
             </Card>
           )}
 
-          {/* AI Parsing Status (Phase 2 placeholder) */}
-          {document.parsing_status !== 'pending' && (
-            <Card className="card-elevated">
-              <CardHeader>
-                <CardTitle className="text-base">AI Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  {document.parsing_status === 'completed' ? (
-                    <>
-                      <CheckCircle2 className="h-5 w-5 text-success" />
-                      <div>
-                        <p className="font-medium">Analysis Complete</p>
-                        {document.parsing_confidence && (
-                          <p className="text-sm text-muted-foreground">
-                            Confidence: {Math.round(document.parsing_confidence * 100)}%
-                          </p>
-                        )}
-                      </div>
-                    </>
-                  ) : document.parsing_status === 'processing' ? (
-                    <>
-                      <Clock className="h-5 w-5 text-info animate-pulse" />
-                      <div>
-                        <p className="font-medium">Processing...</p>
-                        <p className="text-sm text-muted-foreground">
-                          AI is analyzing this document
-                        </p>
-                      </div>
-                    </>
-                  ) : document.parsing_status === 'failed' ? (
-                    <>
-                      <AlertTriangle className="h-5 w-5 text-error" />
-                      <div>
-                        <p className="font-medium">Analysis Failed</p>
-                        {document.parsing_error && (
-                          <p className="text-sm text-error">{document.parsing_error}</p>
-                        )}
-                      </div>
-                    </>
-                  ) : null}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* AI Contract Analysis */}
+          <DocumentAIAnalysisCard
+            documentId={document.id}
+            documentType={document.type}
+            mimeType={document.mime_type}
+            vendorId={document.vendor_id}
+            vendorName={document.vendor?.name}
+            parsingStatus={document.parsing_status}
+            parsingError={document.parsing_error}
+            existingAnalysis={existingAnalysis}
+            vendorContracts={vendorContracts}
+          />
         </div>
 
         {/* Right Column - Vendor & Quick Actions */}
