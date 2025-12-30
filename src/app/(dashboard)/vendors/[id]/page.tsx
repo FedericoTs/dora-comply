@@ -30,6 +30,7 @@ import {
   getRiskLevel,
 } from '@/lib/vendors/types';
 import { getCountryName, getCountryFlag } from '@/lib/external/gleif';
+import { VendorDocuments } from './vendor-documents';
 
 interface VendorDetailPageProps {
   params: Promise<{ id: string }>;
@@ -396,24 +397,7 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
         </TabsContent>
 
         <TabsContent value="documents">
-          <Card className="card-elevated">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Documents</CardTitle>
-              <Button size="sm">Upload Document</Button>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">
-                  No documents uploaded yet
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Upload SOC2 reports, ISO 27001 certificates, and other compliance
-                  documents
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <VendorDocuments vendorId={vendor.id} vendorName={vendor.name} />
         </TabsContent>
 
         <TabsContent value="contracts">

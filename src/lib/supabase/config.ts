@@ -3,17 +3,20 @@ export type DataRegion = 'us' | 'eu';
 export interface RegionConfig {
   url: string;
   anonKey: string;
+  serviceRoleKey?: string;
 }
 
 export const REGION_CONFIGS: Record<DataRegion, RegionConfig> = {
   us: {
     url: process.env.NEXT_PUBLIC_SUPABASE_URL_US || '',
     anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_US || '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY_US || '',
   },
   eu: {
     // Support both region-specific and default env vars
     url: process.env.NEXT_PUBLIC_SUPABASE_URL_EU || process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_EU || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY_EU || process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   },
 };
 
