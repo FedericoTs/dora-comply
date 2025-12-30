@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { RegionProvider } from "@/components/providers/region-provider";
 import "./globals.css";
 
@@ -22,12 +23,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={plusJakarta.variable}>
+    <html lang="en" className={plusJakarta.variable} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <RegionProvider>
-          {children}
-          <Toaster richColors position="top-right" />
-        </RegionProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <RegionProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </RegionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

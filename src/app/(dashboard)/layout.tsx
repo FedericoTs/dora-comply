@@ -9,11 +9,13 @@ import {
   AlertTriangle,
   Settings,
   LogOut,
-  ChevronRight,
+  Search,
+  Bell,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeToggleSimple } from '@/components/ui/theme-toggle';
 import { checkAuthStatus, logout } from '@/lib/auth';
-import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -43,45 +45,40 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-50 w-64 border-r border-border/40 bg-sidebar">
-        <div className="flex h-full flex-col">
+    <div className="min-h-screen bg-background">
+      <div className="flex min-h-screen">
+        {/* Sidebar */}
+        <aside className="w-64 border-r border-border bg-sidebar flex flex-col">
           {/* Logo */}
-          <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-6">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Shield className="h-5 w-5" />
-            </div>
-            <span className="text-xl font-semibold tracking-tight">DORA Comply</span>
+          <div className="h-16 px-6 flex items-center border-b border-sidebar-border">
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <Shield className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <span className="font-semibold text-lg tracking-tight">DORA Comply</span>
+            </Link>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 p-4">
-            <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Main Menu
-            </div>
+          <nav className="flex-1 p-4 space-y-1">
             {navigation.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={cn(
-                    "nav-item group",
-                    item.href === '/dashboard' && "active"
-                  )}
+                  className="nav-item"
                 >
                   <Icon className="h-5 w-5" />
-                  <span className="flex-1">{item.name}</span>
-                  <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-50 transition-opacity" />
+                  <span className="flex-1 text-sm">{item.name}</span>
                 </Link>
               );
             })}
 
-            <div className="my-4 h-px bg-sidebar-border" />
-
-            <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Configuration
+            <div className="pt-6 pb-2">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3">
+                Settings
+              </span>
             </div>
             {secondaryNavigation.map((item) => {
               const Icon = item.icon;
@@ -89,51 +86,65 @@ export default async function DashboardLayout({
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="nav-item group"
+                  className="nav-item"
                 >
                   <Icon className="h-5 w-5" />
-                  <span className="flex-1">{item.name}</span>
-                  <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-50 transition-opacity" />
+                  <span className="flex-1 text-sm">{item.name}</span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* User section */}
-          <div className="border-t border-sidebar-border p-4">
-            <div className="mb-3 flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-accent transition-colors">
-              <div className="avatar avatar-primary">
-                {user?.fullName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+          {/* User */}
+          <div className="p-4 border-t border-sidebar-border">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center">
+                <span className="text-sm font-semibold text-primary">
+                  {user?.fullName?.split(' ').map(w => w[0]).join('') || user?.email?.charAt(0) || 'U'}
+                </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="truncate text-sm font-medium">
-                  {user?.fullName || 'User'}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {user?.email}
-                </p>
+                <p className="text-sm font-medium truncate">{user?.fullName || 'User'}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              </div>
+              <form action={logout}>
+                <button type="submit" className="icon-btn" title="Sign out">
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </form>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto">
+          {/* Top Bar */}
+          <header className="h-16 px-8 flex items-center justify-between border-b border-border bg-background sticky top-0 z-10">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search anything..."
+                  className="w-80 pl-10 pr-4 py-2 rounded-lg bg-muted border-0 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
               </div>
             </div>
-            <form action={logout}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign out
-              </Button>
-            </form>
-          </div>
-        </div>
-      </aside>
+            <div className="flex items-center gap-2">
+              <button className="icon-btn relative">
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
+              </button>
+              <ThemeToggleSimple />
+            </div>
+          </header>
 
-      {/* Main content */}
-      <main className="pl-64">
-        <div className="container max-w-7xl py-8 animate-in">
-          {children}
-        </div>
-      </main>
+          {/* Page Content */}
+          <div className="p-8">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
