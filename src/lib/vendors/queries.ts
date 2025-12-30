@@ -227,7 +227,7 @@ export async function getVendorWithRelations(
   }
 
   // Fetch related data in parallel
-  const [contactsResult, entitiesResult, countsResult] = await Promise.all([
+  const [contactsResult, entitiesResult, contractsResult, countsResult] = await Promise.all([
     // Contacts
     supabase
       .from('vendor_contacts')
@@ -241,6 +241,13 @@ export async function getVendorWithRelations(
       .select('*')
       .eq('vendor_id', vendorId)
       .order('created_at', { ascending: true }),
+
+    // Contracts
+    supabase
+      .from('contracts')
+      .select('*')
+      .eq('vendor_id', vendorId)
+      .order('effective_date', { ascending: false }),
 
     // Counts
     Promise.all([
@@ -273,6 +280,39 @@ export async function getVendorWithRelations(
       entity_type: e.entity_type,
       address: e.address || {},
       created_at: e.created_at,
+    })) || [],
+    contracts: contractsResult.data?.map(c => ({
+      id: c.id,
+      organization_id: c.organization_id,
+      vendor_id: c.vendor_id,
+      contract_ref: c.contract_ref,
+      contract_type: c.contract_type,
+      signature_date: c.signature_date,
+      effective_date: c.effective_date,
+      expiry_date: c.expiry_date,
+      auto_renewal: c.auto_renewal,
+      termination_notice_days: c.termination_notice_days,
+      last_renewal_date: c.last_renewal_date,
+      dora_provisions: c.dora_provisions || {
+        article_30_2: {
+          service_description: { status: 'missing' },
+          data_locations: { status: 'missing' },
+          data_protection: { status: 'missing' },
+          availability_guarantees: { status: 'missing' },
+          incident_support: { status: 'missing' },
+          authority_cooperation: { status: 'missing' },
+          termination_rights: { status: 'missing' },
+          subcontracting_conditions: { status: 'missing' },
+        },
+      },
+      annual_value: c.annual_value,
+      total_value: c.total_value,
+      currency: c.currency,
+      document_ids: c.document_ids || [],
+      status: c.status,
+      notes: c.notes,
+      created_at: c.created_at,
+      updated_at: c.updated_at,
     })) || [],
     documents_count: countsResult[0].count || 0,
     contracts_count: countsResult[1].count || 0,

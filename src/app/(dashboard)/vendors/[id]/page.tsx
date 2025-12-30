@@ -4,12 +4,8 @@ import { notFound } from 'next/navigation';
 import {
   ChevronLeft,
   Building2,
-  MapPin,
   Shield,
   FileText,
-  Users,
-  Calendar,
-  ExternalLink,
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -31,6 +27,8 @@ import {
 } from '@/lib/vendors/types';
 import { getCountryName, getCountryFlag } from '@/lib/external/gleif';
 import { VendorDocuments } from './vendor-documents';
+import { VendorContacts } from '@/components/vendors/vendor-contacts';
+import { VendorContracts } from '@/components/vendors/vendor-contracts';
 
 interface VendorDetailPageProps {
   params: Promise<{ id: string }>;
@@ -348,52 +346,10 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
         </TabsContent>
 
         <TabsContent value="contacts">
-          <Card className="card-elevated">
-            <CardHeader>
-              <CardTitle className="text-base">Contacts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {vendor.contacts && vendor.contacts.length > 0 ? (
-                <div className="space-y-4">
-                  {vendor.contacts.map((contact) => (
-                    <div
-                      key={contact.id}
-                      className="flex items-start gap-4 rounded-lg border p-4"
-                    >
-                      <div className="rounded-full bg-muted p-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{contact.name}</p>
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {contact.contact_type}
-                          </Badge>
-                        </div>
-                        {contact.title && (
-                          <p className="text-sm text-muted-foreground">
-                            {contact.title}
-                          </p>
-                        )}
-                        <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                          {contact.email && <span>{contact.email}</span>}
-                          {contact.phone && <span>{contact.phone}</span>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Users className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground">No contacts added yet</p>
-                  <Button variant="outline" size="sm" className="mt-4">
-                    Add Contact
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <VendorContacts
+            vendorId={vendor.id}
+            contacts={vendor.contacts || []}
+          />
         </TabsContent>
 
         <TabsContent value="documents">
@@ -401,21 +357,11 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
         </TabsContent>
 
         <TabsContent value="contracts">
-          <Card className="card-elevated">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Contracts</CardTitle>
-              <Button size="sm">Add Contract</Button>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No contracts linked yet</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Link service agreements, SLAs, and other contractual documents
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <VendorContracts
+            vendorId={vendor.id}
+            contracts={vendor.contracts || []}
+            isCriticalFunction={vendor.supports_critical_function}
+          />
         </TabsContent>
       </Tabs>
     </div>

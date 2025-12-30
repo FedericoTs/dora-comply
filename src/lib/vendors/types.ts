@@ -6,6 +6,8 @@
  * - 003_enhanced_roi.sql (vendor extensions)
  */
 
+import type { Contract } from '../contracts';
+
 // ============================================
 // ENUMS
 // ============================================
@@ -126,6 +128,7 @@ export interface VendorEntity {
 export interface VendorWithRelations extends Vendor {
   contacts?: VendorContactRecord[];
   entities?: VendorEntity[];
+  contracts?: Contract[];
   documents_count?: number;
   contracts_count?: number;
   services_count?: number;
