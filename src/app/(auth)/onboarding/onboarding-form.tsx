@@ -32,7 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import {
   completeOnboarding,
@@ -204,20 +203,20 @@ export function OnboardingForm() {
         })}
       </div>
 
-      <Card>
-        <CardHeader className="text-center">
-          <CardTitle>
-            {currentStep === 0 && 'Tell us about your organization'}
-            {currentStep === 1 && 'How big is your team?'}
-            {currentStep === 2 && 'What brings you here?'}
-          </CardTitle>
-          <CardDescription>
-            {currentStep === 0 && "We'll use this to customize your experience"}
-            {currentStep === 1 && "This helps us recommend the right plan"}
-            {currentStep === 2 && "Select your primary compliance goal"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="card-premium">
+        <div className="p-8">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-semibold tracking-tight">
+              {currentStep === 0 && 'Tell us about your organization'}
+              {currentStep === 1 && 'How big is your team?'}
+              {currentStep === 2 && 'What brings you here?'}
+            </h2>
+            <p className="text-muted-foreground text-sm mt-2">
+              {currentStep === 0 && "We'll use this to customize your experience"}
+              {currentStep === 1 && "This helps us recommend the right plan"}
+              {currentStep === 2 && "Select your primary compliance goal"}
+            </p>
+          </div>
           <Form {...form}>
             <form className="space-y-6">
               {error && (
@@ -431,8 +430,8 @@ export function OnboardingForm() {
               </div>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

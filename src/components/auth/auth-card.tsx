@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface AuthCardProps {
   title: string;
@@ -17,25 +16,32 @@ export function AuthCard({
   footer,
 }: AuthCardProps) {
   return (
-    <Card className={cn('w-full max-w-md shadow-lg', className)}>
-      <CardHeader className="space-y-1 text-center">
-        <CardTitle className="text-2xl font-semibold tracking-tight">
-          {title}
-        </CardTitle>
-        {description && (
-          <CardDescription className="text-muted-foreground">
-            {description}
-          </CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {children}
-      </CardContent>
-      {footer && (
-        <div className="px-6 pb-6 text-center text-sm text-muted-foreground">
-          {footer}
+    <div className={cn('card-premium w-full max-w-md', className)}>
+      <div className="p-8 space-y-6">
+        {/* Header */}
+        <div className="space-y-2 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight">
+            {title}
+          </h2>
+          {description && (
+            <p className="text-muted-foreground text-sm">
+              {description}
+            </p>
+          )}
         </div>
-      )}
-    </Card>
+
+        {/* Content */}
+        <div className="space-y-4">
+          {children}
+        </div>
+
+        {/* Footer */}
+        {footer && (
+          <div className="pt-4 border-t text-center text-sm text-muted-foreground">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

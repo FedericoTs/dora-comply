@@ -1,11 +1,16 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import {
   Building2,
   FileCheck,
   AlertTriangle,
   TrendingUp,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Calendar,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { getCurrentUser } from '@/lib/auth';
 
 export const metadata: Metadata = {
@@ -19,28 +24,60 @@ const stats = [
     value: '0',
     description: 'Third-party vendors',
     icon: Building2,
-    trend: null,
+    color: 'text-blue-600',
+    bg: 'bg-blue-50',
   },
   {
     name: 'Documents',
     value: '0',
     description: 'Uploaded files',
     icon: FileCheck,
-    trend: null,
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50',
   },
   {
     name: 'Open Incidents',
     value: '0',
     description: 'Requiring action',
     icon: AlertTriangle,
-    trend: null,
+    color: 'text-amber-600',
+    bg: 'bg-amber-50',
   },
   {
     name: 'Compliance Score',
     value: '—',
     description: 'Overall status',
     icon: TrendingUp,
-    trend: null,
+    color: 'text-primary',
+    bg: 'bg-accent',
+  },
+];
+
+const setupSteps = [
+  { step: 1, title: 'Add your first ICT third-party provider', href: '/vendors/new', completed: false },
+  { step: 2, title: 'Upload vendor contracts and certifications', href: '/documents', completed: false },
+  { step: 3, title: 'Generate your Register of Information', href: '/roi', completed: false },
+  { step: 4, title: 'Set up incident reporting workflows', href: '/incidents', completed: false },
+];
+
+const timeline = [
+  {
+    date: 'January 17, 2025',
+    title: 'DORA enters into force',
+    status: 'completed',
+    icon: CheckCircle2,
+  },
+  {
+    date: 'April 30, 2025',
+    title: 'First RoI submission deadline',
+    status: 'upcoming',
+    icon: Calendar,
+  },
+  {
+    date: 'Ongoing',
+    title: 'Incident reporting within 4 hours',
+    status: 'ongoing',
+    icon: Clock,
   },
 ];
 
@@ -48,13 +85,13 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 stagger">
       {/* Welcome section */}
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">
+        <h1>
           Welcome{user?.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-2">
           Here&apos;s an overview of your DORA compliance status.
         </p>
       </div>
@@ -64,102 +101,101 @@ export default async function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.name}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.name}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stat.description}
-                </p>
-              </CardContent>
-            </Card>
+            <div key={stat.name} className="stat-card card-elevated">
+              <div className="flex items-center justify-between mb-3">
+                <div className={`p-2 rounded-lg ${stat.bg}`}>
+                  <Icon className={`h-5 w-5 ${stat.color}`} />
+                </div>
+              </div>
+              <div className="stat-value">{stat.value}</div>
+              <div className="stat-label mt-1">{stat.name}</div>
+            </div>
           );
         })}
       </div>
 
       {/* Quick actions */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Get Started</CardTitle>
-            <CardDescription>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="card-premium p-6">
+          <div className="mb-6">
+            <h3>Get Started</h3>
+            <p className="text-muted-foreground text-sm mt-1">
               Complete these steps to set up your DORA compliance program
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              <li className="flex items-center gap-3">
-                <div className="h-6 w-6 rounded-full border-2 border-muted flex items-center justify-center text-xs">
-                  1
-                </div>
-                <span className="text-sm">Add your first ICT third-party provider</span>
+            </p>
+          </div>
+          <ul className="space-y-4">
+            {setupSteps.map((item) => (
+              <li key={item.step}>
+                <Link
+                  href={item.href}
+                  className="flex items-center gap-4 p-3 -mx-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                >
+                  <div className={`
+                    h-8 w-8 rounded-full border-2 flex items-center justify-center text-sm font-medium
+                    ${item.completed
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : 'border-border text-muted-foreground group-hover:border-primary group-hover:text-primary'
+                    }
+                  `}>
+                    {item.completed ? <CheckCircle2 className="h-4 w-4" /> : item.step}
+                  </div>
+                  <span className="flex-1 text-sm font-medium">{item.title}</span>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
               </li>
-              <li className="flex items-center gap-3">
-                <div className="h-6 w-6 rounded-full border-2 border-muted flex items-center justify-center text-xs">
-                  2
-                </div>
-                <span className="text-sm">Upload vendor contracts and certifications</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <div className="h-6 w-6 rounded-full border-2 border-muted flex items-center justify-center text-xs">
-                  3
-                </div>
-                <span className="text-sm">Generate your Register of Information</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <div className="h-6 w-6 rounded-full border-2 border-muted flex items-center justify-center text-xs">
-                  4
-                </div>
-                <span className="text-sm">Set up incident reporting workflows</span>
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
+            ))}
+          </ul>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>DORA Compliance Timeline</CardTitle>
-            <CardDescription>
+        <div className="card-premium p-6">
+          <div className="mb-6">
+            <h3>DORA Compliance Timeline</h3>
+            <p className="text-muted-foreground text-sm mt-1">
               Key dates and deadlines for your compliance journey
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="h-2 w-2 mt-2 rounded-full bg-green-500" />
-                <div>
-                  <p className="text-sm font-medium">January 17, 2025</p>
-                  <p className="text-xs text-muted-foreground">
-                    DORA enters into force
-                  </p>
+            </p>
+          </div>
+          <div className="space-y-4">
+            {timeline.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div key={index} className="flex items-start gap-4">
+                  <div className={`
+                    mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full
+                    ${item.status === 'completed'
+                      ? 'bg-success/10 text-success'
+                      : item.status === 'upcoming'
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-muted text-muted-foreground'
+                    }
+                  `}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{item.date}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {item.title}
+                    </p>
+                  </div>
+                  {item.status === 'completed' && (
+                    <span className="badge badge-success">Complete</span>
+                  )}
+                  {item.status === 'upcoming' && (
+                    <span className="badge badge-primary">Upcoming</span>
+                  )}
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="h-2 w-2 mt-2 rounded-full bg-primary" />
-                <div>
-                  <p className="text-sm font-medium">April 30, 2025</p>
-                  <p className="text-xs text-muted-foreground">
-                    First RoI submission deadline
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="h-2 w-2 mt-2 rounded-full bg-muted" />
-                <div>
-                  <p className="text-sm font-medium">Ongoing</p>
-                  <p className="text-xs text-muted-foreground">
-                    Incident reporting within 4 hours
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 pt-6 border-t">
+            <Button variant="outline" className="w-full" asChild>
+              <Link href="/settings/compliance">
+                View full compliance calendar
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
