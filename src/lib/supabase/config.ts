@@ -11,8 +11,9 @@ export const REGION_CONFIGS: Record<DataRegion, RegionConfig> = {
     anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_US || '',
   },
   eu: {
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL_EU || '',
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_EU || '',
+    // Support both region-specific and default env vars
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL_EU || process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_EU || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
   },
 };
 

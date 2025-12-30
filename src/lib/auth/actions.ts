@@ -333,19 +333,29 @@ export async function checkAuthStatus(): Promise<{
   needsOnboarding: boolean;
   user: User | null;
 }> {
-  const user = await getCurrentUser();
+  try {
+    const user = await getCurrentUser();
 
-  if (!user) {
+    if (!user) {
+      return {
+        isAuthenticated: false,
+        needsOnboarding: false,
+        user: null,
+      };
+    }
+
+    return {
+      isAuthenticated: true,
+      needsOnboarding: !user.organizationId,
+      user,
+    };
+  } catch (error) {
+    // If Supabase isn't configured or there's an error, treat as unauthenticated
+    console.error('Auth check failed:', error);
     return {
       isAuthenticated: false,
       needsOnboarding: false,
       user: null,
     };
   }
-
-  return {
-    isAuthenticated: true,
-    needsOnboarding: !user.organizationId,
-    user,
-  };
 }
