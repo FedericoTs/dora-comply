@@ -4,9 +4,10 @@
  * Contract Form Dialog
  *
  * Dialog component for creating/editing vendor contracts
+ * Supports optional PDF upload with AI-powered quick scan to auto-populate fields
  */
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -29,8 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Upload, FileText, Sparkles, X, CheckCircle2 } from 'lucide-react';
 import {
   createContractSchema,
   type CreateContractFormData,
@@ -39,6 +41,7 @@ import {
   CONTRACT_TYPES,
 } from '@/lib/contracts';
 import { createContract, updateContract } from '@/lib/contracts/actions';
+import { cn } from '@/lib/utils';
 
 interface ContractFormDialogProps {
   vendorId: string;
@@ -46,6 +49,18 @@ interface ContractFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+}
+
+interface ScanResult {
+  documentType: string;
+  documentTypeConfidence: number;
+  title: string | null;
+  effectiveDate: string | null;
+  expiryDate: string | null;
+  isIctContract: boolean;
+  likelyCriticalFunction: boolean;
+  keyServicesMentioned: string[];
+  scanNotes: string | null;
 }
 
 // Common currencies
@@ -59,6 +74,11 @@ export function ContractFormDialog({
   onSuccess,
 }: ContractFormDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isEditing = !!contract;
 
   const form = useForm<CreateContractFormData>({
@@ -78,6 +98,92 @@ export function ContractFormDialog({
       notes: contract?.notes || '',
     },
   });
+
+  // Handle file selection and scanning
+  const handleFileSelect = useCallback(async (file: File) => {
+    if (file.type !== 'application/pdf') {
+      toast.error('Only PDF files are supported');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File too large. Maximum size is 10MB');
+      return;
+    }
+
+    setUploadedFile(file);
+    setScanError(null);
+    setScanResult(null);
+    setIsScanning(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/documents/scan', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error?.message || 'Scan failed');
+      }
+
+      const scan = result.data.scan;
+      const suggestions = result.data.formSuggestions;
+
+      setScanResult(scan);
+
+      // Auto-populate form fields from scan
+      if (suggestions.name && !form.getValues('contract_ref')) {
+        form.setValue('contract_ref', suggestions.name);
+      }
+      if (suggestions.contractType) {
+        form.setValue('contract_type', suggestions.contractType as CreateContractFormData['contract_type']);
+      }
+      if (suggestions.effectiveDate) {
+        form.setValue('effective_date', suggestions.effectiveDate);
+      }
+      if (suggestions.expiryDate) {
+        form.setValue('expiry_date', suggestions.expiryDate);
+      }
+
+      // Add services to notes if detected
+      if (suggestions.services.length > 0) {
+        const currentNotes = form.getValues('notes') || '';
+        const servicesNote = `Services detected: ${suggestions.services.join(', ')}`;
+        if (!currentNotes.includes(servicesNote)) {
+          form.setValue('notes', currentNotes ? `${currentNotes}\n\n${servicesNote}` : servicesNote);
+        }
+      }
+
+      toast.success('Document scanned successfully! Fields auto-populated.');
+    } catch (error) {
+      console.error('Scan error:', error);
+      setScanError(error instanceof Error ? error.message : 'Scan failed');
+      toast.error('Failed to scan document');
+    } finally {
+      setIsScanning(false);
+    }
+  }, [form]);
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
+
+  const clearUploadedFile = () => {
+    setUploadedFile(null);
+    setScanResult(null);
+    setScanError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const onSubmit = async (data: CreateContractFormData) => {
     setIsLoading(true);
@@ -142,6 +248,13 @@ export function ContractFormDialog({
         currency: 'EUR',
         notes: '',
       });
+      // Clear file upload state
+      setUploadedFile(null);
+      setScanResult(null);
+      setScanError(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } else if (contract) {
       form.reset({
         vendor_id: vendorId,
@@ -176,6 +289,135 @@ export function ContractFormDialog({
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* Optional PDF Upload with Quick Scan */}
+          {!isEditing && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <Label>Quick Scan (Optional)</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Upload a contract PDF to automatically extract and populate fields using AI.
+              </p>
+
+              {!uploadedFile ? (
+                <div
+                  className={cn(
+                    'relative rounded-lg border-2 border-dashed p-4 transition-colors cursor-pointer',
+                    'hover:border-primary/50 hover:bg-muted/30',
+                    isScanning && 'pointer-events-none opacity-50'
+                  )}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={handleFileInputChange}
+                    disabled={isScanning}
+                  />
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Drop PDF here or click to upload</p>
+                      <p className="text-xs text-muted-foreground">Max 10MB • PDF only</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-lg bg-primary/10 p-2">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{uploadedFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(uploadedFile.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isScanning && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Scanning...
+                        </div>
+                      )}
+                      {scanResult && (
+                        <Badge variant="outline" className="gap-1 text-success border-success">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Scanned
+                        </Badge>
+                      )}
+                      {scanError && (
+                        <Badge variant="destructive">Failed</Badge>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearUploadedFile}
+                        disabled={isScanning}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Scan Results Summary */}
+                  {scanResult && (
+                    <div className="mt-3 pt-3 border-t text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Document Type:</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {scanResult.documentType.replace(/_/g, ' ')}
+                        </Badge>
+                      </div>
+                      {scanResult.isIctContract && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">ICT Contract:</span>
+                          <Badge variant="outline" className="text-xs text-success border-success">
+                            Yes - DORA Applicable
+                          </Badge>
+                        </div>
+                      )}
+                      {scanResult.likelyCriticalFunction && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Critical Function:</span>
+                          <Badge variant="outline" className="text-xs text-warning border-warning">
+                            Likely Critical
+                          </Badge>
+                        </div>
+                      )}
+                      {scanResult.keyServicesMentioned.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {scanResult.keyServicesMentioned.slice(0, 3).map((service) => (
+                            <Badge key={service} variant="outline" className="text-xs">
+                              {service}
+                            </Badge>
+                          ))}
+                          {scanResult.keyServicesMentioned.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{scanResult.keyServicesMentioned.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Scan Error */}
+                  {scanError && (
+                    <p className="mt-2 text-xs text-destructive">{scanError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             {/* Contract Reference */}
             <div className="space-y-2">
