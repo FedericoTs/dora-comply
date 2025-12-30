@@ -1,0 +1,54 @@
+{
+  "$schema": "https://claude.ai/claude-code/settings.schema.json",
+  "projectName": "DORA Comply",
+  "description": "AI-powered DORA compliance platform for EU financial institutions",
+
+  "codeStyle": {
+    "language": "typescript",
+    "framework": "nextjs",
+    "uiLibrary": "shadcn-ui",
+    "styling": "tailwindcss",
+    "stateManagement": "react-server-components",
+    "formHandling": "react-hook-form-zod"
+  },
+
+  "preferences": {
+    "preferServerComponents": true,
+    "preferServerActions": true,
+    "usePathAliases": true,
+    "strictTypeScript": true,
+    "preferComposition": true
+  },
+
+  "documentation": {
+    "masterSpec": "docs/architecture/MASTER-SPEC.md",
+    "authSpec": "docs/architecture/AUTH-SPECIFICATION.md",
+    "landingPageSpec": "docs/design/LANDING-PAGE-SPECIFICATION.md",
+    "themePreview": "/theme"
+  },
+
+  "database": {
+    "provider": "supabase",
+    "region": "eu",
+    "projectRef": "oipwlrhyzayuxgcabsvu",
+    "multiTenant": true,
+    "rlsEnabled": true
+  },
+
+  "skills": {
+    "projectManagement": ["project-orchestrator", "compliance-orchestrator"],
+    "compliance": ["dora-compliance", "soc2-reports", "tprm-domain"],
+    "security": ["cybersecurity-expert"],
+    "frontend": ["example-skills:frontend-design", "product-design", "user-experience"],
+    "optimization": ["ultraoptimization-expert", "nextjs-code-optimizer"],
+    "documents": ["example-skills:pdf", "example-skills:xlsx", "example-skills:docx"],
+    "testing": ["example-skills:webapp-testing"]
+  },
+
+  "qualityGates": {
+    "buildMustPass": true,
+    "lintMustPass": true,
+    "typeCheckMustPass": true,
+    "testCoverage": null
+  }
+}
