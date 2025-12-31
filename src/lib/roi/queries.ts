@@ -656,19 +656,29 @@ export async function fetchAllTemplateStats(): Promise<RoiStats[]> {
     const mapping = TEMPLATE_MAPPINGS[templateId];
 
     // Calculate completeness based on required fields
-    let completeness = 100;
-    if (result.data.length > 0 && mapping) {
-      const requiredFields = Object.values(mapping).filter(m => m.required);
-      const filledRequired = result.data.reduce((acc, row) => {
-        const filled = requiredFields.filter(f => {
-          const value = row[f.esaCode];
-          return value !== null && value !== undefined && value !== '';
-        }).length;
-        return acc + (filled / requiredFields.length);
-      }, 0);
-      completeness = result.data.length > 0
-        ? Math.round((filledRequired / result.data.length) * 100)
-        : 0;
+    let completeness = 0; // Default to 0 for empty data
+
+    if (result.data.length > 0) {
+      if (mapping) {
+        // Calculate completeness based on required fields
+        const requiredFields = Object.values(mapping).filter(m => m.required);
+        if (requiredFields.length > 0) {
+          const filledRequired = result.data.reduce((acc, row) => {
+            const filled = requiredFields.filter(f => {
+              const value = row[f.esaCode];
+              return value !== null && value !== undefined && value !== '';
+            }).length;
+            return acc + (filled / requiredFields.length);
+          }, 0);
+          completeness = Math.round((filledRequired / result.data.length) * 100);
+        } else {
+          // No required fields defined, consider 100% complete if data exists
+          completeness = 100;
+        }
+      } else {
+        // No mapping (link tables) - if data exists, consider complete
+        completeness = 100;
+      }
     }
 
     stats.push({

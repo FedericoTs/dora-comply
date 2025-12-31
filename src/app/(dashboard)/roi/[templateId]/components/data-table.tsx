@@ -89,7 +89,8 @@ export function DataTable({ data, columns, validationErrors }: DataTableProps) {
                   {rowIndex + 1}
                 </TableCell>
                 {columns.map((col) => {
-                  const value = row[col.dbColumn];
+                  // Data is keyed by ESA codes (c0010, c0020, etc.), not dbColumn names
+                  const value = row[col.esaCode];
                   const hasError = rowErrors?.has(col.esaCode);
 
                   return (
