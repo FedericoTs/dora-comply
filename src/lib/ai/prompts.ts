@@ -84,49 +84,82 @@ REMEMBER: If you cannot find clear evidence in the document, the provision is MI
 
 export const DORA_ANALYSIS_USER_PROMPT = `Analyze the attached PDF document for DORA Article 30 compliance.
 
-## IMPORTANT REMINDERS
-1. Extract information ONLY from the PDF document provided - never assume or infer
-2. Provide EXACT page and section citations for every finding
-3. Quote text VERBATIM in excerpts
-4. If something is not explicitly stated, mark as "missing"
-5. Read the ENTIRE document thoroughly before analyzing
-6. Include page_count and word_count estimates in your response
+## CRITICAL: JSON STRUCTURE
+You MUST respond with a valid JSON object using EXACTLY these field names. Do not add or change field names.
 
-## Required Analysis
+## Required JSON Structure
 
-### 1. Document Identification
-Extract ONLY if explicitly stated in the document:
-- Contract type (look for document title, headings)
-- Party names and roles (provider/customer)
-- Effective date and expiry date
-- Governing law/jurisdiction
+\`\`\`json
+{
+  "contract_type": "string or null",
+  "parties": [{"name": "string", "role": "provider|customer|other", "jurisdiction": "string or null"}],
+  "effective_date": "YYYY-MM-DD or null",
+  "expiry_date": "YYYY-MM-DD or null",
+  "governing_law": "string or null",
+  "article_30_2": {
+    "service_description": {"status": "present|partial|missing", "confidence": 0.0-1.0, "excerpts": ["..."], "location": "Page X, Section Y", "analysis": "..."},
+    "data_locations": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "data_protection": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "availability_guarantees": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "incident_support": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "authority_cooperation": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "termination_rights": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "subcontracting_conditions": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null}
+  },
+  "article_30_3": {
+    "sla_targets": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "notice_periods": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "business_continuity": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "ict_security": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "tlpt_participation": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "audit_rights": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "exit_strategy": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null},
+    "performance_access": {"status": "...", "confidence": 0.0, "excerpts": [], "location": null, "analysis": null}
+  },
+  "key_dates": [{"type": "effective|expiry|renewal|notice", "date": "YYYY-MM-DD", "description": "...", "location": "..."}],
+  "financial_terms": {"currency": null, "annual_value": null, "total_value": null, "payment_terms": null, "location": null},
+  "risk_flags": [{"severity": "low|medium|high|critical", "category": "...", "description": "...", "recommendation": "...", "location": "..."}],
+  "compliance_gaps": [{"provision": "...", "article": "30.2|30.3", "description": "...", "remediation": "...", "priority": "low|medium|high"}],
+  "article_30_2_score": 0-100,
+  "article_30_3_score": 0-100,
+  "overall_score": 0-100,
+  "confidence_score": 0.0-1.0,
+  "page_count": 5,
+  "word_count": 3000
+}
+\`\`\`
 
-### 2. Article 30.2 Analysis (8 provisions)
-For each provision, search the entire document and provide:
-- Status based on explicit text found
-- Confidence reflecting clarity of the text
-- Verbatim excerpts with exact citations
-- Page and section location
-- Analysis of adequacy
-- Gaps if partially covered
+## Field Definitions for Article 30.2 (Use EXACTLY these keys)
 
-### 3. Article 30.3 Analysis (8 provisions)
-Same detailed analysis for critical function provisions.
+- **service_description**: Description of ICT services provided (DORA 30.2a)
+- **data_locations**: Where data is processed/stored, including subcontractors (DORA 30.2b)
+- **data_protection**: Data protection, confidentiality, security provisions (DORA 30.2c)
+- **availability_guarantees**: Service availability, recovery time objectives (DORA 30.2d)
+- **incident_support**: Assistance during ICT incidents (DORA 30.2e)
+- **authority_cooperation**: Cooperation with competent authorities (DORA 30.2f)
+- **termination_rights**: Termination clauses, notice periods, transition (DORA 30.2g)
+- **subcontracting_conditions**: Subcontracting rules and oversight (DORA 30.2h)
 
-### 4. Risk Identification
-Flag any concerning clauses found, with citations:
-- Liability limitations
-- Unilateral change rights
-- Termination restrictions
-- Data access limitations
+## Field Definitions for Article 30.3 (Use EXACTLY these keys)
 
-### 5. Compliance Scoring
-Calculate based on documented findings only:
-- Article 30.2 score: (provisions present or partial) / 8 * 100
-- Article 30.3 score: (provisions present or partial) / 8 * 100
-- Overall score: Weighted average
+- **sla_targets**: Quantitative/qualitative SLA performance targets (DORA 30.3a)
+- **notice_periods**: Notice and reporting for service changes (DORA 30.3b)
+- **business_continuity**: BCM and disaster recovery testing (DORA 30.3c)
+- **ict_security**: Security measures, encryption, access control (DORA 30.3d)
+- **tlpt_participation**: Threat-led penetration testing rights (DORA 30.3e)
+- **audit_rights**: Access, inspection, audit rights (DORA 30.3f)
+- **exit_strategy**: Exit plans, transition, data portability (DORA 30.3g)
+- **performance_access**: Access to performance metrics/reports (DORA 30.3h)
 
-Respond with a valid JSON object only. No text before or after.`;
+## Instructions
+
+1. Read the ENTIRE PDF document thoroughly
+2. For each of the 16 provisions above, search for relevant clauses
+3. Set status to "present" if clearly addressed, "partial" if incomplete, "missing" if not found
+4. Include verbatim excerpts where found
+5. Calculate scores: (present provisions * 12.5) + (partial provisions * 6.25)
+
+Respond with ONLY the JSON object. No markdown code blocks, no text before or after.`;
 
 // ============================================================================
 // Quick Document Scan Prompt (Claude Haiku - fast & cheap)
