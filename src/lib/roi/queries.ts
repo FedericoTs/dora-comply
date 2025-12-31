@@ -119,7 +119,7 @@ export async function fetchB_01_01(): Promise<QueryResult<Record<string, unknown
 
   const { data: org, error } = await supabase
     .from('organizations')
-    .select('id, lei, name, country, entity_type, competent_authorities, created_at')
+    .select('id, lei, name, jurisdiction, entity_type, competent_authorities, created_at')
     .single();
 
   if (error || !org) {
@@ -130,7 +130,7 @@ export async function fetchB_01_01(): Promise<QueryResult<Record<string, unknown
   const row = {
     c0010: org.lei || '',
     c0020: org.name || '',
-    c0030: mapToEbaCountry(org.country),
+    c0030: mapToEbaCountry(org.jurisdiction),
     c0040: mapToEbaEntityType(org.entity_type),
     c0050: Array.isArray(org.competent_authorities) ? org.competent_authorities[0] : '',
     c0060: formatDate(org.created_at) || formatDate(new Date()),
@@ -158,7 +158,7 @@ export async function fetchB_01_02(): Promise<QueryResult<Record<string, unknown
   const rows = (orgs || []).map(org => ({
     c0010: org.lei || '',
     c0020: org.name || '',
-    c0030: mapToEbaCountry(org.country),
+    c0030: mapToEbaCountry(org.jurisdiction),
     c0040: mapToEbaEntityType(org.entity_type),
     c0050: org.group_structure || '',
     c0060: org.parent_entity_lei || '',
@@ -544,7 +544,7 @@ export async function fetchB_07_01(): Promise<QueryResult<Record<string, unknown
     .select(`
       *,
       contract:contracts(contract_ref, dora_provisions),
-      vendor:vendors(lei, last_audit_date),
+      vendor:vendors(lei, last_assessment_date),
       mappings:function_service_mapping(substitutability)
     `);
 
@@ -554,7 +554,7 @@ export async function fetchB_07_01(): Promise<QueryResult<Record<string, unknown
 
   const rows = (services || []).map(s => {
     const contract = s.contract as { contract_ref?: string; dora_provisions?: Record<string, unknown> };
-    const vendor = s.vendor as { lei?: string; last_audit_date?: string };
+    const vendor = s.vendor as { lei?: string; last_assessment_date?: string };
     const mappings = s.mappings as Array<{ substitutability?: string }>;
     const provisions = contract?.dora_provisions || {};
 
@@ -565,7 +565,7 @@ export async function fetchB_07_01(): Promise<QueryResult<Record<string, unknown
       c0040: mapToEbaServiceType(s.service_type),
       c0050: mapToEbaSubstitutability(mappings?.[0]?.substitutability || 'easily_substitutable'),
       c0060: null, // Reason if not substitutable
-      c0070: formatDate(vendor?.last_audit_date),
+      c0070: formatDate(vendor?.last_assessment_date),
       c0080: Boolean(provisions.exit_strategy),
       c0090: mapToEbaReintegration('easy'),
       c0100: mapToEbaImpact(s.criticality_level || 'low'),
