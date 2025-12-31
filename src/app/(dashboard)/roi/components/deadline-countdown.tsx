@@ -1,15 +1,20 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Clock, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface DeadlineCountdownProps {
-  deadline: Date;
+  deadline: Date | string;
   daysRemaining: number;
 }
 
 export function DeadlineCountdown({ deadline, daysRemaining }: DeadlineCountdownProps) {
+  // Convert deadline to Date if it was serialized as a string from Server Component
+  const deadlineDate = useMemo(() => {
+    return deadline instanceof Date ? deadline : new Date(deadline);
+  }, [deadline]);
   const getUrgencyLevel = () => {
     if (daysRemaining <= 0) return 'overdue';
     if (daysRemaining <= 30) return 'critical';
@@ -66,7 +71,7 @@ export function DeadlineCountdown({ deadline, daysRemaining }: DeadlineCountdown
       </CardHeader>
       <CardContent className="space-y-2">
         <p className="text-sm text-muted-foreground">
-          {deadline.toLocaleDateString('en-US', {
+          {deadlineDate.toLocaleDateString('en-US', {
             month: 'long',
             day: 'numeric',
             year: 'numeric',
