@@ -25,9 +25,8 @@ import type {
 // Constants
 // ============================================================================
 
-const MAX_CONTRACT_TEXT_LENGTH = 100000; // ~25k tokens
 const EXTRACTION_MODEL = 'claude-sonnet-4-20250514';
-const EXTRACTION_VERSION = '1.0';
+const EXTRACTION_VERSION = '1.1'; // Updated: Direct PDF analysis (no separate extraction)
 
 // Default provision structure
 const DEFAULT_PROVISION: ExtractedProvision = {
@@ -39,64 +38,24 @@ const DEFAULT_PROVISION: ExtractedProvision = {
 };
 
 // ============================================================================
-// PDF Text Extraction (using AI SDK with native PDF support)
+// PDF Metadata Extraction (lightweight - just count pages/estimate size)
 // ============================================================================
 
-import { generateText } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
+export function extractPdfMetadata(pdfBuffer: Buffer): {
+  estimatedPageCount: number;
+  fileSizeKb: number;
+} {
+  const fileSizeKb = Math.round(pdfBuffer.length / 1024);
+  // Rough estimate: ~50KB per page for text-heavy PDFs
+  const estimatedPageCount = Math.max(1, Math.ceil(fileSizeKb / 50));
 
-export async function extractTextFromPdf(pdfBuffer: Buffer): Promise<{
-  text: string;
-  pageCount: number;
-  wordCount: number;
-}> {
-  console.log('[PDF Extract] Starting extraction with AI SDK, buffer size:', pdfBuffer.length);
+  console.log('[PDF Metadata] Size:', fileSizeKb, 'KB, estimated pages:', estimatedPageCount);
 
-  try {
-    const pdfBase64 = pdfBuffer.toString('base64');
-
-    const result = await generateText({
-      model: anthropic('claude-3-5-haiku-20241022'),
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'file',
-              data: pdfBase64,
-              mediaType: 'application/pdf',
-            },
-            {
-              type: 'text',
-              text: 'Extract all the text content from this PDF document. Return only the text, no commentary.',
-            },
-          ],
-        },
-      ],
-      maxOutputTokens: 16000,
-    });
-
-    const text = result.text || '';
-    const wordCount = text.split(/\s+/).filter(Boolean).length;
-    // Estimate page count from text length (roughly 500 words per page)
-    const pageCount = Math.max(1, Math.ceil(wordCount / 500));
-
-    console.log('[PDF Extract] Success - estimated pages:', pageCount, 'words:', wordCount);
-
-    return {
-      text: text.slice(0, MAX_CONTRACT_TEXT_LENGTH),
-      pageCount,
-      wordCount,
-    };
-  } catch (error) {
-    console.error('[PDF Extract] Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    throw new Error(`Failed to extract text from PDF: ${errorMessage}`);
-  }
+  return { estimatedPageCount, fileSizeKb };
 }
 
 // ============================================================================
-// Claude Analysis
+// Claude Analysis (with native PDF support)
 // ============================================================================
 
 interface ClaudeAnalysisResponse {
@@ -115,26 +74,45 @@ interface ClaudeAnalysisResponse {
   article_30_3_score: number;
   overall_score: number;
   confidence_score: number;
+  extracted_text_summary?: string;
+  page_count?: number;
+  word_count?: number;
 }
 
 async function analyzeWithClaude(
-  contractText: string,
+  pdfBuffer: Buffer,
   apiKey: string
 ): Promise<ClaudeAnalysisResponse> {
   const client = new Anthropic({
     apiKey,
   });
 
-  const userPrompt = buildAnalysisPrompt(contractText);
+  console.log('[Claude Analysis] Sending PDF directly to Sonnet, size:', pdfBuffer.length, 'bytes');
+
+  // Convert PDF to base64
+  const pdfBase64 = pdfBuffer.toString('base64');
 
   const response = await client.messages.create({
     model: EXTRACTION_MODEL,
-    max_tokens: 8192,
+    max_tokens: 16384, // Increased for comprehensive analysis
     system: DORA_ANALYSIS_SYSTEM_PROMPT,
     messages: [
       {
         role: 'user',
-        content: userPrompt,
+        content: [
+          {
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: pdfBase64,
+            },
+          },
+          {
+            type: 'text',
+            text: buildAnalysisPrompt(''), // Empty string - PDF is sent directly
+          },
+        ],
       },
     ],
   });
@@ -145,15 +123,18 @@ async function analyzeWithClaude(
     throw new Error('No text response from Claude');
   }
 
+  console.log('[Claude Analysis] Response received, parsing JSON...');
+
   // Parse JSON response
   try {
     const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
+      console.error('[Claude Analysis] No JSON in response:', textContent.text.slice(0, 500));
       throw new Error('No JSON found in response');
     }
     return JSON.parse(jsonMatch[0]) as ClaudeAnalysisResponse;
   } catch (parseError) {
-    console.error('Failed to parse Claude response:', textContent.text);
+    console.error('[Claude Analysis] Failed to parse response:', textContent.text.slice(0, 1000));
     throw new Error('Failed to parse AI response as JSON');
   }
 }
@@ -215,18 +196,26 @@ export async function analyzeContract(
 ): Promise<ContractAnalysisResult> {
   const startTime = Date.now();
 
-  // Step 1: Extract text from PDF
-  const { text, pageCount, wordCount } = await extractTextFromPdf(options.pdfBuffer);
+  // Step 1: Get PDF metadata (lightweight)
+  const { estimatedPageCount, fileSizeKb } = extractPdfMetadata(options.pdfBuffer);
 
-  if (!text || text.trim().length < 100) {
-    throw new Error('Contract text too short or empty - may be a scanned image PDF');
+  if (fileSizeKb < 1) {
+    throw new Error('PDF file is empty or corrupted');
   }
 
-  // Step 2: Analyze with Claude
-  const analysis = await analyzeWithClaude(text, options.apiKey);
+  console.log('[Contract Analysis] Starting analysis of', fileSizeKb, 'KB document');
+
+  // Step 2: Analyze with Claude (PDF sent directly - no separate extraction needed)
+  const analysis = await analyzeWithClaude(options.pdfBuffer, options.apiKey);
 
   // Step 3: Map results
   const processingTimeMs = Date.now() - startTime;
+
+  // Use page/word count from Claude if provided, otherwise use estimates
+  const pageCount = analysis.page_count || estimatedPageCount;
+  const wordCount = analysis.word_count || Math.round(fileSizeKb * 150); // Rough estimate
+
+  console.log('[Contract Analysis] Complete in', processingTimeMs, 'ms, score:', analysis.overall_score);
 
   return {
     documentId: options.documentId,

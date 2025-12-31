@@ -82,18 +82,15 @@ For each provision, provide:
 
 REMEMBER: If you cannot find clear evidence in the document, the provision is MISSING. Do not invent or assume.`;
 
-export const DORA_ANALYSIS_USER_PROMPT = `Analyze the following contract document for DORA Article 30 compliance.
+export const DORA_ANALYSIS_USER_PROMPT = `Analyze the attached PDF document for DORA Article 30 compliance.
 
 ## IMPORTANT REMINDERS
-1. Extract information ONLY from this document - never assume or infer
+1. Extract information ONLY from the PDF document provided - never assume or infer
 2. Provide EXACT page and section citations for every finding
 3. Quote text VERBATIM in excerpts
 4. If something is not explicitly stated, mark as "missing"
-
-## Contract Text
----
-{CONTRACT_TEXT}
----
+5. Read the ENTIRE document thoroughly before analyzing
+6. Include page_count and word_count estimates in your response
 
 ## Required Analysis
 
@@ -364,8 +361,10 @@ export const QUICK_SCAN_OUTPUT_SCHEMA = {
 // Helper Functions
 // ============================================================================
 
-export function buildAnalysisPrompt(contractText: string): string {
-  return DORA_ANALYSIS_USER_PROMPT.replace('{CONTRACT_TEXT}', contractText);
+export function buildAnalysisPrompt(_contractText?: string): string {
+  // For direct PDF analysis, we don't need to insert contract text
+  // The PDF is sent as a document attachment alongside this prompt
+  return DORA_ANALYSIS_USER_PROMPT;
 }
 
 export function buildQuickScanPrompt(documentText: string): string {
