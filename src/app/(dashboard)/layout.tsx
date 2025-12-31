@@ -47,8 +47,8 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-background">
       <div className="flex min-h-screen">
-        {/* Sidebar */}
-        <aside className="w-64 border-r border-border bg-sidebar flex flex-col">
+        {/* Sidebar - sticky, doesn't scroll with content */}
+        <aside className="w-64 border-r border-border bg-sidebar flex flex-col sticky top-0 h-screen overflow-y-auto">
           {/* Logo */}
           <div className="h-16 px-6 flex items-center border-b border-sidebar-border">
             <Link href="/dashboard" className="flex items-center gap-3">

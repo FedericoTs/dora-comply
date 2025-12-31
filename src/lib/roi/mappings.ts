@@ -620,6 +620,47 @@ export const B_02_02_MAPPING: TemplateMapping = {
 };
 
 /**
+ * B_04.01 - Service Recipients
+ * Source: ict_services + contracts + organizations tables
+ * Links contracts to entities (organization/branches) using the services
+ */
+export const B_04_01_MAPPING: TemplateMapping = {
+  c0010: {
+    esaCode: 'c0010',
+    dbColumn: 'contract_ref',
+    dbTable: 'contracts',
+    description: 'Contractual arrangement reference number',
+    required: true,
+    dataType: 'string',
+  },
+  c0020: {
+    esaCode: 'c0020',
+    dbColumn: 'entity_lei',
+    dbTable: 'organizations',
+    description: 'Entity LEI (organization using the service)',
+    required: true,
+    dataType: 'string',
+  },
+  c0030: {
+    esaCode: 'c0030',
+    dbColumn: 'entity_nature',
+    dbTable: 'organizations',
+    description: 'Nature of the entity',
+    required: true,
+    dataType: 'enum',
+    enumeration: EBA_ENTITY_NATURE,
+  },
+  c0040: {
+    esaCode: 'c0040',
+    dbColumn: 'branch_code',
+    dbTable: 'organization_branches',
+    description: 'Branch identification code',
+    required: false,
+    dataType: 'string',
+  },
+};
+
+/**
  * B_05.01 - ICT Providers
  * Source: vendors table
  */
@@ -946,7 +987,7 @@ export const TEMPLATE_MAPPINGS: Record<RoiTemplateId, TemplateMapping | null> = 
   'B_03.01': null, // Link table, generated from relationships
   'B_03.02': null, // Link table, generated from relationships
   'B_03.03': null, // Link table, generated from relationships
-  'B_04.01': null, // Link table, generated from relationships
+  'B_04.01': B_04_01_MAPPING,
   'B_05.01': B_05_01_MAPPING,
   'B_05.02': null, // Subcontracting, generated from subcontractors table
   'B_06.01': B_06_01_MAPPING,

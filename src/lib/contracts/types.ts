@@ -387,9 +387,14 @@ export const CONTRACT_STATUSES = Object.keys(CONTRACT_STATUS_INFO) as ContractSt
  * Calculate DORA compliance score for a contract
  */
 export function calculateDoraComplianceScore(
-  provisions: DoraProvisions,
+  provisions: DoraProvisions | null | undefined | Record<string, unknown>,
   isCriticalFunction: boolean
 ): number {
+  // Handle empty or missing provisions - return 0% compliance
+  if (!provisions || !('article_30_2' in provisions) || !provisions.article_30_2) {
+    return 0;
+  }
+
   const weights = {
     present: 100,
     partial: 50,
@@ -398,41 +403,45 @@ export function calculateDoraComplianceScore(
   };
 
   // Article 30.2 provisions (always required)
-  const article30_2 = provisions.article_30_2;
+  const article30_2 = provisions.article_30_2 as DoraArticle30_2Provisions;
+
+  // Safely get provisions, defaulting to 'missing' status
+  const defaultProvision: DoraProvision = { status: 'missing' };
   const basicProvisions = [
-    article30_2.service_description,
-    article30_2.data_locations,
-    article30_2.data_protection,
-    article30_2.availability_guarantees,
-    article30_2.incident_support,
-    article30_2.authority_cooperation,
-    article30_2.termination_rights,
-    article30_2.subcontracting_conditions,
+    article30_2.service_description || defaultProvision,
+    article30_2.data_locations || defaultProvision,
+    article30_2.data_protection || defaultProvision,
+    article30_2.availability_guarantees || defaultProvision,
+    article30_2.incident_support || defaultProvision,
+    article30_2.authority_cooperation || defaultProvision,
+    article30_2.termination_rights || defaultProvision,
+    article30_2.subcontracting_conditions || defaultProvision,
   ];
 
   let totalScore = 0;
   let totalWeight = 0;
 
   basicProvisions.forEach((p) => {
-    totalScore += weights[p.status];
+    totalScore += weights[p.status] ?? 0;
     totalWeight += 100;
   });
 
   // Article 30.3 provisions (only for critical functions)
   if (isCriticalFunction && provisions.article_30_3) {
+    const article30_3 = provisions.article_30_3 as DoraArticle30_3Provisions;
     const criticalProvisions = [
-      provisions.article_30_3.sla_targets,
-      provisions.article_30_3.notice_periods,
-      provisions.article_30_3.business_continuity,
-      provisions.article_30_3.ict_security,
-      provisions.article_30_3.tlpt_participation,
-      provisions.article_30_3.audit_rights,
-      provisions.article_30_3.exit_strategy,
-      provisions.article_30_3.performance_access,
+      article30_3.sla_targets || defaultProvision,
+      article30_3.notice_periods || defaultProvision,
+      article30_3.business_continuity || defaultProvision,
+      article30_3.ict_security || defaultProvision,
+      article30_3.tlpt_participation || defaultProvision,
+      article30_3.audit_rights || defaultProvision,
+      article30_3.exit_strategy || defaultProvision,
+      article30_3.performance_access || defaultProvision,
     ];
 
     criticalProvisions.forEach((p) => {
-      totalScore += weights[p.status];
+      totalScore += weights[p.status] ?? 0;
       totalWeight += 100;
     });
   }
