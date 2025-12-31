@@ -120,7 +120,7 @@ export function ContractFormDialog({
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/documents/scan', {
+      const response = await fetch('/api/scan', {
         method: 'POST',
         body: formData,
       });

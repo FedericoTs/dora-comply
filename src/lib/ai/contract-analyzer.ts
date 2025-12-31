@@ -39,27 +39,49 @@ const DEFAULT_PROVISION: ExtractedProvision = {
 };
 
 // ============================================================================
-// PDF Text Extraction
+// PDF Text Extraction (using AI SDK with native PDF support)
 // ============================================================================
 
-import { PDFParse } from 'pdf-parse';
+import { generateText } from 'ai';
+import { anthropic } from '@ai-sdk/anthropic';
 
 export async function extractTextFromPdf(pdfBuffer: Buffer): Promise<{
   text: string;
   pageCount: number;
   wordCount: number;
 }> {
-  let parser: PDFParse | null = null;
+  console.log('[PDF Extract] Starting extraction with AI SDK, buffer size:', pdfBuffer.length);
 
   try {
-    // Use pdf-parse v2 class-based API
-    parser = new PDFParse({ data: pdfBuffer });
+    const pdfBase64 = pdfBuffer.toString('base64');
 
-    // getText() returns TextResult with text and total (page count)
-    const result = await parser.getText();
-    const text = result?.text || '';
-    const pageCount = result?.total || 0;
+    const result = await generateText({
+      model: anthropic('claude-3-5-haiku-20241022'),
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'file',
+              data: pdfBase64,
+              mediaType: 'application/pdf',
+            },
+            {
+              type: 'text',
+              text: 'Extract all the text content from this PDF document. Return only the text, no commentary.',
+            },
+          ],
+        },
+      ],
+      maxOutputTokens: 16000,
+    });
+
+    const text = result.text || '';
     const wordCount = text.split(/\s+/).filter(Boolean).length;
+    // Estimate page count from text length (roughly 500 words per page)
+    const pageCount = Math.max(1, Math.ceil(wordCount / 500));
+
+    console.log('[PDF Extract] Success - estimated pages:', pageCount, 'words:', wordCount);
 
     return {
       text: text.slice(0, MAX_CONTRACT_TEXT_LENGTH),
@@ -67,14 +89,9 @@ export async function extractTextFromPdf(pdfBuffer: Buffer): Promise<{
       wordCount,
     };
   } catch (error) {
-    console.error('PDF extraction error:', error);
+    console.error('[PDF Extract] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to extract text from PDF: ${errorMessage}`);
-  } finally {
-    // Clean up
-    if (parser) {
-      await parser.destroy();
-    }
   }
 }
 

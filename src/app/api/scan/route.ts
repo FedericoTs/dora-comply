@@ -1,8 +1,8 @@
 /**
  * Document Quick Scan API Endpoint
  *
- * POST /api/documents/scan - Quick scan to identify document type
- * Uses Claude Haiku for fast, cheap document classification
+ * POST /api/scan - Quick scan to identify document type
+ * Uses Claude Haiku via AI SDK for fast, cheap document classification
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -20,15 +20,18 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.log('[Scan API] Auth failed:', authError?.message || 'No user');
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
         { status: 401 }
       );
     }
 
-    // Get API key from environment
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
+    console.log('[Scan API] User authenticated:', user.id);
+
+    // AI SDK uses ANTHROPIC_API_KEY environment variable automatically
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('[Scan API] ANTHROPIC_API_KEY not configured');
       return NextResponse.json(
         { error: { code: 'CONFIG_ERROR', message: 'AI service not configured' } },
         { status: 500 }
@@ -40,11 +43,14 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
 
     if (!file) {
+      console.log('[Scan API] No file provided');
       return NextResponse.json(
         { error: { code: 'INVALID_INPUT', message: 'No file provided' } },
         { status: 400 }
       );
     }
+
+    console.log('[Scan API] File received:', file.name, 'type:', file.type, 'size:', file.size);
 
     // Validate file type
     if (file.type !== 'application/pdf') {
@@ -64,15 +70,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert file to buffer
-    console.log('[Scan API] Converting file to buffer, size:', file.size);
+    console.log('[Scan API] Converting file to buffer...');
     const arrayBuffer = await file.arrayBuffer();
     const pdfBuffer = Buffer.from(arrayBuffer);
+    console.log('[Scan API] Buffer ready, size:', pdfBuffer.length);
 
-    // Perform quick scan with Haiku
+    // Perform quick scan with Haiku via AI SDK
     console.log('[Scan API] Starting document scan...');
     const scanResult = await scanDocument({
       pdfBuffer,
-      apiKey,
+      apiKey: process.env.ANTHROPIC_API_KEY, // Still passed but AI SDK uses env var
     });
     console.log('[Scan API] Scan completed successfully');
 
@@ -91,7 +98,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Document scan error:', error);
+    console.error('[Scan API] Error:', error);
+    console.error('[Scan API] Error stack:', error instanceof Error ? error.stack : 'no stack');
 
     // Handle specific errors
     if (error instanceof Error) {
@@ -109,7 +117,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Return the actual error message in development for debugging
+      // Return the actual error message for debugging
       return NextResponse.json(
         { error: { code: 'INTERNAL_ERROR', message: error.message } },
         { status: 500 }
