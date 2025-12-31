@@ -94,6 +94,19 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      if (error.message.includes('Failed to extract text')) {
+        return NextResponse.json(
+          { error: { code: 'EXTRACTION_FAILED', message: 'Failed to read PDF content. The file may be corrupted or password-protected.' } },
+          { status: 400 }
+        );
+      }
+
+      // Return the actual error message in development for debugging
+      return NextResponse.json(
+        { error: { code: 'INTERNAL_ERROR', message: error.message } },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(

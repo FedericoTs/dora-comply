@@ -42,19 +42,23 @@ const DEFAULT_PROVISION: ExtractedProvision = {
 // PDF Text Extraction
 // ============================================================================
 
+import { PDFParse } from 'pdf-parse';
+
 export async function extractTextFromPdf(pdfBuffer: Buffer): Promise<{
   text: string;
   pageCount: number;
   wordCount: number;
 }> {
-  try {
-    // Use require for pdf-parse (CommonJS module)
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require('pdf-parse');
-    const data = await pdfParse(pdfBuffer);
+  let parser: PDFParse | null = null;
 
-    const text = data.text || '';
-    const pageCount = data.numpages || 0;
+  try {
+    // Use pdf-parse v2 class-based API
+    parser = new PDFParse({ data: pdfBuffer });
+
+    // getText() returns TextResult with text and total (page count)
+    const result = await parser.getText();
+    const text = result?.text || '';
+    const pageCount = result?.total || 0;
     const wordCount = text.split(/\s+/).filter(Boolean).length;
 
     return {
@@ -64,7 +68,13 @@ export async function extractTextFromPdf(pdfBuffer: Buffer): Promise<{
     };
   } catch (error) {
     console.error('PDF extraction error:', error);
-    throw new Error('Failed to extract text from PDF');
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to extract text from PDF: ${errorMessage}`);
+  } finally {
+    // Clean up
+    if (parser) {
+      await parser.destroy();
+    }
   }
 }
 
