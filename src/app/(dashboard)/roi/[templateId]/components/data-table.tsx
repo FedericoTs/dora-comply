@@ -64,12 +64,22 @@ export function DataTable({ data, columns, validationErrors }: DataTableProps) {
             {columns.map((col) => (
               <TableHead
                 key={col.esaCode}
-                className="min-w-[150px] whitespace-nowrap"
+                className={cn(
+                  "min-w-[150px] whitespace-nowrap",
+                  col.required && "bg-amber-50/50"
+                )}
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {col.esaCode}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {col.esaCode}
+                    </span>
+                    {col.required && (
+                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-amber-100 text-amber-800 border-amber-300">
+                        Required
+                      </Badge>
+                    )}
+                  </div>
                   <span className="font-medium">{col.description}</span>
                 </div>
               </TableHead>
@@ -92,19 +102,23 @@ export function DataTable({ data, columns, validationErrors }: DataTableProps) {
                   // Data is keyed by ESA codes (c0010, c0020, etc.), not dbColumn names
                   const value = row[col.esaCode];
                   const hasError = rowErrors?.has(col.esaCode);
+                  const isEmpty = value === null || value === undefined || value === '';
+                  const isMissingRequired = col.required && isEmpty;
 
                   return (
                     <TableCell
                       key={col.esaCode}
                       className={cn(
                         'whitespace-nowrap',
-                        hasError && 'bg-red-100 border-red-200'
+                        hasError && 'bg-red-100 border-red-200',
+                        isMissingRequired && !hasError && 'bg-amber-50'
                       )}
                     >
                       <CellValue
                         value={value}
                         type={col.dataType}
                         hasError={hasError}
+                        required={col.required}
                       />
                     </TableCell>
                   );
@@ -122,16 +136,31 @@ interface CellValueProps {
   value: unknown;
   type: string;
   hasError?: boolean;
+  required?: boolean;
 }
 
-function CellValue({ value, type, hasError }: CellValueProps) {
+function CellValue({ value, type, hasError, required }: CellValueProps) {
   if (value === null || value === undefined || value === '') {
+    // Show different indicator for required vs optional empty fields
+    if (required) {
+      return (
+        <span className={cn(
+          'inline-flex items-center gap-1 text-amber-700 font-medium text-sm',
+          hasError && 'text-red-600'
+        )}>
+          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+          </svg>
+          Missing
+        </span>
+      );
+    }
     return (
       <span className={cn(
         'text-muted-foreground italic text-sm',
         hasError && 'text-red-500'
       )}>
-        empty
+        —
       </span>
     );
   }
