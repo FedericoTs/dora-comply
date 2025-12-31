@@ -26,30 +26,30 @@ export function DeadlineCountdown({ deadline, daysRemaining }: DeadlineCountdown
 
   const urgencyConfig = {
     overdue: {
-      color: 'text-red-600',
-      bg: 'bg-red-50',
-      border: 'border-red-200',
+      color: 'text-red-600 dark:text-red-400',
+      bg: 'bg-red-50 dark:bg-red-950',
+      border: 'border-red-200 dark:border-red-800',
       icon: AlertTriangle,
       label: 'Deadline Passed',
     },
     critical: {
-      color: 'text-red-600',
-      bg: 'bg-red-50',
-      border: 'border-red-200',
+      color: 'text-red-600 dark:text-red-400',
+      bg: 'bg-red-50 dark:bg-red-950',
+      border: 'border-red-200 dark:border-red-800',
       icon: AlertTriangle,
       label: 'Critical',
     },
     warning: {
-      color: 'text-yellow-600',
-      bg: 'bg-yellow-50',
-      border: 'border-yellow-200',
+      color: 'text-yellow-600 dark:text-yellow-400',
+      bg: 'bg-yellow-50 dark:bg-yellow-950',
+      border: 'border-yellow-200 dark:border-yellow-800',
       icon: Clock,
       label: 'Approaching',
     },
     normal: {
-      color: 'text-green-600',
-      bg: 'bg-green-50',
-      border: 'border-green-200',
+      color: 'text-green-600 dark:text-green-400',
+      bg: 'bg-green-50 dark:bg-green-950',
+      border: 'border-green-200 dark:border-green-800',
       icon: CheckCircle,
       label: 'On Track',
     },
@@ -79,10 +79,10 @@ export function DeadlineCountdown({ deadline, daysRemaining }: DeadlineCountdown
         </p>
         <div className={cn(
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          urgency === 'overdue' && 'bg-red-100 text-red-800',
-          urgency === 'critical' && 'bg-red-100 text-red-800',
-          urgency === 'warning' && 'bg-yellow-100 text-yellow-800',
-          urgency === 'normal' && 'bg-green-100 text-green-800',
+          urgency === 'overdue' && 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+          urgency === 'critical' && 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+          urgency === 'warning' && 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+          urgency === 'normal' && 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
         )}>
           {config.label}
         </div>

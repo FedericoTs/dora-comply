@@ -30,13 +30,13 @@ export function ValidationPanel({ errors, isValid }: ValidationPanelProps) {
 
   if (isValid && errors.length === 0) {
     return (
-      <Card className="border-green-200 bg-green-50">
+      <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
-            <CardTitle className="text-green-800">Validation Passed</CardTitle>
+            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <CardTitle className="text-green-800 dark:text-green-200">Validation Passed</CardTitle>
           </div>
-          <CardDescription className="text-green-700">
+          <CardDescription className="text-green-700 dark:text-green-300">
             All records meet ESA requirements and are ready for export
           </CardDescription>
         </CardHeader>
@@ -47,7 +47,9 @@ export function ValidationPanel({ errors, isValid }: ValidationPanelProps) {
   return (
     <Card className={cn(
       'border-2',
-      errorCount > 0 ? 'border-red-200' : 'border-yellow-200'
+      errorCount > 0
+        ? 'border-red-200 dark:border-red-800'
+        : 'border-yellow-200 dark:border-yellow-800'
     )}>
       <CardHeader
         className="pb-3 cursor-pointer"
@@ -56,11 +58,14 @@ export function ValidationPanel({ errors, isValid }: ValidationPanelProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {errorCount > 0 ? (
-              <AlertCircle className="h-5 w-5 text-red-600" />
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
             ) : (
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
             )}
-            <CardTitle className={errorCount > 0 ? 'text-red-800' : 'text-yellow-800'}>
+            <CardTitle className={errorCount > 0
+              ? 'text-red-800 dark:text-red-200'
+              : 'text-yellow-800 dark:text-yellow-200'
+            }>
               Validation Issues Found
             </CardTitle>
           </div>
@@ -69,7 +74,7 @@ export function ValidationPanel({ errors, isValid }: ValidationPanelProps) {
               <Badge variant="destructive">{errorCount} errors</Badge>
             )}
             {warningCount > 0 && (
-              <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+              <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-900">
                 {warningCount} warnings
               </Badge>
             )}
@@ -117,15 +122,15 @@ function ValidationErrorCard({ error }: ValidationErrorCardProps) {
   }[error.severity];
 
   const severityColors = {
-    error: 'border-red-200 bg-red-50',
-    warning: 'border-yellow-200 bg-yellow-50',
-    info: 'border-blue-200 bg-blue-50',
+    error: 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950',
+    warning: 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950',
+    info: 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950',
   };
 
   const iconColors = {
-    error: 'text-red-600',
-    warning: 'text-yellow-600',
-    info: 'text-blue-600',
+    error: 'text-red-600 dark:text-red-400',
+    warning: 'text-yellow-600 dark:text-yellow-400',
+    info: 'text-blue-600 dark:text-blue-400',
   };
 
   return (
