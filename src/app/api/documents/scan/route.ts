@@ -9,7 +9,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { scanDocument, shouldAnalyzeForDora, mapScanToContractForm } from '@/lib/ai';
 
+// Increase timeout for this function (max 60s on Vercel Pro, 10s on Hobby)
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
+  console.log('[Scan API] Request received');
   try {
     // Verify user is authenticated
     const supabase = await createClient();
@@ -60,14 +64,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert file to buffer
+    console.log('[Scan API] Converting file to buffer, size:', file.size);
     const arrayBuffer = await file.arrayBuffer();
     const pdfBuffer = Buffer.from(arrayBuffer);
 
     // Perform quick scan with Haiku
+    console.log('[Scan API] Starting document scan...');
     const scanResult = await scanDocument({
       pdfBuffer,
       apiKey,
     });
+    console.log('[Scan API] Scan completed successfully');
 
     // Determine if document should be analyzed for DORA compliance
     const shouldAnalyze = shouldAnalyzeForDora(scanResult);

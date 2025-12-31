@@ -141,14 +141,18 @@ export async function scanDocument(
   const startTime = Date.now();
 
   // Step 1: Extract text from PDF (uses first ~5000 chars in prompt)
+  console.log('[Document Scanner] Extracting text from PDF...');
   const { text } = await extractTextFromPdf(options.pdfBuffer);
+  console.log('[Document Scanner] Extracted', text.length, 'characters');
 
   if (!text || text.trim().length < 50) {
     throw new Error('Document text too short or empty - may be a scanned image PDF');
   }
 
   // Step 2: Quick scan with Claude Haiku
+  console.log('[Document Scanner] Calling Claude Haiku...');
   const scan = await scanWithClaude(text, options.apiKey);
+  console.log('[Document Scanner] Claude response received');
 
   // Step 3: Map results
   const processingTimeMs = Date.now() - startTime;

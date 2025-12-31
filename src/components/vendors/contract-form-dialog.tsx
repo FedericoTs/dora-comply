@@ -125,7 +125,19 @@ export function ContractFormDialog({
         body: formData,
       });
 
-      const result = await response.json();
+      // Handle empty or invalid responses
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error('Empty response from server. The scan may have timed out.');
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        console.error('Invalid JSON response:', responseText);
+        throw new Error('Invalid response from server');
+      }
 
       if (!response.ok) {
         throw new Error(result.error?.message || 'Scan failed');
