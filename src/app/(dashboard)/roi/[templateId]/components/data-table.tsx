@@ -10,11 +10,21 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { ColumnMapping } from '@/lib/roi';
+
+// Serializable version of ColumnMapping (without transform function)
+interface SerializableColumn {
+  esaCode: string;
+  dbColumn: string;
+  dbTable: string;
+  description: string;
+  required: boolean;
+  dataType: 'string' | 'number' | 'boolean' | 'date' | 'enum';
+  enumeration?: Record<string, string>;
+}
 
 interface DataTableProps {
   data: Record<string, unknown>[];
-  columns: ColumnMapping[];
+  columns: SerializableColumn[];
   validationErrors?: Map<number, Set<string>>;
 }
 

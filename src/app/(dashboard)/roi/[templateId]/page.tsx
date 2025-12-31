@@ -59,7 +59,11 @@ export async function generateMetadata({ params }: PageProps) {
 
 async function TemplateDetailContent({ templateId }: { templateId: RoiTemplateId }) {
   const template = ROI_TEMPLATES[templateId];
-  const columns = getColumnMappings(templateId);
+  const rawColumns = getColumnMappings(templateId);
+
+  // Strip non-serializable properties (transform functions) before passing to Client Components
+  // Functions cannot be passed from Server Components to Client Components
+  const columns = rawColumns.map(({ transform, ...rest }) => rest);
 
   // Fetch data
   const { data, count } = await fetchTemplateData(templateId);

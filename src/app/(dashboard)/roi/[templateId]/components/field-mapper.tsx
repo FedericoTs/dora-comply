@@ -6,10 +6,20 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ArrowRight, Database, FileSpreadsheet, ChevronDown, ChevronUp } from 'lucide-react';
-import type { ColumnMapping } from '@/lib/roi';
+
+// Serializable version of ColumnMapping (without transform function)
+interface SerializableColumn {
+  esaCode: string;
+  dbColumn: string;
+  dbTable: string;
+  description: string;
+  required: boolean;
+  dataType: 'string' | 'number' | 'boolean' | 'date' | 'enum';
+  enumeration?: Record<string, string>;
+}
 
 interface FieldMapperProps {
-  columns: ColumnMapping[];
+  columns: SerializableColumn[];
 }
 
 export function FieldMapper({ columns }: FieldMapperProps) {
@@ -68,7 +78,7 @@ export function FieldMapper({ columns }: FieldMapperProps) {
 }
 
 interface FieldMappingRowProps {
-  column: ColumnMapping;
+  column: SerializableColumn;
 }
 
 function FieldMappingRow({ column }: FieldMappingRowProps) {
