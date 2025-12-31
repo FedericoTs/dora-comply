@@ -27,8 +27,8 @@ async function RoiDashboardContent() {
     ? Math.round(stats.reduce((sum, s) => sum + s.completeness, 0) / stats.length)
     : 0;
 
-  // Days until deadline
-  const deadline = new Date('2025-04-30');
+  // Days until deadline (annual ESA RoI submission)
+  const deadline = new Date('2026-04-30');
   const today = new Date();
   const daysUntilDeadline = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 

@@ -29,9 +29,15 @@ interface PageProps {
 
 // Convert URL param to template ID (b_01_01 -> B_01.01)
 function parseTemplateId(param: string): RoiTemplateId | null {
-  const normalized = param.toUpperCase().replace('_', '.').replace('_', '.');
-  if (normalized in ROI_TEMPLATES) {
-    return normalized as RoiTemplateId;
+  // URL format: b_01_01 -> Template format: B_01.01
+  // Split by underscore: ['b', '01', '01']
+  // Reassemble: B_01.01
+  const parts = param.toUpperCase().split('_');
+  if (parts.length === 3) {
+    const normalized = `${parts[0]}_${parts[1]}.${parts[2]}`;
+    if (normalized in ROI_TEMPLATES) {
+      return normalized as RoiTemplateId;
+    }
   }
   return null;
 }
