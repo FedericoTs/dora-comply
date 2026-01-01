@@ -78,6 +78,27 @@ export interface Vendor {
   registration_number?: string | null;
   regulatory_authorizations: string[];
 
+  // ESA/DORA B_05.01 fields (from Migration 005)
+  ultimate_parent_lei?: string | null;
+  ultimate_parent_name?: string | null;
+  esa_register_id?: string | null;
+  substitutability_assessment?: SubstitutabilityAssessment | null;
+  total_annual_expense?: number | null;
+  expense_currency?: string | null;
+
+  // LEI Verification (from GLEIF API)
+  lei_status?: LEIRegistrationStatus | null;
+  lei_verified_at?: string | null;
+  lei_next_renewal?: string | null;
+  entity_status?: EntityStatus | null;
+  registration_authority_id?: string | null;
+  legal_form_code?: string | null;
+  legal_address?: GLEIFAddress | null;
+  headquarters_address?: GLEIFAddress | null;
+  entity_creation_date?: string | null;
+  gleif_data?: Record<string, unknown> | null;
+  gleif_fetched_at?: string | null;
+
   // Risk
   risk_score?: number | null;
   last_assessment_date?: string | null;
@@ -224,29 +245,78 @@ export interface UpdateVendorInput {
 // GLEIF API TYPES
 // ============================================
 
+export type LEIRegistrationStatus = 'ISSUED' | 'LAPSED' | 'RETIRED' | 'ANNULLED' | 'PENDING_VALIDATION' | 'PENDING_TRANSFER' | 'PENDING_ARCHIVAL';
+export type EntityStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface GLEIFAddress {
+  country: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+  addressLines?: string[];
+}
+
 export interface GLEIFEntity {
   lei: string;
   legalName: string;
   otherNames?: string[];
-  legalAddress: {
-    country: string;
-    city?: string;
-    postalCode?: string;
-    addressLines?: string[];
-  };
-  headquartersAddress?: {
-    country: string;
-    city?: string;
-  };
-  registrationStatus: 'ISSUED' | 'LAPSED' | 'RETIRED' | 'ANNULLED' | 'PENDING_VALIDATION';
+  legalAddress: GLEIFAddress;
+  headquartersAddress?: GLEIFAddress;
+  registrationStatus: LEIRegistrationStatus;
   entityCategory?: string;
   legalForm?: string;
+}
+
+/**
+ * Extended GLEIF entity with all available fields for ESA compliance
+ */
+export interface GLEIFFullEntity extends GLEIFEntity {
+  // Registration data from GLEIF
+  registeredAs?: string;          // Business registration number
+  registeredAt?: string;          // Registration authority ID
+  jurisdiction?: string;          // ISO country/region code
+  entityStatus?: EntityStatus;    // ACTIVE or INACTIVE
+  nextRenewalDate?: string;       // LEI renewal date (ISO format)
+  entityCreationDate?: string;    // When entity was formed
+  legalFormCode?: string;         // ISO legal form code
+  corroborationLevel?: string;    // Validation level
+  lastUpdateDate?: string;        // Last GLEIF update
+  initialRegistrationDate?: string; // First LEI registration
+}
+
+/**
+ * Parent entity information from GLEIF Level 2 data
+ */
+export interface GLEIFParentEntity {
+  lei: string;
+  legalName: string;
+  country: string;
+  relationshipType: 'IS_DIRECTLY_CONSOLIDATED_BY' | 'IS_ULTIMATELY_CONSOLIDATED_BY';
+}
+
+/**
+ * Fully enriched entity with parent relationships
+ * This is the comprehensive data structure for ESA RoI compliance
+ */
+export interface GLEIFEnrichedEntity extends GLEIFFullEntity {
+  directParent?: GLEIFParentEntity | null;
+  ultimateParent?: GLEIFParentEntity | null;
+  parentException?: string;  // Reason if no parent reported
 }
 
 export interface GLEIFSearchResult {
   total: number;
   results: GLEIFEntity[];
 }
+
+/**
+ * Substitutability assessment per DORA Article 28
+ */
+export type SubstitutabilityAssessment =
+  | 'easily_substitutable'
+  | 'substitutable_with_difficulty'
+  | 'not_substitutable'
+  | 'not_assessed';
 
 // ============================================
 // UI HELPER TYPES

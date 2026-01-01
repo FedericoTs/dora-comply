@@ -20,7 +20,9 @@ import type {
   VendorSortOptions,
   PaginationOptions,
   PaginatedResult,
+  GLEIFEnrichedEntity,
 } from './types';
+import { lookupLEIEnriched } from '@/lib/external/gleif';
 
 // ============================================================================
 // Types
@@ -94,6 +96,45 @@ async function getCurrentUserOrganization(): Promise<string | null> {
   return userData?.organization_id || null;
 }
 
+/**
+ * Build enrichment data from GLEIF entity for database insert
+ */
+function buildGLEIFEnrichmentData(gleifEntity: GLEIFEnrichedEntity): Record<string, unknown> {
+  return {
+    // Auto-populated from GLEIF
+    name: gleifEntity.legalName,
+    headquarters_country: gleifEntity.headquartersAddress?.country || gleifEntity.legalAddress.country,
+    jurisdiction: gleifEntity.jurisdiction || null,
+    registration_number: gleifEntity.registeredAs || null,
+
+    // LEI verification data
+    lei_status: gleifEntity.registrationStatus,
+    lei_verified_at: new Date().toISOString(),
+    lei_next_renewal: gleifEntity.nextRenewalDate || null,
+    entity_status: gleifEntity.entityStatus || null,
+    registration_authority_id: gleifEntity.registeredAt || null,
+    legal_form_code: gleifEntity.legalFormCode || null,
+    entity_creation_date: gleifEntity.entityCreationDate || null,
+
+    // Full addresses
+    legal_address: gleifEntity.legalAddress,
+    headquarters_address: gleifEntity.headquartersAddress || null,
+
+    // Parent companies (from Level 2)
+    direct_parent_lei: gleifEntity.directParent?.lei || null,
+    direct_parent_name: gleifEntity.directParent?.legalName || null,
+    direct_parent_country: gleifEntity.directParent?.country || null,
+    ultimate_parent_lei: gleifEntity.ultimateParent?.lei || null,
+    ultimate_parent_name: gleifEntity.ultimateParent?.legalName || null,
+    ultimate_parent_country: gleifEntity.ultimateParent?.country || null,
+    parent_exception_reason: gleifEntity.parentException || null,
+
+    // Cache full GLEIF response
+    gleif_data: gleifEntity,
+    gleif_fetched_at: new Date().toISOString(),
+  };
+}
+
 // ============================================================================
 // Create Vendor
 // ============================================================================
@@ -146,25 +187,68 @@ export async function createVendor(
     }
   }
 
+  // Fetch GLEIF enrichment data if LEI provided
+  let gleifEnrichment: Record<string, unknown> = {};
+  if (data.lei) {
+    try {
+      const gleifEntity = await lookupLEIEnriched(data.lei.toUpperCase());
+      if (gleifEntity) {
+        gleifEnrichment = buildGLEIFEnrichmentData(gleifEntity);
+      }
+    } catch (error) {
+      console.warn('GLEIF enrichment failed:', error);
+      // Continue without enrichment - not a blocking error
+    }
+  }
+
+  // Build insert data - merge user input with GLEIF enrichment
+  // User input takes precedence for fields they explicitly provided
+  const insertData = {
+    organization_id: organizationId,
+    // Use GLEIF name if available, otherwise user input
+    name: (gleifEnrichment.name as string) || data.name.trim(),
+    lei: data.lei?.toUpperCase() || null,
+    tier: data.tier,
+    status: 'pending' as const, // New vendors start as pending
+    provider_type: data.provider_type || null,
+    // Use GLEIF headquarters country if available
+    headquarters_country: (gleifEnrichment.headquarters_country as string) || data.headquarters_country?.toUpperCase() || null,
+    jurisdiction: (gleifEnrichment.jurisdiction as string) || null,
+    service_types: data.service_types || [],
+    supports_critical_function: data.supports_critical_function || false,
+    critical_functions: data.critical_functions || [],
+    is_intra_group: data.is_intra_group || false,
+    primary_contact: data.primary_contact || {},
+    notes: data.notes || null,
+    metadata: {},
+    // GLEIF enrichment fields
+    registration_number: gleifEnrichment.registration_number || null,
+    lei_status: gleifEnrichment.lei_status || null,
+    lei_verified_at: gleifEnrichment.lei_verified_at || null,
+    lei_next_renewal: gleifEnrichment.lei_next_renewal || null,
+    entity_status: gleifEnrichment.entity_status || null,
+    registration_authority_id: gleifEnrichment.registration_authority_id || null,
+    legal_form_code: gleifEnrichment.legal_form_code || null,
+    entity_creation_date: gleifEnrichment.entity_creation_date || null,
+    legal_address: gleifEnrichment.legal_address || {},
+    headquarters_address: gleifEnrichment.headquarters_address || {},
+    // Parent company data (Level 2)
+    direct_parent_lei: gleifEnrichment.direct_parent_lei || null,
+    direct_parent_name: gleifEnrichment.direct_parent_name || null,
+    direct_parent_country: gleifEnrichment.direct_parent_country || null,
+    ultimate_parent_lei: gleifEnrichment.ultimate_parent_lei || null,
+    ultimate_parent_name: gleifEnrichment.ultimate_parent_name || null,
+    ultimate_parent_country: gleifEnrichment.ultimate_parent_country || null,
+    parent_exception_reason: gleifEnrichment.parent_exception_reason || null,
+    // Cache full GLEIF response
+    gleif_data: gleifEnrichment.gleif_data || {},
+    gleif_fetched_at: gleifEnrichment.gleif_fetched_at || null,
+  };
+
   // Insert vendor
   const { data: vendor, error } = await supabase
     .from('vendors')
-    .insert({
-      organization_id: organizationId,
-      name: data.name.trim(),
-      lei: data.lei?.toUpperCase() || null,
-      tier: data.tier,
-      status: 'pending', // New vendors start as pending
-      provider_type: data.provider_type || null,
-      headquarters_country: data.headquarters_country?.toUpperCase() || null,
-      service_types: data.service_types || [],
-      supports_critical_function: data.supports_critical_function || false,
-      critical_functions: data.critical_functions || [],
-      is_intra_group: data.is_intra_group || false,
-      primary_contact: data.primary_contact || {},
-      notes: data.notes || null,
-      metadata: {},
-    })
+    .insert(insertData)
     .select()
     .single();
 
@@ -647,6 +731,100 @@ export async function fetchVendorsAction(
 }
 
 // ============================================================================
+// Refresh Vendor GLEIF Data
+// ============================================================================
+
+/**
+ * Refresh vendor's GLEIF data from the API
+ * Use this to update vendor info or if parent company data was missing
+ */
+export async function refreshVendorGLEIF(vendorId: string): Promise<ActionResult<Vendor>> {
+  const supabase = await createClient();
+
+  const organizationId = await getCurrentUserOrganization();
+  if (!organizationId) {
+    return {
+      success: false,
+      error: createVendorError('UNAUTHORIZED', 'You must be logged in'),
+    };
+  }
+
+  // Get vendor and check LEI exists
+  const { data: existingVendor, error: fetchError } = await supabase
+    .from('vendors')
+    .select('id, lei')
+    .eq('id', vendorId)
+    .eq('organization_id', organizationId)
+    .is('deleted_at', null)
+    .single();
+
+  if (fetchError || !existingVendor) {
+    return {
+      success: false,
+      error: createVendorError('NOT_FOUND', 'Vendor not found'),
+    };
+  }
+
+  if (!existingVendor.lei) {
+    return {
+      success: false,
+      error: createVendorError('VALIDATION_ERROR', 'Vendor has no LEI to refresh'),
+    };
+  }
+
+  // Fetch fresh GLEIF data
+  const gleifEntity = await lookupLEIEnriched(existingVendor.lei);
+  if (!gleifEntity) {
+    return {
+      success: false,
+      error: createVendorError('VALIDATION_ERROR', 'LEI not found in GLEIF database'),
+    };
+  }
+
+  const enrichmentData = buildGLEIFEnrichmentData(gleifEntity);
+
+  // Update vendor with fresh GLEIF data
+  const { data: vendor, error } = await supabase
+    .from('vendors')
+    .update({
+      ...enrichmentData,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', vendorId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Refresh GLEIF error:', error);
+    return {
+      success: false,
+      error: mapDatabaseError(error),
+    };
+  }
+
+  // Log activity
+  await supabase.from('activity_log').insert({
+    organization_id: organizationId,
+    action: 'refreshed_gleif',
+    entity_type: 'vendor',
+    entity_id: vendorId,
+    entity_name: vendor.name,
+    details: {
+      lei: existingVendor.lei,
+      has_parent: !!gleifEntity.ultimateParent,
+    },
+  });
+
+  revalidatePath('/vendors');
+  revalidatePath(`/vendors/${vendorId}`);
+
+  return {
+    success: true,
+    data: mapVendorFromDatabase(vendor),
+  };
+}
+
+// ============================================================================
 // Database Mapping Helper
 // ============================================================================
 
@@ -668,6 +846,26 @@ function mapVendorFromDatabase(row: Record<string, unknown>): Vendor {
     parent_provider_id: row.parent_provider_id as string | null,
     registration_number: row.registration_number as string | null,
     regulatory_authorizations: (row.regulatory_authorizations as string[]) || [],
+    // ESA/DORA B_05.01 fields
+    ultimate_parent_lei: row.ultimate_parent_lei as string | null,
+    ultimate_parent_name: row.ultimate_parent_name as string | null,
+    esa_register_id: row.esa_register_id as string | null,
+    substitutability_assessment: row.substitutability_assessment as Vendor['substitutability_assessment'],
+    total_annual_expense: row.total_annual_expense as number | null,
+    expense_currency: row.expense_currency as string | null,
+    // LEI verification fields
+    lei_status: row.lei_status as Vendor['lei_status'],
+    lei_verified_at: row.lei_verified_at as string | null,
+    lei_next_renewal: row.lei_next_renewal as string | null,
+    entity_status: row.entity_status as Vendor['entity_status'],
+    registration_authority_id: row.registration_authority_id as string | null,
+    legal_form_code: row.legal_form_code as string | null,
+    legal_address: row.legal_address as Vendor['legal_address'],
+    headquarters_address: row.headquarters_address as Vendor['headquarters_address'],
+    entity_creation_date: row.entity_creation_date as string | null,
+    gleif_data: row.gleif_data as Record<string, unknown> | null,
+    gleif_fetched_at: row.gleif_fetched_at as string | null,
+    // Risk
     risk_score: row.risk_score as number | null,
     last_assessment_date: row.last_assessment_date as string | null,
     primary_contact: (row.primary_contact as Vendor['primary_contact']) || { name: '' },
