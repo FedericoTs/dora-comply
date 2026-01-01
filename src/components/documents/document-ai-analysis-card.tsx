@@ -60,6 +60,7 @@ import type { ParsedContractRecord } from '@/lib/ai/types';
 import type { Contract } from '@/lib/contracts/types';
 import { ContractAnalysisResults } from './contract-analysis-results';
 import { AnalysisSignOffDialog } from './analysis-sign-off-dialog';
+import { PopulateRoiButton } from './populate-roi-button';
 
 interface DocumentAIAnalysisCardProps {
   documentId: string;
@@ -442,6 +443,14 @@ export function DocumentAIAnalysisCard({
                   Create Contract
                 </Button>
               ) : null}
+
+              {/* 10X Feature: Direct RoI population from AI analysis */}
+              <PopulateRoiButton
+                documentId={documentId}
+                hasAnalysis={true}
+                vendorId={vendorId || undefined}
+                vendorName={vendorName || undefined}
+              />
             </div>
 
             {/* Sign-off info */}
