@@ -254,36 +254,44 @@ export async function populateRoiFromAnalysis(
     }
   }
 
+  // Step 2: Create contract
+  // IMPORTANT: contracts.vendor_id is NOT NULL in the current schema
+  // We must have a vendor to create a contract
   if (!vendorId) {
-    warnings.push('No vendor linked - contract will be created without vendor association');
+    return {
+      success: false,
+      errors: ['A vendor must be linked or created to populate RoI. Please select an existing vendor or enable vendor creation.'],
+      warnings,
+    };
   }
 
-  // Step 2: Create contract
   const contractRef = options.contractRef || `AI-${documentId.slice(0, 8).toUpperCase()}`;
   const contractType = mapContractType(analysis.identified_contract_type);
+  const governingLawCountry = extractCountryCode(analysis.identified_governing_law);
 
+  // Build contract data using only columns that exist in the current schema (migration 003)
+  // Note: governing_law_country is from migration 005 - include in dora_provisions for now
   const contractData: Record<string, unknown> = {
     organization_id: organizationId,
+    vendor_id: vendorId, // Required - NOT NULL constraint
     contract_ref: contractRef,
     contract_type: contractType,
     effective_date: analysis.identified_effective_date || new Date().toISOString().split('T')[0],
     expiry_date: analysis.identified_expiry_date || null,
-    governing_law_country: extractCountryCode(analysis.identified_governing_law),
     dora_provisions: {
       article_30_2: analysis.article_30_2,
       article_30_3: analysis.article_30_3,
       compliance_score: analysis.overall_compliance_score,
       confidence_score: analysis.confidence_score,
       analyzed_at: analysis.extracted_at,
+      // Store governing law in JSONB until migration 005 is applied
+      governing_law: analysis.identified_governing_law,
+      governing_law_country: governingLawCountry,
     },
     document_ids: [documentId],
-    notes: `Auto-populated from AI contract analysis on ${new Date().toISOString()}`,
+    notes: `Auto-populated from AI contract analysis on ${new Date().toISOString()}. Governing Law: ${analysis.identified_governing_law || 'Not specified'}`,
     status: 'active',
   };
-
-  if (vendorId) {
-    contractData.vendor_id = vendorId;
-  }
 
   const { data: contract, error: contractError } = await supabase
     .from('contracts')
@@ -312,6 +320,8 @@ export async function populateRoiFromAnalysis(
 
   if (vendorId && contract.id) {
     // Try to create a basic ICT service record
+    // Note: Using only columns from migration 003 schema
+    // service_start_date and service_end_date are from migration 005 - not available yet
     const { error: serviceError } = await supabase
       .from('ict_services')
       .insert({
@@ -321,8 +331,7 @@ export async function populateRoiFromAnalysis(
         service_name: `Services under ${contractRef}`,
         service_type: 'other',
         criticality_level: 'non_critical', // Default, needs assessment
-        service_start_date: analysis.identified_effective_date,
-        service_end_date: analysis.identified_expiry_date,
+        description: `ICT service derived from contract ${contractRef}. Effective: ${analysis.identified_effective_date || 'Not specified'}, Expires: ${analysis.identified_expiry_date || 'Not specified'}`,
       });
 
     if (!serviceError) {

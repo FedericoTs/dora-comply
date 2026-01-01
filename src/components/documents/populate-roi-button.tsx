@@ -240,9 +240,14 @@ export function PopulateRoiButton({
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span className="text-sm">No provider identified in contract</span>
+                <div className="rounded-lg border border-error/30 bg-error/5 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-error">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">No provider identified in contract</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    A vendor must be linked to create RoI records. Please first link this document to an existing vendor or ensure the AI analysis identified a provider.
+                  </p>
                 </div>
               )}
             </div>
@@ -293,20 +298,20 @@ export function PopulateRoiButton({
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-sm font-medium mb-2">This will create:</p>
               <ul className="text-sm space-y-1">
-                <li className="flex items-center gap-2">
-                  <ChevronRight className="h-3 w-3" />
-                  1 contract record in <strong>B_02.01</strong>
-                </li>
                 {(createVendor || vendorId) && (
                   <li className="flex items-center gap-2">
                     <ChevronRight className="h-3 w-3" />
                     {createVendor ? '1 new vendor' : 'Link to existing vendor'} in{' '}
-                    <strong>B_05.01</strong>
+                    <strong>B_02.01</strong> (Provider Registry)
                   </li>
                 )}
                 <li className="flex items-center gap-2">
                   <ChevronRight className="h-3 w-3" />
-                  1 ICT service record in <strong>B_04.01</strong>
+                  1 contract record in <strong>B_03.01</strong> (Contracts)
+                </li>
+                <li className="flex items-center gap-2">
+                  <ChevronRight className="h-3 w-3" />
+                  1 ICT service record in <strong>B_04.01</strong> (Services)
                 </li>
               </ul>
             </div>
@@ -323,7 +328,7 @@ export function PopulateRoiButton({
           </Button>
           <Button
             onClick={handlePopulate}
-            disabled={populating || !preview}
+            disabled={populating || !preview || (!vendorId && !createVendor)}
             className="gap-2"
           >
             {populating ? (
@@ -338,6 +343,11 @@ export function PopulateRoiButton({
               </>
             )}
           </Button>
+          {preview && !vendorId && !createVendor && (
+            <p className="text-xs text-error mt-2 w-full text-right">
+              Please select or create a vendor to continue
+            </p>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
