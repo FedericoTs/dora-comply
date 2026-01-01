@@ -183,11 +183,19 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
             </CardContent>
           </Card>
 
-          {/* Document Metadata */}
-          {Object.keys(document.metadata).length > 0 && (
+          {/* Document Metadata / AI-Extracted Details */}
+          {(Object.keys(document.metadata).length > 0 || document.parsing_status === 'completed') && (
             <Card className="card-elevated">
               <CardHeader>
-                <CardTitle className="text-base">Document Details</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  Document Details
+                  {document.metadata.ai_analyzed === true && (
+                    <Badge variant="outline" className="text-xs font-normal">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      AI Extracted
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {document.metadata.description && (
@@ -287,7 +295,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
                   )}
 
                   {/* Contract specific */}
-                  {document.metadata.contract_start && (
+                  {typeof document.metadata.contract_start === 'string' && (
                     <div>
                       <p className="text-xs font-medium text-muted-foreground uppercase">
                         Contract Start
@@ -298,7 +306,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
                     </div>
                   )}
 
-                  {document.metadata.contract_end && (
+                  {typeof document.metadata.contract_end === 'string' && (
                     <div>
                       <p className="text-xs font-medium text-muted-foreground uppercase">
                         Contract End
@@ -309,7 +317,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
                     </div>
                   )}
 
-                  {document.metadata.renewal_type && (
+                  {typeof document.metadata.renewal_type === 'string' && (
                     <div>
                       <p className="text-xs font-medium text-muted-foreground uppercase">
                         Renewal Type
@@ -318,7 +326,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
                     </div>
                   )}
 
-                  {document.metadata.version && (
+                  {typeof document.metadata.version === 'string' && (
                     <div>
                       <p className="text-xs font-medium text-muted-foreground uppercase">
                         Version
@@ -326,15 +334,61 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
                       <p className="mt-1">{document.metadata.version}</p>
                     </div>
                   )}
+
+                  {/* AI-Extracted Fields */}
+                  {typeof document.metadata.governing_law === 'string' && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Governing Law
+                      </p>
+                      <p className="mt-1">{document.metadata.governing_law}</p>
+                    </div>
+                  )}
+
+                  {typeof document.metadata.provider_name === 'string' && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Provider
+                      </p>
+                      <p className="mt-1">{document.metadata.provider_name}</p>
+                    </div>
+                  )}
+
+                  {typeof document.metadata.customer_name === 'string' && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Customer
+                      </p>
+                      <p className="mt-1">{document.metadata.customer_name}</p>
+                    </div>
+                  )}
+
+                  {typeof document.metadata.page_count === 'number' && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Pages
+                      </p>
+                      <p className="mt-1">{document.metadata.page_count}</p>
+                    </div>
+                  )}
+
+                  {typeof document.metadata.word_count === 'number' && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Word Count
+                      </p>
+                      <p className="mt-1">{document.metadata.word_count.toLocaleString()}</p>
+                    </div>
+                  )}
                 </div>
 
-                {document.metadata.tags && document.metadata.tags.length > 0 && (
+                {Array.isArray(document.metadata.tags) && document.metadata.tags.length > 0 && (
                   <div>
                     <p className="text-xs font-medium text-muted-foreground uppercase mb-2">
                       Tags
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {document.metadata.tags.map((tag) => (
+                      {(document.metadata.tags as string[]).map((tag) => (
                         <Badge key={tag} variant="outline">
                           {tag}
                         </Badge>

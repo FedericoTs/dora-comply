@@ -341,13 +341,50 @@ export async function analyzeContractDocument(
         .eq('organization_id', organizationId);
     }
 
-    // Update document parsing status
+    // Update document parsing status AND metadata with extracted info
+    // Build metadata from AI analysis results
+    const extractedMetadata: Record<string, unknown> = {
+      ...document.metadata, // Preserve existing metadata
+    };
+
+    // Add extracted contract details
+    if (result.contractType) {
+      extractedMetadata.description = result.contractType;
+    }
+    if (result.effectiveDate) {
+      extractedMetadata.valid_from = result.effectiveDate;
+      extractedMetadata.contract_start = result.effectiveDate;
+    }
+    if (result.expiryDate) {
+      extractedMetadata.valid_until = result.expiryDate;
+      extractedMetadata.expiry_date = result.expiryDate;
+      extractedMetadata.contract_end = result.expiryDate;
+    }
+    if (result.governingLaw) {
+      extractedMetadata.governing_law = result.governingLaw;
+    }
+    if (result.parties && result.parties.length > 0) {
+      extractedMetadata.parties = result.parties;
+      // Extract provider and customer names
+      const provider = result.parties.find(p => p.role === 'provider');
+      const customer = result.parties.find(p => p.role === 'customer');
+      if (provider) extractedMetadata.provider_name = provider.name;
+      if (customer) extractedMetadata.customer_name = customer.name;
+    }
+    // Add analysis metadata
+    extractedMetadata.ai_analyzed = true;
+    extractedMetadata.ai_analysis_date = new Date().toISOString();
+    extractedMetadata.ai_compliance_score = result.overallComplianceScore;
+    extractedMetadata.page_count = result.pageCount;
+    extractedMetadata.word_count = result.wordCount;
+
     await supabase
       .from('documents')
       .update({
         parsing_status: 'completed',
         parsed_at: new Date().toISOString(),
         parsing_confidence: result.confidenceScore,
+        metadata: extractedMetadata,
       })
       .eq('id', documentId);
 
