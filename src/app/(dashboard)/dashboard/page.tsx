@@ -1,9 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import {
-  Building2,
   FileText,
-  AlertTriangle,
   TrendingUp,
   TrendingDown,
   ArrowUpRight,
@@ -16,6 +14,14 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
+import { getVendorStats } from '@/lib/vendors/queries';
+import { fetchAllTemplateStats } from '@/lib/roi/queries';
+import {
+  getRecentActivity,
+  formatActivityTitle,
+  formatRelativeTime,
+  mapActivityType,
+} from '@/lib/activity/queries';
 
 export const metadata: Metadata = {
   title: 'Dashboard | DORA Comply',
@@ -25,6 +31,28 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   const firstName = user?.fullName?.split(' ')[0] || '';
+
+  // Fetch real data
+  const [vendorStats, roiStats, recentActivity] = await Promise.all([
+    getVendorStats(),
+    fetchAllTemplateStats(),
+    getRecentActivity(5),
+  ]);
+
+  // Calculate RoI readiness (average completeness across templates with data)
+  const templatesWithData = roiStats.filter(s => s.rowCount > 0);
+  const avgRoiCompleteness = templatesWithData.length > 0
+    ? Math.round(templatesWithData.reduce((sum, s) => sum + s.completeness, 0) / templatesWithData.length)
+    : 0;
+
+  // Calculate days to deadline (April 30, 2025 for first RoI submission)
+  const deadline = new Date('2025-04-30');
+  const today = new Date();
+  const daysToDeadline = Math.max(0, Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+
+  // Calculate total vendors
+  const totalVendors = vendorStats.total;
+  const criticalRisks = vendorStats.by_risk.critical;
 
   return (
     <>
@@ -52,28 +80,28 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-4 gap-6 mb-8 stagger">
         <StatCard
           label="Total Vendors"
-          value="0"
-          change="+0"
+          value={totalVendors.toString()}
+          change={totalVendors > 0 ? `+${totalVendors}` : '+0'}
           trend="up"
-          period="vs last month"
+          period="total"
         />
         <StatCard
           label="RoI Readiness"
-          value="0%"
-          change="+0%"
+          value={`${avgRoiCompleteness}%`}
+          change={avgRoiCompleteness > 0 ? `${templatesWithData.length} templates` : 'No data yet'}
           trend="up"
-          period="vs last week"
+          period=""
         />
         <StatCard
           label="Critical Risks"
-          value="0"
-          change="0"
+          value={criticalRisks.toString()}
+          change={criticalRisks === 0 ? 'None' : `${criticalRisks} vendors`}
           trend="down"
-          period="from yesterday"
+          period=""
         />
         <StatCard
           label="Days to Deadline"
-          value="121"
+          value={daysToDeadline.toString()}
           subtitle="April 30, 2025"
         />
       </div>
@@ -90,23 +118,38 @@ export default async function DashboardPage() {
             </button>
           </div>
           <div className="space-y-0">
-            <ActivityItem
-              title="Welcome to DORA Comply!"
-              description="Get started by adding your first vendor"
-              time="Just now"
-              type="info"
-            />
-            <ActivityItem
-              title="Complete your organization setup"
-              description="Add more details to your profile"
-              time="Today"
-              type="info"
-            />
+            {recentActivity.length > 0 ? (
+              recentActivity.map(activity => (
+                <ActivityItem
+                  key={activity.id}
+                  title={formatActivityTitle(activity.action, activity.entity_type)}
+                  description={activity.entity_name || ''}
+                  time={formatRelativeTime(activity.created_at)}
+                  type={mapActivityType(activity.action)}
+                />
+              ))
+            ) : (
+              <>
+                <ActivityItem
+                  title="Welcome to DORA Comply!"
+                  description="Get started by adding your first vendor"
+                  time="Just now"
+                  type="info"
+                />
+                <ActivityItem
+                  title="Complete your organization setup"
+                  description="Add more details to your profile"
+                  time="Today"
+                  type="info"
+                />
+              </>
+            )}
           </div>
-          {/* Empty state */}
-          <div className="py-8 text-center text-muted-foreground">
-            <p className="text-sm">Add vendors to see activity here</p>
-          </div>
+          {totalVendors === 0 && (
+            <div className="py-8 text-center text-muted-foreground">
+              <p className="text-sm">Add vendors to see activity here</p>
+            </div>
+          )}
         </div>
 
         {/* Deadline Card */}
@@ -116,25 +159,29 @@ export default async function DashboardPage() {
             <span className="text-sm font-medium">RoI Submission</span>
           </div>
           <div className="mb-6">
-            <div className="text-5xl font-semibold tracking-tight mb-1">121</div>
+            <div className="text-5xl font-semibold tracking-tight mb-1">{daysToDeadline}</div>
             <div className="text-muted-foreground">days remaining</div>
           </div>
           <div className="space-y-3 mb-6">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">0%</span>
+              <span className="font-medium">{avgRoiCompleteness}%</span>
             </div>
             <div className="progress-bar">
-              <div className="progress-fill" style={{ width: '0%' }} />
+              <div className="progress-fill" style={{ width: `${avgRoiCompleteness}%` }} />
             </div>
           </div>
           <div className="p-4 rounded-lg bg-accent">
             <div className="flex items-start gap-3">
               <Zap className="h-5 w-5 text-primary mt-0.5" />
               <div>
-                <p className="text-sm font-medium mb-1">Get started</p>
+                <p className="text-sm font-medium mb-1">
+                  {totalVendors === 0 ? 'Get started' : 'Keep going!'}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Add your first vendor to begin tracking progress.
+                  {totalVendors === 0
+                    ? 'Add your first vendor to begin tracking progress.'
+                    : `${totalVendors} vendor${totalVendors === 1 ? '' : 's'} registered. Continue building your RoI.`}
                 </p>
               </div>
             </div>
@@ -150,10 +197,10 @@ export default async function DashboardPage() {
             </button>
           </div>
           <div className="space-y-4">
-            <RiskRow label="Critical" count={0} total={1} color="bg-error" />
-            <RiskRow label="High" count={0} total={1} color="bg-warning" />
-            <RiskRow label="Medium" count={0} total={1} color="bg-chart-5" />
-            <RiskRow label="Low" count={0} total={1} color="bg-success" />
+            <RiskRow label="Critical" count={vendorStats.by_risk.critical} total={totalVendors} color="bg-error" />
+            <RiskRow label="High" count={vendorStats.by_risk.high} total={totalVendors} color="bg-warning" />
+            <RiskRow label="Medium" count={vendorStats.by_risk.medium} total={totalVendors} color="bg-chart-5" />
+            <RiskRow label="Low" count={vendorStats.by_risk.low} total={totalVendors} color="bg-success" />
           </div>
         </div>
 
@@ -168,7 +215,7 @@ export default async function DashboardPage() {
               step={1}
               title="Add your first ICT third-party provider"
               href="/vendors/new"
-              completed={false}
+              completed={totalVendors > 0}
             />
             <StepItem
               step={2}
@@ -180,7 +227,7 @@ export default async function DashboardPage() {
               step={3}
               title="Generate your Register of Information"
               href="/roi"
-              completed={false}
+              completed={avgRoiCompleteness > 0}
             />
             <StepItem
               step={4}
@@ -226,7 +273,7 @@ function StatCard({
             <TrendingDown className="h-4 w-4 text-success" />
           )}
           <span className="text-sm text-success font-medium">{change}</span>
-          <span className="text-sm text-muted-foreground">{period}</span>
+          {period && <span className="text-sm text-muted-foreground">{period}</span>}
         </div>
       )}
       {subtitle && (
@@ -266,7 +313,7 @@ function ActivityItem({
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium">{title}</p>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="text-sm text-muted-foreground truncate">{description}</p>
       </div>
       <p className="text-sm text-muted-foreground whitespace-nowrap">{time}</p>
     </div>

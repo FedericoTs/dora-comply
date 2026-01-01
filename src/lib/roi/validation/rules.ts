@@ -314,6 +314,50 @@ export const B_01_02_RULES: TemplateRules = {
 };
 
 // ============================================================================
+// B_01.03 Rules - Branches
+// ============================================================================
+
+export const B_01_03_RULES: TemplateRules = {
+  c0010: {
+    columnCode: 'c0010',
+    description: 'Branch identification code',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Branch ID'),
+      maxLengthRule(100, 'Branch ID'),
+      {
+        type: 'pattern',
+        severity: 'warning',
+        message: 'Branch ID should be alphanumeric with hyphens/underscores',
+        validate: (value) => validators.pattern(value, /^[A-Za-z0-9_-]+$/),
+      },
+    ],
+  },
+  c0020: {
+    columnCode: 'c0020',
+    description: 'LEI of head office',
+    dataType: 'string',
+    required: true,
+    rules: [requiredRule('Organization LEI'), leiRule('Organization LEI')],
+  },
+  c0030: {
+    columnCode: 'c0030',
+    description: 'Branch name',
+    dataType: 'string',
+    required: true,
+    rules: [requiredRule('Branch name'), maxLengthRule(500, 'Branch name')],
+  },
+  c0040: {
+    columnCode: 'c0040',
+    description: 'Country of branch',
+    dataType: 'string',
+    required: true,
+    rules: [requiredRule('Country'), ebaEnumRule('eba_GA:', 'Country code')],
+  },
+};
+
+// ============================================================================
 // B_02.01 Rules - Contracts Overview
 // ============================================================================
 
@@ -477,6 +521,44 @@ export const B_02_02_RULES: TemplateRules = {
 };
 
 // ============================================================================
+// B_04.01 Rules - Service Recipients
+// ============================================================================
+
+export const B_04_01_RULES: TemplateRules = {
+  c0010: {
+    columnCode: 'c0010',
+    description: 'Contract reference number',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Contract reference'),
+      maxLengthRule(100, 'Contract reference'),
+    ],
+  },
+  c0020: {
+    columnCode: 'c0020',
+    description: 'LEI of entity using service',
+    dataType: 'string',
+    required: true,
+    rules: [requiredRule('Entity LEI'), leiRule('Entity LEI')],
+  },
+  c0030: {
+    columnCode: 'c0030',
+    description: 'Nature of entity',
+    dataType: 'string',
+    required: true,
+    rules: [requiredRule('Entity nature'), ebaEnumRule('eba_BT:', 'Entity nature')],
+  },
+  c0040: {
+    columnCode: 'c0040',
+    description: 'Branch identification code',
+    dataType: 'string',
+    required: false,
+    rules: [maxLengthRule(100, 'Branch code')],
+  },
+};
+
+// ============================================================================
 // B_05.01 Rules - ICT Providers
 // ============================================================================
 
@@ -539,6 +621,73 @@ export const B_05_01_RULES: TemplateRules = {
       requiredRule('Currency'),
       ebaEnumRule('eba_CU:', 'Currency code'),
     ],
+  },
+};
+
+// ============================================================================
+// B_05.02 Rules - Subcontracting Chain
+// ============================================================================
+
+export const B_05_02_RULES: TemplateRules = {
+  c0010: {
+    columnCode: 'c0010',
+    description: 'Contract reference number',
+    dataType: 'string',
+    required: true,
+    rules: [requiredRule('Contract reference'), maxLengthRule(100, 'Contract reference')],
+  },
+  c0020: {
+    columnCode: 'c0020',
+    description: 'Type of ICT services',
+    dataType: 'string',
+    required: true,
+    rules: [requiredRule('Service type'), ebaEnumRule('eba_TA:', 'Service type')],
+  },
+  c0030: {
+    columnCode: 'c0030',
+    description: 'Provider identification code',
+    dataType: 'string',
+    required: true,
+    rules: [requiredRule('Provider ID'), maxLengthRule(100, 'Provider ID')],
+  },
+  c0040: {
+    columnCode: 'c0040',
+    description: 'Provider code type',
+    dataType: 'string',
+    required: true,
+    rules: [requiredRule('Provider code type'), ebaEnumRule('eba_qCO:', 'Provider code type')],
+  },
+  c0050: {
+    columnCode: 'c0050',
+    description: 'Rank in subcontracting chain',
+    dataType: 'number',
+    required: true,
+    rules: [
+      requiredRule('Tier level'),
+      {
+        type: 'range',
+        severity: 'error',
+        message: 'Tier level must be 1-10',
+        validate: (value) => {
+          const num = Number(value);
+          return Number.isInteger(num) && num >= 1 && num <= 10;
+        },
+      },
+    ],
+  },
+  c0060: {
+    columnCode: 'c0060',
+    description: 'Subcontractor identification code',
+    dataType: 'string',
+    required: true,
+    rules: [requiredRule('Subcontractor ID'), maxLengthRule(100, 'Subcontractor ID')],
+  },
+  c0070: {
+    columnCode: 'c0070',
+    description: 'Subcontractor code type',
+    dataType: 'string',
+    required: true,
+    rules: [requiredRule('Subcontractor code type'), ebaEnumRule('eba_qCO:', 'Subcontractor code type')],
   },
 };
 
@@ -731,9 +880,12 @@ export const B_07_01_RULES: TemplateRules = {
 export const TEMPLATE_RULES: Partial<Record<RoiTemplateId, TemplateRules>> = {
   'B_01.01': B_01_01_RULES,
   'B_01.02': B_01_02_RULES,
+  'B_01.03': B_01_03_RULES,
   'B_02.01': B_02_01_RULES,
   'B_02.02': B_02_02_RULES,
+  'B_04.01': B_04_01_RULES,
   'B_05.01': B_05_01_RULES,
+  'B_05.02': B_05_02_RULES,
   'B_06.01': B_06_01_RULES,
   'B_07.01': B_07_01_RULES,
 };
@@ -803,6 +955,54 @@ export const CROSS_FIELD_RULES: CrossFieldRule[] = [
             errors.push(`Row ${i + 1}: Duplicate contract reference: ${ref}`);
           }
           refs.add(ref);
+        }
+      });
+      return { valid: errors.length === 0, errors };
+    },
+  },
+  {
+    templateId: 'B_01.03',
+    name: 'unique_branch_id',
+    description: 'Each branch must have unique ID',
+    severity: 'error',
+    validate: (rows) => {
+      const ids = new Set<string>();
+      const errors: string[] = [];
+      rows.forEach((row, i) => {
+        const id = row.c0010 as string;
+        if (id) {
+          if (ids.has(id)) {
+            errors.push(`Row ${i + 1}: Duplicate branch ID '${id}'`);
+          }
+          ids.add(id);
+        }
+      });
+      return { valid: errors.length === 0, errors };
+    },
+  },
+  {
+    templateId: 'B_05.02',
+    name: 'sequential_tiers',
+    description: 'Tier levels should be sequential per contract',
+    severity: 'warning',
+    validate: (rows) => {
+      const errors: string[] = [];
+      const byContract = new Map<string, number[]>();
+      rows.forEach(row => {
+        const ref = row.c0010 as string;
+        const tier = Number(row.c0050);
+        if (ref && !isNaN(tier)) {
+          if (!byContract.has(ref)) byContract.set(ref, []);
+          byContract.get(ref)!.push(tier);
+        }
+      });
+      byContract.forEach((tiers, ref) => {
+        const sorted = [...tiers].sort((a, b) => a - b);
+        for (let i = 0; i < sorted.length; i++) {
+          if (sorted[i] !== i + 1) {
+            errors.push(`Contract ${ref}: Tiers should be sequential starting from 1 (found: ${sorted.join(', ')})`);
+            break;
+          }
         }
       });
       return { valid: errors.length === 0, errors };

@@ -72,6 +72,33 @@ function mapVendorFromDatabase(row: Record<string, unknown>): Vendor {
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
     deleted_at: row.deleted_at as string | null,
+
+    // LEI Enrichment Fields (GLEIF API)
+    lei_status: row.lei_status as Vendor['lei_status'],
+    lei_verified_at: row.lei_verified_at as string | null,
+    lei_next_renewal: row.lei_next_renewal as string | null,
+    entity_status: row.entity_status as Vendor['entity_status'],
+    registration_authority_id: row.registration_authority_id as string | null,
+    legal_form_code: row.legal_form_code as string | null,
+    entity_creation_date: row.entity_creation_date as string | null,
+    legal_address: row.legal_address as Vendor['legal_address'],
+    headquarters_address: row.headquarters_address as Vendor['headquarters_address'],
+    gleif_data: row.gleif_data as Record<string, unknown> | null,
+    gleif_fetched_at: row.gleif_fetched_at as string | null,
+
+    // Parent Company Fields (GLEIF Level 2)
+    direct_parent_lei: row.direct_parent_lei as string | null,
+    direct_parent_name: row.direct_parent_name as string | null,
+    direct_parent_country: row.direct_parent_country as string | null,
+    ultimate_parent_lei: row.ultimate_parent_lei as string | null,
+    ultimate_parent_name: row.ultimate_parent_name as string | null,
+    ultimate_parent_country: row.ultimate_parent_country as string | null,
+
+    // ESA Fields
+    esa_register_id: row.esa_register_id as string | null,
+    substitutability_assessment: row.substitutability_assessment as Vendor['substitutability_assessment'],
+    total_annual_expense: row.total_annual_expense as number | null,
+    expense_currency: row.expense_currency as string | null,
   };
 }
 
@@ -333,6 +360,7 @@ export async function getVendorStats(): Promise<VendorStats> {
       total: 0,
       by_tier: { critical: 0, important: 0, standard: 0 },
       by_status: { active: 0, pending: 0, inactive: 0, offboarding: 0 },
+      by_risk: { critical: 0, high: 0, medium: 0, low: 0 },
       pending_reviews: 0,
       roi_ready_percentage: 0,
       avg_risk_score: null,
@@ -351,6 +379,7 @@ export async function getVendorStats(): Promise<VendorStats> {
       total: 0,
       by_tier: { critical: 0, important: 0, standard: 0 },
       by_status: { active: 0, pending: 0, inactive: 0, offboarding: 0 },
+      by_risk: { critical: 0, high: 0, medium: 0, low: 0 },
       pending_reviews: 0,
       roi_ready_percentage: 0,
       avg_risk_score: null,
@@ -373,9 +402,15 @@ export async function getVendorStats(): Promise<VendorStats> {
     offboarding: vendors.filter(v => v.status === 'offboarding').length,
   };
 
+  // Risk breakdown (based on RISK_THRESHOLDS: critical 81-100, high 61-80, medium 31-60, low 0-30)
+  const byRisk = {
+    critical: vendors.filter(v => (v.risk_score ?? 0) >= 81).length,
+    high: vendors.filter(v => (v.risk_score ?? 0) >= 61 && (v.risk_score ?? 0) < 81).length,
+    medium: vendors.filter(v => (v.risk_score ?? 0) >= 31 && (v.risk_score ?? 0) < 61).length,
+    low: vendors.filter(v => (v.risk_score ?? 0) < 31 || v.risk_score === null).length,
+  };
+
   // Pending reviews = critical/important vendors without recent assessment
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const pendingReviews = vendors.filter(v =>
     (v.tier === 'critical' || v.tier === 'important') && v.status === 'pending'
   ).length;
@@ -394,6 +429,7 @@ export async function getVendorStats(): Promise<VendorStats> {
     total,
     by_tier: byTier,
     by_status: byStatus,
+    by_risk: byRisk,
     pending_reviews: pendingReviews,
     roi_ready_percentage: roiReadyPercentage,
     avg_risk_score: avgRiskScore,

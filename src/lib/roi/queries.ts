@@ -433,17 +433,17 @@ export async function fetchB_05_01(): Promise<QueryResult<Record<string, unknown
 
   const rows = (vendors || []).map(v => ({
     c0010: v.lei || v.id,
-    c0020: 'eba_qCO:qx2000', // LEI code type
+    c0020: v.lei ? 'eba_qCO:qx2000' : 'eba_qCO:qx2099', // LEI or Other code type
     c0030: v.registration_number || null,
     c0040: v.registration_number ? 'eba_qCO:qx2001' : null,
     c0050: v.name || '',
     c0060: v.name || '', // Latin alphabet name
     c0070: 'eba_CT:x212', // Legal person
     c0080: mapToEbaCountry(v.headquarters_country),
-    c0090: mapToEbaCurrency('EUR'),
-    c0100: null, // Total annual expense
-    c0110: null, // Parent LEI
-    c0120: null, // Parent code type
+    c0090: mapToEbaCurrency(v.expense_currency || 'EUR'),
+    c0100: v.total_annual_expense || null, // Total annual expense from DB
+    c0110: v.ultimate_parent_lei || null, // Parent LEI from GLEIF Level 2
+    c0120: v.ultimate_parent_lei ? 'eba_qCO:qx2000' : null, // LEI code type if parent exists
   }));
 
   return { data: rows, count: rows.length, error: null };

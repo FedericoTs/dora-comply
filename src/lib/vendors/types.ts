@@ -78,9 +78,13 @@ export interface Vendor {
   registration_number?: string | null;
   regulatory_authorizations: string[];
 
-  // ESA/DORA B_05.01 fields (from Migration 005)
+  // ESA/DORA B_05.01 fields (from Migration 005/006)
+  direct_parent_lei?: string | null;
+  direct_parent_name?: string | null;
+  direct_parent_country?: string | null;
   ultimate_parent_lei?: string | null;
   ultimate_parent_name?: string | null;
+  ultimate_parent_country?: string | null;
   esa_register_id?: string | null;
   substitutability_assessment?: SubstitutabilityAssessment | null;
   total_annual_expense?: number | null;
@@ -167,6 +171,12 @@ export interface VendorStats {
     pending: number;
     inactive: number;
     offboarding: number;
+  };
+  by_risk: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
   };
   pending_reviews: number;
   roi_ready_percentage: number;
