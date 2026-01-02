@@ -500,16 +500,16 @@ export function IncidentEditForm({ incident, vendors }: IncidentEditFormProps) {
               <div className="space-y-2">
                 <Label htmlFor="reputational_impact">Reputational Impact</Label>
                 <Select
-                  value={formData.reputational_impact || ''}
+                  value={formData.reputational_impact || '_none'}
                   onValueChange={(value) => updateFormData({
-                    reputational_impact: value as ImpactLevel || undefined,
+                    reputational_impact: value === '_none' ? undefined : value as ImpactLevel,
                   })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select impact level" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="_none">None</SelectItem>
                     {IMPACT_LEVELS.map((level) => (
                       <SelectItem key={level.value} value={level.value}>
                         {level.label}
@@ -547,16 +547,16 @@ export function IncidentEditForm({ incident, vendors }: IncidentEditFormProps) {
               <div className="space-y-2">
                 <Label htmlFor="vendor_id">Related Vendor</Label>
                 <Select
-                  value={formData.vendor_id || ''}
+                  value={formData.vendor_id || '_none'}
                   onValueChange={(value) => updateFormData({
-                    vendor_id: value || undefined,
+                    vendor_id: value === '_none' ? undefined : value,
                   })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select vendor" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="_none">None</SelectItem>
                     {vendors.map((vendor) => (
                       <SelectItem key={vendor.id} value={vendor.id}>
                         {vendor.name}
