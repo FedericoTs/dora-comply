@@ -44,6 +44,7 @@ export type ImpactLevel = typeof IMPACT_LEVELS[number];
 export const EVENT_TYPES = [
   'created',
   'classified',
+  'reclassified',
   'escalated',
   'updated',
   'report_submitted',
@@ -94,6 +95,13 @@ export interface Incident {
   root_cause: string | null;
   remediation_actions: string | null;
   lessons_learned: string | null;
+
+  // Classification Override (DORA audit trail)
+  classification_calculated: IncidentClassification | null;
+  classification_override: boolean;
+  classification_override_justification: string | null;
+  classification_override_at: string | null;
+  classification_override_by: string | null;
 
   // Relations
   vendor_id: string | null;
@@ -189,6 +197,10 @@ export interface CreateIncidentInput {
   vendor_id?: string;
   root_cause?: string;
   remediation_actions?: string;
+  // Classification override fields
+  classification_calculated?: IncidentClassification;
+  classification_override?: boolean;
+  classification_override_justification?: string;
 }
 
 export interface UpdateIncidentInput extends Partial<CreateIncidentInput> {
@@ -251,6 +263,43 @@ export interface PendingDeadline {
   deadline: string;
   hours_remaining: number;
   is_overdue: boolean;
+}
+
+// ============================================================================
+// Classification Calculation Types
+// ============================================================================
+
+export interface ThresholdStatus {
+  key: string;
+  label: string;
+  description: string;
+  triggered: boolean;
+  currentValue: string | number | boolean | null;
+  thresholdValue: string | number;
+  classification: 'major' | 'significant';
+}
+
+export interface ClassificationResult {
+  calculated: IncidentClassification;
+  triggeredThresholds: ThresholdStatus[];
+  notTriggeredThresholds: ThresholdStatus[];
+  requiresReporting: boolean;
+  deadlines: {
+    initial: Date | null;
+    intermediate: Date | null;
+    final: Date | null;
+  } | null;
+}
+
+export interface ImpactData {
+  clients_affected_count?: number;
+  clients_affected_percentage?: number;
+  transactions_affected_count?: number;
+  transactions_value_affected?: number;
+  duration_hours?: number;
+  critical_functions_affected?: string[];
+  data_breach?: boolean;
+  data_records_affected?: number;
 }
 
 // ============================================================================

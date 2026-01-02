@@ -13,6 +13,13 @@ import {
   REPORT_STATUSES,
   IMPACT_LEVELS,
   EVENT_TYPES,
+  calculateDeadline,
+} from './types';
+import type {
+  ImpactData,
+  ClassificationResult,
+  ThresholdStatus,
+  IncidentClassification,
 } from './types';
 
 // ============================================================================
@@ -87,7 +94,23 @@ export const createIncidentSchema = z.object({
   vendor_id: z.string().uuid().optional(),
   root_cause: z.string().optional(),
   remediation_actions: z.string().optional(),
-});
+  // Classification override fields
+  classification_calculated: incidentClassificationSchema.optional(),
+  classification_override: z.boolean().optional().default(false),
+  classification_override_justification: z.string().optional(),
+}).refine(
+  (data) => {
+    // If override is true, justification must be at least 50 characters
+    if (data.classification_override && (!data.classification_override_justification || data.classification_override_justification.length < 50)) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'Override justification must be at least 50 characters when overriding classification',
+    path: ['classification_override_justification'],
+  }
+);
 
 export const updateIncidentSchema = createIncidentSchema.partial().extend({
   status: incidentStatusSchema.optional(),
@@ -201,4 +224,160 @@ export function suggestClassification(data: {
   }
 
   return 'minor';
+}
+
+/**
+ * Comprehensive classification calculation with detailed threshold analysis
+ * Returns full ClassificationResult with triggered/not-triggered thresholds
+ */
+export function calculateClassification(
+  data: ImpactData,
+  detectionDateTime?: string
+): ClassificationResult {
+  const major = CLASSIFICATION_THRESHOLDS.major;
+  const significant = CLASSIFICATION_THRESHOLDS.significant;
+
+  const allThresholds: ThresholdStatus[] = [
+    // Major thresholds
+    {
+      key: 'data_breach',
+      label: 'Data Breach',
+      description: 'Any data breach automatically triggers Major classification',
+      triggered: data.data_breach === true,
+      currentValue: data.data_breach ?? false,
+      thresholdValue: 'Any breach',
+      classification: 'major',
+    },
+    {
+      key: 'critical_functions',
+      label: 'Critical Functions',
+      description: 'One or more critical functions affected',
+      triggered: (data.critical_functions_affected?.length ?? 0) >= major.critical_functions_count,
+      currentValue: data.critical_functions_affected?.length ?? 0,
+      thresholdValue: `≥${major.critical_functions_count}`,
+      classification: 'major',
+    },
+    {
+      key: 'clients_percentage_major',
+      label: 'Client Impact (Major)',
+      description: `≥${major.clients_affected_percentage}% of clients affected`,
+      triggered: (data.clients_affected_percentage ?? 0) >= major.clients_affected_percentage,
+      currentValue: data.clients_affected_percentage ?? null,
+      thresholdValue: `≥${major.clients_affected_percentage}%`,
+      classification: 'major',
+    },
+    {
+      key: 'transaction_value_major',
+      label: 'Transaction Value (Major)',
+      description: `≥€${(major.transactions_value_affected / 1000000).toFixed(0)}M in transactions affected`,
+      triggered: (data.transactions_value_affected ?? 0) >= major.transactions_value_affected,
+      currentValue: data.transactions_value_affected ?? null,
+      thresholdValue: `≥€${(major.transactions_value_affected / 1000000).toFixed(0)}M`,
+      classification: 'major',
+    },
+    {
+      key: 'duration_major',
+      label: 'Duration (Major)',
+      description: `≥${major.duration_hours} hours of service disruption`,
+      triggered: (data.duration_hours ?? 0) >= major.duration_hours,
+      currentValue: data.duration_hours ?? null,
+      thresholdValue: `≥${major.duration_hours}h`,
+      classification: 'major',
+    },
+    // Significant thresholds
+    {
+      key: 'clients_percentage_significant',
+      label: 'Client Impact (Significant)',
+      description: `≥${significant.clients_affected_percentage}% of clients affected`,
+      triggered: (data.clients_affected_percentage ?? 0) >= significant.clients_affected_percentage && (data.clients_affected_percentage ?? 0) < major.clients_affected_percentage,
+      currentValue: data.clients_affected_percentage ?? null,
+      thresholdValue: `≥${significant.clients_affected_percentage}%`,
+      classification: 'significant',
+    },
+    {
+      key: 'transaction_value_significant',
+      label: 'Transaction Value (Significant)',
+      description: `≥€${(significant.transactions_value_affected / 1000).toFixed(0)}K in transactions affected`,
+      triggered: (data.transactions_value_affected ?? 0) >= significant.transactions_value_affected && (data.transactions_value_affected ?? 0) < major.transactions_value_affected,
+      currentValue: data.transactions_value_affected ?? null,
+      thresholdValue: `≥€${(significant.transactions_value_affected / 1000).toFixed(0)}K`,
+      classification: 'significant',
+    },
+    {
+      key: 'duration_significant',
+      label: 'Duration (Significant)',
+      description: `≥${significant.duration_hours} hours of service disruption`,
+      triggered: (data.duration_hours ?? 0) >= significant.duration_hours && (data.duration_hours ?? 0) < major.duration_hours,
+      currentValue: data.duration_hours ?? null,
+      thresholdValue: `≥${significant.duration_hours}h`,
+      classification: 'significant',
+    },
+  ];
+
+  const triggeredThresholds = allThresholds.filter(t => t.triggered);
+  const notTriggeredThresholds = allThresholds.filter(t => !t.triggered);
+
+  // Determine classification based on triggered thresholds
+  let calculated: IncidentClassification = 'minor';
+
+  const hasMajorTrigger = triggeredThresholds.some(t => t.classification === 'major');
+  const hasSignificantTrigger = triggeredThresholds.some(t => t.classification === 'significant');
+
+  if (hasMajorTrigger) {
+    calculated = 'major';
+  } else if (hasSignificantTrigger) {
+    calculated = 'significant';
+  }
+
+  // Calculate deadlines if detection time is provided
+  let deadlines: ClassificationResult['deadlines'] = null;
+  if (detectionDateTime && (calculated === 'major' || calculated === 'significant')) {
+    const detectionDate = new Date(detectionDateTime);
+    deadlines = {
+      initial: calculated === 'major' ? calculateDeadline(detectionDate, 'initial') : null,
+      intermediate: calculateDeadline(detectionDate, 'intermediate'),
+      final: null, // Final deadline is based on resolution, not detection
+    };
+  }
+
+  return {
+    calculated,
+    triggeredThresholds,
+    notTriggeredThresholds,
+    requiresReporting: calculated === 'major' || calculated === 'significant',
+    deadlines,
+  };
+}
+
+/**
+ * Format threshold value for display
+ */
+export function formatThresholdValue(threshold: ThresholdStatus): string {
+  if (threshold.currentValue === null || threshold.currentValue === undefined) {
+    return 'Not provided';
+  }
+
+  if (typeof threshold.currentValue === 'boolean') {
+    return threshold.currentValue ? 'Yes' : 'No';
+  }
+
+  if (threshold.key.includes('transaction_value')) {
+    const value = threshold.currentValue as number;
+    if (value >= 1000000) {
+      return `€${(value / 1000000).toFixed(1)}M`;
+    } else if (value >= 1000) {
+      return `€${(value / 1000).toFixed(0)}K`;
+    }
+    return `€${value}`;
+  }
+
+  if (threshold.key.includes('percentage')) {
+    return `${threshold.currentValue}%`;
+  }
+
+  if (threshold.key.includes('duration')) {
+    return `${threshold.currentValue}h`;
+  }
+
+  return String(threshold.currentValue);
 }

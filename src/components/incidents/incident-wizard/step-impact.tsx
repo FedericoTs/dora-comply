@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, X, Globe, Users, DollarSign, Database, AlertCircle } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, X, Globe, Users, DollarSign, Database, AlertCircle, Shield, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -15,8 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import type { WizardData } from './index';
 import type { ImpactLevel } from '@/lib/incidents/types';
+import { calculateClassification, CLASSIFICATION_THRESHOLDS } from '@/lib/incidents/validation';
+import { ClassificationBadge } from '../threshold-indicator';
 
 interface StepImpactProps {
   data: WizardData;
@@ -55,6 +59,24 @@ export function StepImpact({
 }: StepImpactProps) {
   const [customRegion, setCustomRegion] = useState('');
 
+  // Calculate classification in real-time based on current impact data
+  const classificationResult = useMemo(() => {
+    return calculateClassification({
+      clients_affected_percentage: data.clients_affected_percentage,
+      transactions_value_affected: data.transactions_value_affected,
+      critical_functions_affected: data.critical_functions_affected,
+      data_breach: data.data_breach,
+      data_records_affected: data.data_records_affected,
+    }, data.detection_datetime);
+  }, [
+    data.clients_affected_percentage,
+    data.transactions_value_affected,
+    data.critical_functions_affected,
+    data.data_breach,
+    data.data_records_affected,
+    data.detection_datetime,
+  ]);
+
   const toggleService = (serviceId: string) => {
     const current = data.services_affected;
     const updated = current.includes(serviceId)
@@ -88,6 +110,55 @@ export function StepImpact({
 
   return (
     <div className="space-y-8">
+      {/* Real-time Classification Preview */}
+      <Card className={cn(
+        'border-2 transition-colors',
+        classificationResult.calculated === 'major' && 'border-destructive/50 bg-destructive/5',
+        classificationResult.calculated === 'significant' && 'border-warning/50 bg-warning/5',
+        classificationResult.calculated === 'minor' && 'border-muted'
+      )}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Shield className={cn(
+                'h-5 w-5',
+                classificationResult.calculated === 'major' && 'text-destructive',
+                classificationResult.calculated === 'significant' && 'text-warning',
+                classificationResult.calculated === 'minor' && 'text-muted-foreground'
+              )} />
+              <div>
+                <p className="text-sm font-medium">Current Classification</p>
+                <p className="text-xs text-muted-foreground">
+                  Based on impact data below
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <ClassificationBadge classification={classificationResult.calculated} size="md" />
+              {classificationResult.triggeredThresholds.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {classificationResult.triggeredThresholds.length} threshold{classificationResult.triggeredThresholds.length !== 1 ? 's' : ''} triggered
+                </span>
+              )}
+            </div>
+          </div>
+          {classificationResult.triggeredThresholds.length > 0 && (
+            <div className="mt-3 pt-3 border-t flex flex-wrap gap-2">
+              {classificationResult.triggeredThresholds.map((t) => (
+                <Badge
+                  key={t.key}
+                  variant={t.classification === 'major' ? 'destructive' : 'secondary'}
+                  className="gap-1 text-xs"
+                >
+                  <CheckCircle2 className="h-3 w-3" />
+                  {t.label}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Services Affected */}
       <div className="space-y-3">
         <div>
@@ -121,11 +192,19 @@ export function StepImpact({
 
       {/* Critical Functions Affected */}
       <div className="space-y-3">
-        <div>
-          <Label className="text-base font-medium">Critical Functions Affected</Label>
-          <p className="text-sm text-muted-foreground mt-1">
-            Select critical or important functions impacted
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <Label className="text-base font-medium">Critical Functions Affected</Label>
+            <p className="text-sm text-muted-foreground mt-1">
+              Select critical or important functions impacted
+            </p>
+          </div>
+          {data.critical_functions_affected.length > 0 && (
+            <Badge variant="destructive" className="gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Triggers Major
+            </Badge>
+          )}
         </div>
 
         {criticalFunctions.length > 0 ? (
@@ -174,7 +253,16 @@ export function StepImpact({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="clients_percentage">Clients Affected (%)</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="clients_percentage">Clients Affected (%)</Label>
+              {(data.clients_affected_percentage ?? 0) >= CLASSIFICATION_THRESHOLDS.major.clients_affected_percentage && (
+                <Badge variant="destructive" className="text-xs">Major</Badge>
+              )}
+              {(data.clients_affected_percentage ?? 0) >= CLASSIFICATION_THRESHOLDS.significant.clients_affected_percentage &&
+               (data.clients_affected_percentage ?? 0) < CLASSIFICATION_THRESHOLDS.major.clients_affected_percentage && (
+                <Badge className="text-xs bg-warning text-warning-foreground">Significant</Badge>
+              )}
+            </div>
             <Input
               id="clients_percentage"
               type="number"
@@ -189,6 +277,9 @@ export function StepImpact({
                 })
               }
             />
+            <p className="text-xs text-muted-foreground">
+              Major: ≥{CLASSIFICATION_THRESHOLDS.major.clients_affected_percentage}% • Significant: ≥{CLASSIFICATION_THRESHOLDS.significant.clients_affected_percentage}%
+            </p>
           </div>
         </div>
       </div>
@@ -217,7 +308,16 @@ export function StepImpact({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="transactions_value">Value Affected (€)</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="transactions_value">Value Affected (€)</Label>
+              {(data.transactions_value_affected ?? 0) >= CLASSIFICATION_THRESHOLDS.major.transactions_value_affected && (
+                <Badge variant="destructive" className="text-xs">Major</Badge>
+              )}
+              {(data.transactions_value_affected ?? 0) >= CLASSIFICATION_THRESHOLDS.significant.transactions_value_affected &&
+               (data.transactions_value_affected ?? 0) < CLASSIFICATION_THRESHOLDS.major.transactions_value_affected && (
+                <Badge className="text-xs bg-warning text-warning-foreground">Significant</Badge>
+              )}
+            </div>
             <Input
               id="transactions_value"
               type="number"
@@ -231,6 +331,9 @@ export function StepImpact({
                 })
               }
             />
+            <p className="text-xs text-muted-foreground">
+              Major: ≥€1M • Significant: ≥€100K
+            </p>
           </div>
         </div>
 
@@ -253,10 +356,16 @@ export function StepImpact({
       </div>
 
       {/* Data Breach */}
-      <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
+      <div className={cn(
+        'space-y-4 p-4 rounded-lg border',
+        data.data_breach ? 'border-destructive/50 bg-destructive/5' : 'bg-muted/30'
+      )}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-muted-foreground" />
+            <Database className={cn(
+              'h-4 w-4',
+              data.data_breach ? 'text-destructive' : 'text-muted-foreground'
+            )} />
             <div>
               <Label className="text-base font-medium">Data Breach</Label>
               <p className="text-sm text-muted-foreground">
@@ -264,10 +373,18 @@ export function StepImpact({
               </p>
             </div>
           </div>
-          <Switch
-            checked={data.data_breach}
-            onCheckedChange={(checked) => updateData({ data_breach: checked })}
-          />
+          <div className="flex items-center gap-3">
+            {data.data_breach && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Triggers Major
+              </Badge>
+            )}
+            <Switch
+              checked={data.data_breach}
+              onCheckedChange={(checked) => updateData({ data_breach: checked })}
+            />
+          </div>
         </div>
 
         {data.data_breach && (

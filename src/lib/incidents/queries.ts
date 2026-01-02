@@ -220,6 +220,13 @@ export async function updateIncident(
 ): Promise<{ data: Incident | null; error: string | null }> {
   const supabase = await createClient();
 
+  // Get current incident to track changes
+  const { data: oldIncident } = await supabase
+    .from('incidents')
+    .select('classification, classification_override, status')
+    .eq('id', id)
+    .single();
+
   const { data, error } = await supabase
     .from('incidents')
     .update({
@@ -236,11 +243,31 @@ export async function updateIncident(
   }
 
   // Track status change
-  if (input.status) {
+  if (input.status && input.status !== oldIncident?.status) {
     await addIncidentEvent(id, {
       event_type: 'updated',
       description: `Status changed to ${input.status}`,
-      metadata: { new_status: input.status },
+      metadata: { new_status: input.status, old_status: oldIncident?.status },
+    });
+  }
+
+  // Track classification change
+  if (input.classification && input.classification !== oldIncident?.classification) {
+    const isOverride = input.classification_override === true;
+    const eventDescription = isOverride
+      ? `Classification overridden from ${oldIncident?.classification} to ${input.classification}`
+      : `Classification changed from ${oldIncident?.classification} to ${input.classification}`;
+
+    await addIncidentEvent(id, {
+      event_type: 'reclassified',
+      description: eventDescription,
+      metadata: {
+        old_classification: oldIncident?.classification,
+        new_classification: input.classification,
+        was_override: oldIncident?.classification_override,
+        is_override: isOverride,
+        justification: isOverride ? input.classification_override_justification : undefined,
+      },
     });
   }
 

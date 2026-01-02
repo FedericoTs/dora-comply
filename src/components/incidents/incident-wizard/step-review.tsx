@@ -5,18 +5,14 @@ import {
   Shield,
   Info,
   Calendar,
-  Users,
-  Globe,
-  Building2,
-  FileText,
   Edit,
   Check,
-  DollarSign,
-  Database,
+  AlertCircle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import type { WizardData } from './index';
 import {
@@ -73,6 +69,10 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
     final: calculateDeadline(detectionDate, 'final'),
   };
 
+  const requiresReporting = data.classification === 'major' || data.classification === 'significant';
+  const isOverride = data.classification_override === true;
+  const classificationMismatch = isOverride && data.classification !== data.classification_calculated;
+
   return (
     <div className="space-y-6">
       {/* Summary Header */}
@@ -103,6 +103,7 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
               )}
             >
               {getClassificationLabel(data.classification)}
+              {isOverride && ' (Override)'}
             </Badge>
             <Badge variant="outline">{getIncidentTypeLabel(data.incident_type)}</Badge>
             {data.data_breach && (
@@ -112,24 +113,54 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
         </div>
       </div>
 
-      {/* Classification Section */}
+      {/* Override Warning */}
+      {classificationMismatch && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Classification has been overridden from{' '}
+            <strong className="capitalize">{data.classification_calculated}</strong> to{' '}
+            <strong className="capitalize">{data.classification}</strong>.
+            {data.classification_override_justification && (
+              <span className="block mt-1 text-xs">
+                Justification: {data.classification_override_justification}
+              </span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Step 0: Basic Info Section */}
       <div className="space-y-3">
-        <SectionHeader title="Classification" step={0} onEdit={goToStep} />
+        <SectionHeader title="Basic Information" step={0} onEdit={goToStep} />
         <div className="rounded-lg border p-4 space-y-1">
-          <InfoRow
-            label="Classification"
-            value={getClassificationLabel(data.classification)}
-          />
+          <InfoRow label="Title" value={data.title} />
           <InfoRow
             label="Incident Type"
             value={getIncidentTypeLabel(data.incident_type)}
           />
+          <InfoRow
+            label="Detection Time"
+            value={detectionDate.toLocaleString('en-GB')}
+          />
+          {data.occurrence_datetime && (
+            <InfoRow
+              label="Occurrence Time"
+              value={new Date(data.occurrence_datetime).toLocaleString('en-GB')}
+            />
+          )}
+          {data.description && (
+            <div className="pt-2 border-t mt-2">
+              <p className="text-sm text-muted-foreground mb-1">Description</p>
+              <p className="text-sm">{data.description}</p>
+            </div>
+          )}
         </div>
       </div>
 
       <Separator />
 
-      {/* Impact Section */}
+      {/* Step 1: Impact Section */}
       <div className="space-y-3">
         <SectionHeader title="Impact Assessment" step={1} onEdit={goToStep} />
         <div className="rounded-lg border p-4 space-y-1">
@@ -148,9 +179,11 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
           <InfoRow
             label="Clients Affected"
             value={
-              data.clients_affected_count
-                ? `${data.clients_affected_count.toLocaleString()} (${data.clients_affected_percentage ?? 0}%)`
-                : undefined
+              data.clients_affected_percentage !== undefined && data.clients_affected_percentage > 0
+                ? `${data.clients_affected_percentage}% (${data.clients_affected_count?.toLocaleString() ?? 'unknown'} clients)`
+                : data.clients_affected_count
+                  ? `${data.clients_affected_count.toLocaleString()} client(s)`
+                  : undefined
             }
           />
           <InfoRow
@@ -197,54 +230,87 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
 
       <Separator />
 
-      {/* Timeline Section */}
+      {/* Step 2: Classification Section */}
       <div className="space-y-3">
-        <SectionHeader title="Timeline" step={2} onEdit={goToStep} />
-        <div className="rounded-lg border p-4 space-y-1">
-          <InfoRow
-            label="Detection Time"
-            value={detectionDate.toLocaleString('en-GB')}
-          />
-          {data.occurrence_datetime && (
+        <SectionHeader title="DORA Classification" step={2} onEdit={goToStep} />
+        <div className="rounded-lg border p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Final Classification</span>
+            <Badge
+              className={cn(
+                data.classification === 'major'
+                  ? 'bg-destructive'
+                  : data.classification === 'significant'
+                  ? 'bg-warning text-warning-foreground'
+                  : 'bg-secondary'
+              )}
+            >
+              {getClassificationLabel(data.classification)}
+            </Badge>
+          </div>
+          {data.classification_calculated && (
             <InfoRow
-              label="Occurrence Time"
-              value={new Date(data.occurrence_datetime).toLocaleString('en-GB')}
+              label="Auto-Calculated"
+              value={getClassificationLabel(data.classification_calculated)}
             />
           )}
+          <InfoRow
+            label="Override"
+            value={isOverride ? 'Yes' : 'No'}
+          />
+          {isOverride && data.classification_override_justification && (
+            <div className="pt-2 border-t mt-2">
+              <p className="text-sm text-muted-foreground mb-1">Override Justification</p>
+              <p className="text-sm">{data.classification_override_justification}</p>
+            </div>
+          )}
+          <InfoRow
+            label="Requires Reporting"
+            value={requiresReporting ? 'Yes' : 'No'}
+          />
         </div>
 
-        {data.classification === 'major' && (
-          <div className="grid gap-2 sm:grid-cols-3 mt-2">
-            <div className="rounded-lg border p-3 text-center">
-              <p className="text-xs text-muted-foreground">Initial Report Due</p>
-              <p className="text-sm font-mono mt-1">
-                {deadlines.initial.toLocaleString('en-GB', {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-            </div>
-            <div className="rounded-lg border p-3 text-center">
-              <p className="text-xs text-muted-foreground">Intermediate Due</p>
-              <p className="text-sm font-mono mt-1">
-                {deadlines.intermediate.toLocaleString('en-GB', {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-            </div>
-            <div className="rounded-lg border p-3 text-center">
-              <p className="text-xs text-muted-foreground">Final Report Due</p>
-              <p className="text-sm font-mono mt-1">
-                {deadlines.final.toLocaleString('en-GB', {
-                  day: 'numeric',
-                  month: 'short',
-                })}
-              </p>
+        {/* DORA Reporting Deadlines */}
+        {requiresReporting && (
+          <div className="space-y-2 mt-3">
+            <h4 className="text-sm font-medium text-muted-foreground">DORA Reporting Deadlines</h4>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {data.classification === 'major' && (
+                <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-center">
+                  <p className="text-xs text-muted-foreground">Initial Report</p>
+                  <p className="text-sm font-mono font-medium mt-1">
+                    {deadlines.initial.toLocaleString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                  <p className="text-xs text-destructive mt-1">Within 4 hours</p>
+                </div>
+              )}
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-xs text-muted-foreground">Intermediate Report</p>
+                <p className="text-sm font-mono font-medium mt-1">
+                  {deadlines.intermediate.toLocaleString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Within 72 hours</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-xs text-muted-foreground">Final Report</p>
+                <p className="text-sm font-mono font-medium mt-1">
+                  {deadlines.final.toLocaleString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Within 1 month</p>
+              </div>
             </div>
           </div>
         )}
@@ -252,17 +318,10 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
 
       <Separator />
 
-      {/* Details Section */}
+      {/* Step 3: Details Section */}
       <div className="space-y-3">
-        <SectionHeader title="Details" step={3} onEdit={goToStep} />
+        <SectionHeader title="Additional Details" step={3} onEdit={goToStep} />
         <div className="rounded-lg border p-4 space-y-3">
-          <InfoRow label="Title" value={data.title} />
-          {data.description && (
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Description</p>
-              <p className="text-sm">{data.description}</p>
-            </div>
-          )}
           <InfoRow label="Related Vendor" value={data.vendor_id ? 'Selected' : 'None'} />
           {data.root_cause && (
             <div className="space-y-1 pt-2 border-t">
@@ -275,6 +334,11 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
               <p className="text-sm text-muted-foreground">Remediation Actions</p>
               <p className="text-sm">{data.remediation_actions}</p>
             </div>
+          )}
+          {!data.vendor_id && !data.root_cause && !data.remediation_actions && (
+            <p className="text-sm text-muted-foreground italic">
+              No additional details provided. These can be added after incident creation.
+            </p>
           )}
         </div>
       </div>
@@ -289,7 +353,12 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
             </h4>
             <p className="text-sm text-green-800 dark:text-green-400 mt-1">
               Review the information above and click &quot;Create Incident&quot; to save.
-              You can edit details and submit reports after creation.
+              {requiresReporting && (
+                <span className="block mt-1">
+                  <strong>Note:</strong> This incident requires DORA regulatory reporting.
+                  You&apos;ll be able to generate and submit reports after creation.
+                </span>
+              )}
             </p>
           </div>
         </div>

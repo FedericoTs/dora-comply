@@ -8,27 +8,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils';
 import { createIncidentAction } from '@/lib/incidents/actions';
 import type { CreateIncidentInput, IncidentClassification, IncidentType, ImpactLevel } from '@/lib/incidents/types';
-import { StepClassification } from './step-classification';
+import { StepBasicInfo } from './step-basic-info';
 import { StepImpact } from './step-impact';
-import { StepTimeline } from './step-timeline';
+import { StepClassification } from './step-classification';
 import { StepDetails } from './step-details';
 import { StepReview } from './step-review';
 import { toast } from 'sonner';
 
+/**
+ * New wizard flow designed for DORA compliance:
+ * 1. Basic Info - Type, title, detection time (what happened and when)
+ * 2. Impact - Assess business impact (determines classification)
+ * 3. Classification - Auto-calculated from impact with override option
+ * 4. Details - Additional context (vendor, root cause, remediation)
+ * 5. Review - Confirm and submit
+ */
 const STEPS = [
-  { id: 'classification', title: 'Classification', description: 'Incident type and severity' },
-  { id: 'impact', title: 'Impact', description: 'Affected services and clients' },
-  { id: 'timeline', title: 'Timeline', description: 'When it happened' },
-  { id: 'details', title: 'Details', description: 'Description and actions' },
+  { id: 'basic-info', title: 'Basic Info', description: 'What happened and when' },
+  { id: 'impact', title: 'Impact', description: 'Business and client impact' },
+  { id: 'classification', title: 'Classification', description: 'DORA severity assessment' },
+  { id: 'details', title: 'Details', description: 'Context and remediation' },
   { id: 'review', title: 'Review', description: 'Confirm and submit' },
 ];
 
 export interface WizardData {
-  // Step 1: Classification
-  classification: IncidentClassification;
+  // Step 1: Basic Info
   incident_type: IncidentType;
+  title: string;
+  detection_datetime: string;
+  occurrence_datetime?: string;
+  description?: string;
 
-  // Step 2: Impact
+  // Step 2: Impact Assessment
   services_affected: string[];
   critical_functions_affected: string[];
   clients_affected_count?: number;
@@ -41,27 +52,27 @@ export interface WizardData {
   economic_impact?: number;
   reputational_impact?: ImpactLevel;
 
-  // Step 3: Timeline
-  detection_datetime: string;
-  occurrence_datetime?: string;
+  // Step 3: Classification (auto-calculated)
+  classification: IncidentClassification;
+  classification_calculated?: IncidentClassification;
+  classification_override?: boolean;
+  classification_override_justification?: string;
 
   // Step 4: Details
-  title: string;
-  description?: string;
   vendor_id?: string;
   root_cause?: string;
   remediation_actions?: string;
 }
 
 const initialData: WizardData = {
-  classification: 'significant',
   incident_type: 'system_failure',
+  title: '',
+  detection_datetime: new Date().toISOString(),
   services_affected: [],
   critical_functions_affected: [],
   data_breach: false,
   geographic_spread: [],
-  detection_datetime: new Date().toISOString().slice(0, 16),
-  title: '',
+  classification: 'minor', // Will be auto-calculated
 };
 
 interface IncidentWizardProps {
@@ -98,31 +109,46 @@ export function IncidentWizard({
     const errors: Record<string, string[]> = {};
 
     switch (step) {
-      case 0: // Classification
-        if (!data.classification) {
-          errors.classification = ['Classification is required'];
-        }
+      case 0: // Basic Info
         if (!data.incident_type) {
           errors.incident_type = ['Incident type is required'];
         }
-        break;
-      case 1: // Impact
-        // No required fields, but we could add validation for numeric ranges
-        break;
-      case 2: // Timeline
+        if (!data.title || data.title.trim().length < 3) {
+          errors.title = ['Title is required (min 3 characters)'];
+        }
         if (!data.detection_datetime) {
           errors.detection_datetime = ['Detection time is required'];
         }
         break;
-      case 3: // Details
-        if (!data.title || data.title.trim().length < 3) {
-          errors.title = ['Title is required (min 3 characters)'];
+      case 1: // Impact
+        // No required fields - impact data is optional but affects classification
+        break;
+      case 2: // Classification
+        // Validate override justification if override is enabled
+        if (data.classification_override) {
+          if (!data.classification_override_justification ||
+              data.classification_override_justification.trim().length < 50) {
+            errors.classification_override_justification = [
+              'Override justification is required (min 50 characters)'
+            ];
+          }
         }
         break;
+      case 3: // Details
+        // No required fields - vendor, root cause, remediation are optional
+        break;
       case 4: // Review
-        // Final validation
+        // Final validation - check all required fields
         if (!data.title) errors.title = ['Title is required'];
         if (!data.detection_datetime) errors.detection_datetime = ['Detection time is required'];
+        if (!data.incident_type) errors.incident_type = ['Incident type is required'];
+        if (data.classification_override &&
+            (!data.classification_override_justification ||
+             data.classification_override_justification.trim().length < 50)) {
+          errors.classification_override_justification = [
+            'Override justification is required (min 50 characters)'
+          ];
+        }
         break;
     }
 
@@ -153,7 +179,7 @@ export function IncidentWizard({
     setIsSubmitting(true);
     try {
       const input: CreateIncidentInput = {
-        classification: data.classification,
+        // Basic Info
         incident_type: data.incident_type,
         title: data.title,
         description: data.description,
@@ -161,6 +187,8 @@ export function IncidentWizard({
         occurrence_datetime: data.occurrence_datetime
           ? new Date(data.occurrence_datetime).toISOString()
           : undefined,
+
+        // Impact Assessment
         services_affected: data.services_affected,
         critical_functions_affected: data.critical_functions_affected,
         clients_affected_count: data.clients_affected_count,
@@ -172,6 +200,14 @@ export function IncidentWizard({
         geographic_spread: data.geographic_spread,
         economic_impact: data.economic_impact,
         reputational_impact: data.reputational_impact,
+
+        // Classification (auto-calculated with optional override)
+        classification: data.classification,
+        classification_calculated: data.classification_calculated,
+        classification_override: data.classification_override,
+        classification_override_justification: data.classification_override_justification,
+
+        // Details
         vendor_id: data.vendor_id,
         root_cause: data.root_cause,
         remediation_actions: data.remediation_actions,
@@ -195,15 +231,15 @@ export function IncidentWizard({
 
   const renderStep = () => {
     switch (currentStep) {
-      case 0:
+      case 0: // Basic Info
         return (
-          <StepClassification
+          <StepBasicInfo
             data={data}
             updateData={updateData}
             errors={stepErrors}
           />
         );
-      case 1:
+      case 1: // Impact Assessment
         return (
           <StepImpact
             data={data}
@@ -213,15 +249,15 @@ export function IncidentWizard({
             criticalFunctions={criticalFunctions}
           />
         );
-      case 2:
+      case 2: // Classification (auto-calculated)
         return (
-          <StepTimeline
+          <StepClassification
             data={data}
             updateData={updateData}
             errors={stepErrors}
           />
         );
-      case 3:
+      case 3: // Details
         return (
           <StepDetails
             data={data}
@@ -230,7 +266,7 @@ export function IncidentWizard({
             vendors={vendors}
           />
         );
-      case 4:
+      case 4: // Review
         return (
           <StepReview
             data={data}
