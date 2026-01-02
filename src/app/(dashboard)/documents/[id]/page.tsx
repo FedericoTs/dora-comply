@@ -199,7 +199,32 @@ export default async function DocumentDetailPage({ params, searchParams }: Docum
           </Card>
 
           {/* Document Metadata / AI-Extracted Details */}
-          {(Object.keys(document.metadata).length > 0 || document.parsing_status === 'completed') && (
+          {/* Only show if there's meaningful metadata content (not just empty/null values) */}
+          {(() => {
+            const md = document.metadata;
+            const hasMeaningfulContent =
+              md.description ||
+              md.valid_from ||
+              md.valid_until ||
+              md.expiry_date ||
+              md.soc2_type ||
+              md.auditor_name ||
+              md.certification_body ||
+              md.certificate_number ||
+              md.tester_company ||
+              md.findings_count !== undefined ||
+              md.contract_start ||
+              md.contract_end ||
+              md.renewal_type ||
+              md.version ||
+              md.governing_law ||
+              md.provider_name ||
+              md.customer_name ||
+              md.page_count ||
+              md.word_count ||
+              (Array.isArray(md.tags) && md.tags.length > 0);
+            return hasMeaningfulContent;
+          })() && (
             <Card className="card-elevated">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">

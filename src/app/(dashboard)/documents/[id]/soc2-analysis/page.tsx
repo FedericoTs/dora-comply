@@ -10,7 +10,6 @@
  */
 
 import { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   Shield,
@@ -27,7 +26,6 @@ import {
   Info,
   Eye,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { PageBreadcrumb } from '@/components/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +48,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 
 // Client components for charts, export, and evidence view
 import { SOC2AnalysisClient } from './soc2-analysis-client';
@@ -176,12 +175,22 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
   }
 
   // Generate signed URL for PDF viewing (valid for 1 hour)
+  // Using service role client to bypass storage RLS (safe in server component)
   let pdfUrl: string | null = null;
   if (document.storage_path) {
-    const { data: signedUrlData } = await supabase.storage
-      .from('documents')
-      .createSignedUrl(document.storage_path, 3600);
-    pdfUrl = signedUrlData?.signedUrl || null;
+    try {
+      const storageClient = createServiceRoleClient();
+      const { data: signedUrlData, error: signedUrlError } = await storageClient.storage
+        .from('documents')
+        .createSignedUrl(document.storage_path, 3600);
+
+      if (signedUrlError) {
+        console.error('[soc2-analysis] Signed URL error:', signedUrlError.message);
+      }
+      pdfUrl = signedUrlData?.signedUrl || null;
+    } catch (err) {
+      console.error('[soc2-analysis] Failed to create signed URL:', err);
+    }
   }
 
   const analysis = parsedSoc2 as unknown as ParsedSOC2;
@@ -306,17 +315,7 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
             backHref={buildDocumentHref()}
             backLabel="Back to Document"
           />
-          <div className="flex items-center gap-2">
-            <ExportButtons documentId={id} documentName={document.filename} />
-            {vendor && (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/vendors/${vendor.id}?tab=documents`}>
-                  <Building2 className="mr-2 h-4 w-4" />
-                  View Vendor
-                </Link>
-              </Button>
-            )}
-          </div>
+          <ExportButtons documentId={id} documentName={document.filename} />
         </div>
 
         {/* Executive Summary Header */}

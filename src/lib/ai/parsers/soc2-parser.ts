@@ -235,6 +235,8 @@ export async function parseSOC2Report(
       }
 
       // Call Claude with the PDF
+      // CRITICAL: temperature: 0 ensures deterministic extraction
+      // This is essential for compliance - same document must yield same results
       const result = await generateText({
         model: anthropic(PARSER_MODEL),
         system: SOC2_EXTRACTION_SYSTEM_PROMPT,
@@ -255,6 +257,7 @@ export async function parseSOC2Report(
           },
         ],
         maxOutputTokens: 16384, // SOC 2 reports can be large
+        temperature: 0, // Deterministic output for consistent compliance extraction
       });
 
       if (verbose) {
