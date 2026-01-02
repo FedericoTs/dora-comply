@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { parseSOC2Report, calculateDORACoverageScore } from '@/lib/ai/parsers';
 
 interface RouteParams {
@@ -81,13 +82,15 @@ export async function POST(
       );
     }
 
-    // Download PDF from storage
-    const { data: fileData, error: downloadError } = await supabase.storage
+    // Download PDF from storage using service role client (bypasses RLS)
+    const storageClient = createServiceRoleClient();
+    const { data: fileData, error: downloadError } = await storageClient.storage
       .from('documents')
       .download(document.storage_path);
 
     if (downloadError || !fileData) {
       console.error('[parse-soc2] Download error:', downloadError);
+      console.error('[parse-soc2] Storage path:', document.storage_path);
       return NextResponse.json(
         { error: 'Failed to download document' },
         { status: 500 }
