@@ -9,3 +9,4 @@ export { ContractAnalysisResults } from './contract-analysis-results';
 export { AnalysisSignOffDialog } from './analysis-sign-off-dialog';
 export { DocumentAIAnalysisCard } from './document-ai-analysis-card';
 export { PopulateRoiButton } from './populate-roi-button';
+export { SOC2AnalysisCard } from './soc2-analysis-card';

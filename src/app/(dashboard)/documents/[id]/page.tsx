@@ -34,7 +34,8 @@ import {
   type DocumentType,
 } from '@/lib/documents/types';
 import { DocumentActions } from './document-actions';
-import { DocumentAIAnalysisCard } from '@/components/documents';
+import { DocumentAIAnalysisCard, SOC2AnalysisCard } from '@/components/documents';
+import { createClient } from '@/lib/supabase/server';
 
 interface DocumentDetailPageProps {
   params: Promise<{ id: string }>;
@@ -72,10 +73,14 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
     notFound();
   }
 
-  // Fetch existing analysis and vendor contracts in parallel
-  const [existingAnalysis, vendorContracts] = await Promise.all([
+  // Fetch existing analysis, vendor contracts, and SOC 2 parsed data in parallel
+  const supabase = await createClient();
+  const [existingAnalysis, vendorContracts, { data: parsedSoc2 }] = await Promise.all([
     getContractAnalysis(id),
     document.vendor_id ? getVendorContracts(document.vendor_id) : Promise.resolve([]),
+    document.type === 'soc2'
+      ? supabase.from('parsed_soc2').select('*').eq('document_id', id).single()
+      : Promise.resolve({ data: null }),
   ]);
 
   const typeInfo = DOCUMENT_TYPE_INFO[document.type];
@@ -400,18 +405,32 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
             </Card>
           )}
 
-          {/* AI Contract Analysis */}
-          <DocumentAIAnalysisCard
-            documentId={document.id}
-            documentType={document.type}
-            mimeType={document.mime_type}
-            vendorId={document.vendor_id}
-            vendorName={document.vendor?.name}
-            parsingStatus={document.parsing_status}
-            parsingError={document.parsing_error}
-            existingAnalysis={existingAnalysis}
-            vendorContracts={vendorContracts}
-          />
+          {/* SOC 2 Analysis (for SOC 2 documents) */}
+          {document.type === 'soc2' && (
+            <SOC2AnalysisCard
+              documentId={document.id}
+              documentType={document.type}
+              mimeType={document.mime_type}
+              vendorId={document.vendor_id}
+              vendorName={document.vendor?.name}
+              existingAnalysis={parsedSoc2 as Parameters<typeof SOC2AnalysisCard>[0]['existingAnalysis']}
+            />
+          )}
+
+          {/* AI Contract Analysis (for contract documents) */}
+          {document.type === 'contract' && (
+            <DocumentAIAnalysisCard
+              documentId={document.id}
+              documentType={document.type}
+              mimeType={document.mime_type}
+              vendorId={document.vendor_id}
+              vendorName={document.vendor?.name}
+              parsingStatus={document.parsing_status}
+              parsingError={document.parsing_error}
+              existingAnalysis={existingAnalysis}
+              vendorContracts={vendorContracts}
+            />
+          )}
         </div>
 
         {/* Right Column - Vendor & Quick Actions */}
