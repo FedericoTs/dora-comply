@@ -223,24 +223,24 @@ export function IncidentEditForm({ incident, vendors }: IncidentEditFormProps) {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="basic" className="gap-2">
+        <TabsList className="w-full h-auto p-1">
+          <TabsTrigger value="basic" className="flex-1 gap-2">
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">Basic</span>
           </TabsTrigger>
-          <TabsTrigger value="impact" className="gap-2">
+          <TabsTrigger value="impact" className="flex-1 gap-2">
             <Activity className="h-4 w-4" />
             <span className="hidden sm:inline">Impact</span>
           </TabsTrigger>
-          <TabsTrigger value="classification" className="gap-2">
+          <TabsTrigger value="classification" className="flex-1 gap-2">
             <Shield className="h-4 w-4" />
             <span className="hidden sm:inline">Classification</span>
           </TabsTrigger>
-          <TabsTrigger value="details" className="gap-2">
+          <TabsTrigger value="details" className="flex-1 gap-2">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Details</span>
           </TabsTrigger>
-          <TabsTrigger value="status" className="gap-2">
+          <TabsTrigger value="status" className="flex-1 gap-2">
             <CheckCircle2 className="h-4 w-4" />
             <span className="hidden sm:inline">Status</span>
           </TabsTrigger>
@@ -452,7 +452,7 @@ export function IncidentEditForm({ incident, vendors }: IncidentEditFormProps) {
                       </Badge>
                     )}
                     <Switch
-                      checked={formData.data_breach}
+                      checked={formData.data_breach ?? false}
                       onCheckedChange={(checked) => updateFormData({
                         data_breach: checked,
                         data_records_affected: checked ? formData.data_records_affected : undefined,

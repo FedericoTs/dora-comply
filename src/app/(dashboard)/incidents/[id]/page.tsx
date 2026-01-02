@@ -38,6 +38,7 @@ import {
   calculateDeadline,
 } from '@/lib/incidents/types';
 import { DeadlineBadgeStatic } from '@/components/incidents/deadline-badge';
+import { DeleteIncidentButton } from '@/components/incidents/delete-incident-button';
 
 interface IncidentDetailPageProps {
   params: Promise<{ id: string }>;
@@ -164,6 +165,10 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
               Edit
             </Link>
           </Button>
+          <DeleteIncidentButton
+            incidentId={incident.id}
+            incidentRef={incident.incident_ref}
+          />
           {nextReport && (
             <Button asChild>
               <Link href={`/incidents/${id}/reports/new?type=${nextReport.type}`}>
