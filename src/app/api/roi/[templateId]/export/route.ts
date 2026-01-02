@@ -32,9 +32,13 @@ export async function GET(
     }
 
     // Validate template ID
-    const templateIdUpper = templateId.toUpperCase().replace('_', '.') as RoiTemplateId;
+    // Convert URL format (b_01_01) to template format (B_01.01)
+    // Pattern: replace LAST underscore with dot, then uppercase
+    const templateIdNormalized = templateId
+      .toUpperCase()
+      .replace(/_([^_]+)$/, '.$1') as RoiTemplateId;
 
-    if (!ROI_TEMPLATES[templateIdUpper]) {
+    if (!ROI_TEMPLATES[templateIdNormalized]) {
       return NextResponse.json(
         { error: { code: 'NOT_FOUND', message: `Template ${templateId} not found` } },
         { status: 404 }
@@ -42,7 +46,7 @@ export async function GET(
     }
 
     // Fetch template data
-    const result = await fetchTemplateData(templateIdUpper);
+    const result = await fetchTemplateData(templateIdNormalized);
 
     if (result.error) {
       return NextResponse.json(
@@ -53,7 +57,7 @@ export async function GET(
 
     // Generate CSV
     const csv = generateCsv({
-      templateId: templateIdUpper,
+      templateId: templateIdNormalized,
       data: result.data,
     });
 

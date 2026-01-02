@@ -126,19 +126,19 @@ export function ExportControls() {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <a href="/api/roi/B_01.01/export" download>
+            <a href="/api/roi/b_01_01/export" download>
               <Download className="h-4 w-4 mr-2" />
               Entity Info (B_01.01)
             </a>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <a href="/api/roi/B_02.02/export" download>
+            <a href="/api/roi/b_02_02/export" download>
               <Download className="h-4 w-4 mr-2" />
               Contracts (B_02.02)
             </a>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <a href="/api/roi/B_05.01/export" download>
+            <a href="/api/roi/b_05_01/export" download>
               <Download className="h-4 w-4 mr-2" />
               Providers (B_05.01)
             </a>

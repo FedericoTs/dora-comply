@@ -30,8 +30,9 @@ export function ExportButton({ templateId, hasErrors, rowCount }: ExportButtonPr
 
     setIsExporting(true);
     try {
-      const fileName = templateId.toLowerCase().replace('.', '_');
-      window.location.href = `/api/roi/${fileName}/export`;
+      // Convert B_01.01 → b_01_01 for URL-safe format (replace dot with underscore)
+      const urlSafeId = templateId.toLowerCase().replace('.', '_');
+      window.location.href = `/api/roi/${urlSafeId}/export`;
 
       toast.success('Export started', {
         description: `Downloading ${templateId} with ${rowCount} records.`,
