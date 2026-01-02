@@ -34,6 +34,13 @@ export const reportStatusSchema = z.enum(REPORT_STATUSES);
 export const impactLevelSchema = z.enum(IMPACT_LEVELS);
 export const eventTypeSchema = z.enum(EVENT_TYPES);
 
+// Flexible datetime validation that accepts various ISO formats from Supabase
+// Converts to proper ISO string for consistency
+const flexibleDatetimeSchema = z.string().refine(
+  (val) => !Number.isNaN(Date.parse(val)),
+  { message: 'Invalid ISO datetime' }
+).transform((val) => new Date(val).toISOString());
+
 // ============================================================================
 // Incident Schemas
 // ============================================================================
@@ -46,10 +53,10 @@ export const incidentSchema = z.object({
   classification: incidentClassificationSchema,
   incident_type: incidentTypeSchema,
   status: incidentStatusSchema,
-  detection_datetime: z.string().datetime(),
-  occurrence_datetime: z.string().datetime().nullable(),
-  recovery_datetime: z.string().datetime().nullable(),
-  resolution_datetime: z.string().datetime().nullable(),
+  detection_datetime: flexibleDatetimeSchema,
+  occurrence_datetime: flexibleDatetimeSchema.nullable(),
+  recovery_datetime: flexibleDatetimeSchema.nullable(),
+  resolution_datetime: flexibleDatetimeSchema.nullable(),
   services_affected: z.array(z.string()),
   critical_functions_affected: z.array(z.string()),
   clients_affected_count: z.number().int().min(0).nullable(),
@@ -69,8 +76,8 @@ export const incidentSchema = z.object({
   lessons_learned: z.string().nullable(),
   vendor_id: z.string().uuid().nullable(),
   created_by: z.string().uuid().nullable(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  created_at: flexibleDatetimeSchema,
+  updated_at: flexibleDatetimeSchema,
 });
 
 export const createIncidentSchema = z.object({
@@ -78,8 +85,8 @@ export const createIncidentSchema = z.object({
   incident_type: incidentTypeSchema,
   title: z.string().min(1, 'Title is required').max(255, 'Title too long'),
   description: z.string().optional(),
-  detection_datetime: z.string().datetime({ message: 'Invalid detection date' }),
-  occurrence_datetime: z.string().datetime().optional(),
+  detection_datetime: flexibleDatetimeSchema,
+  occurrence_datetime: flexibleDatetimeSchema.optional(),
   services_affected: z.array(z.string()).optional().default([]),
   critical_functions_affected: z.array(z.string()).optional().default([]),
   clients_affected_count: z.number().int().min(0).optional(),
@@ -114,8 +121,8 @@ export const createIncidentSchema = z.object({
 
 export const updateIncidentSchema = createIncidentSchema.partial().extend({
   status: incidentStatusSchema.optional(),
-  recovery_datetime: z.string().datetime().optional(),
-  resolution_datetime: z.string().datetime().optional(),
+  recovery_datetime: flexibleDatetimeSchema.optional(),
+  resolution_datetime: flexibleDatetimeSchema.optional(),
   lessons_learned: z.string().optional(),
   duration_hours: z.number().min(0).optional(),
 });
@@ -155,8 +162,8 @@ export const incidentFiltersSchema = z.object({
   classification: z.union([incidentClassificationSchema, z.array(incidentClassificationSchema)]).optional(),
   incident_type: z.union([incidentTypeSchema, z.array(incidentTypeSchema)]).optional(),
   vendor_id: z.string().uuid().optional(),
-  date_from: z.string().datetime().optional(),
-  date_to: z.string().datetime().optional(),
+  date_from: flexibleDatetimeSchema.optional(),
+  date_to: flexibleDatetimeSchema.optional(),
   search: z.string().optional(),
 });
 
