@@ -43,11 +43,12 @@ export async function POST(
     // Fetch document metadata
     const { data: document, error: docError } = await supabase
       .from('documents')
-      .select('id, name, file_path, file_type, document_type, vendor_id, organization_id')
+      .select('id, filename, storage_path, mime_type, type, vendor_id, organization_id')
       .eq('id', documentId)
       .single();
 
     if (docError || !document) {
+      console.error('[parse-soc2] Document query error:', docError);
       return NextResponse.json(
         { error: 'Document not found' },
         { status: 404 }
@@ -55,7 +56,7 @@ export async function POST(
     }
 
     // Verify document is a SOC 2 report
-    if (document.document_type !== 'soc2') {
+    if (document.type !== 'soc2') {
       return NextResponse.json(
         { error: 'Document is not a SOC 2 report' },
         { status: 400 }
@@ -83,7 +84,7 @@ export async function POST(
     // Download PDF from storage
     const { data: fileData, error: downloadError } = await supabase.storage
       .from('documents')
-      .download(document.file_path);
+      .download(document.storage_path);
 
     if (downloadError || !fileData) {
       console.error('[parse-soc2] Download error:', downloadError);

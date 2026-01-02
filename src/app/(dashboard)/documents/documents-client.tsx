@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useTransition } from 'react';
+import { useState, useCallback, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FileText,
@@ -74,6 +74,12 @@ import {
   getDocumentDownloadUrl,
   fetchDocumentsAction,
 } from '@/lib/documents/actions';
+import { fetchVendorsAction } from '@/lib/vendors/actions';
+
+interface SimpleVendor {
+  id: string;
+  name: string;
+}
 
 interface DocumentsClientProps {
   initialData: PaginatedResult<DocumentWithVendor>;
@@ -105,8 +111,31 @@ export function DocumentsClient({ initialData }: DocumentsClientProps) {
   // Upload state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadType, setUploadType] = useState<DocumentType>('other');
+  const [uploadVendorId, setUploadVendorId] = useState<string>('');
   const [uploadDescription, setUploadDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+
+  // Vendors state
+  const [vendors, setVendors] = useState<SimpleVendor[]>([]);
+  const [isLoadingVendors, setIsLoadingVendors] = useState(false);
+
+  // Fetch vendors when dialog opens
+  useEffect(() => {
+    if (isUploadOpen && vendors.length === 0) {
+      setIsLoadingVendors(true);
+      fetchVendorsAction({ pagination: { page: 1, limit: 500 } })
+        .then((result) => {
+          setVendors(result.data.map(v => ({ id: v.id, name: v.name })));
+        })
+        .catch((error) => {
+          console.error('Failed to fetch vendors:', error);
+          toast.error('Failed to load vendors');
+        })
+        .finally(() => {
+          setIsLoadingVendors(false);
+        });
+    }
+  }, [isUploadOpen, vendors.length]);
 
   const totalPages = Math.ceil(total / initialData.limit);
 
@@ -163,11 +192,17 @@ export function DocumentsClient({ initialData }: DocumentsClientProps) {
       return;
     }
 
+    if (!uploadVendorId) {
+      toast.error('Please select a vendor');
+      return;
+    }
+
     setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', uploadFile);
       formData.append('type', uploadType);
+      formData.append('vendor_id', uploadVendorId);
       formData.append('metadata', JSON.stringify({ description: uploadDescription }));
 
       const result = await uploadDocument(formData);
@@ -177,6 +212,7 @@ export function DocumentsClient({ initialData }: DocumentsClientProps) {
         setIsUploadOpen(false);
         setUploadFile(null);
         setUploadType('other');
+        setUploadVendorId('');
         setUploadDescription('');
         fetchDocuments(1);
       } else {
@@ -490,6 +526,43 @@ export function DocumentsClient({ initialData }: DocumentsClientProps) {
               )}
             </div>
 
+            {/* Vendor (Required) */}
+            <div className="space-y-2">
+              <Label>
+                Vendor <span className="text-destructive">*</span>
+              </Label>
+              {isLoadingVendors ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground p-2 border rounded-md">
+                  <span className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                  Loading vendors...
+                </div>
+              ) : vendors.length === 0 ? (
+                <div className="text-sm text-muted-foreground p-2 border rounded-md">
+                  No vendors found. Please{' '}
+                  <a href="/vendors" className="text-primary hover:underline">
+                    create a vendor
+                  </a>{' '}
+                  first.
+                </div>
+              ) : (
+                <Select value={uploadVendorId} onValueChange={setUploadVendorId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select vendor..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vendors.map((vendor) => (
+                      <SelectItem key={vendor.id} value={vendor.id}>
+                        {vendor.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Documents must be linked to a vendor for compliance tracking.
+              </p>
+            </div>
+
             {/* Document Type */}
             <div className="space-y-2">
               <Label>Document Type</Label>
@@ -523,7 +596,10 @@ export function DocumentsClient({ initialData }: DocumentsClientProps) {
             <Button variant="outline" onClick={() => setIsUploadOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpload} disabled={!uploadFile || isUploading}>
+            <Button
+              onClick={handleUpload}
+              disabled={!uploadFile || !uploadVendorId || isUploading || vendors.length === 0}
+            >
               {isUploading ? 'Uploading...' : 'Upload'}
             </Button>
           </DialogFooter>
