@@ -125,22 +125,103 @@ export function ExportControls() {
             Download Full Package (ZIP)
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          {/* B_01.xx - Entity Information */}
           <DropdownMenuItem asChild>
             <a href="/api/roi/b_01_01/export" download>
               <Download className="h-4 w-4 mr-2" />
-              Entity Info (B_01.01)
+              Entity Maintaining Register (B_01.01)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_01_02/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Entities in Scope (B_01.02)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_01_03/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Branches (B_01.03)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {/* B_02.xx - Contractual Arrangements */}
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_02_01/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Arrangements Overview (B_02.01)
             </a>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <a href="/api/roi/b_02_02/export" download>
               <Download className="h-4 w-4 mr-2" />
-              Contracts (B_02.02)
+              Arrangements Details (B_02.02)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_02_03/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Linked Arrangements (B_02.03)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {/* B_03.xx - Linkage Tables */}
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_03_01/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Entity-Arrangement Links (B_03.01)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_03_02/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Provider-Arrangement Links (B_03.02)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_03_03/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Intra-Group Links (B_03.03)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {/* B_04.xx - B_07.xx - Entities & Functions */}
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_04_01/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Service Recipients (B_04.01)
             </a>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <a href="/api/roi/b_05_01/export" download>
               <Download className="h-4 w-4 mr-2" />
-              Providers (B_05.01)
+              ICT Providers (B_05.01)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_05_02/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Subcontracting (B_05.02)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_06_01/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Critical Functions (B_06.01)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_07_01/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Exit Arrangements (B_07.01)
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {/* B_99.xx - Reference Data */}
+          <DropdownMenuItem asChild>
+            <a href="/api/roi/b_99_01/export" download>
+              <Download className="h-4 w-4 mr-2" />
+              Lookup Values (B_99.01)
             </a>
           </DropdownMenuItem>
         </DropdownMenuContent>

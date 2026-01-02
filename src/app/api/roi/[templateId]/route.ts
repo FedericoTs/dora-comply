@@ -32,10 +32,13 @@ export async function GET(
       );
     }
 
-    // Validate template ID
-    const templateIdUpper = templateId.toUpperCase().replace('_', '.') as RoiTemplateId;
+    // Validate template ID - URL has underscores (b_01_01), convert to internal format (B_01.01)
+    // Only replace the LAST underscore with a dot
+    const templateIdNormalized = templateId
+      .toUpperCase()
+      .replace(/_([^_]+)$/, '.$1') as RoiTemplateId;
 
-    if (!ROI_TEMPLATES[templateIdUpper]) {
+    if (!ROI_TEMPLATES[templateIdNormalized]) {
       return NextResponse.json(
         { error: { code: 'NOT_FOUND', message: `Template ${templateId} not found` } },
         { status: 404 }
@@ -43,7 +46,7 @@ export async function GET(
     }
 
     // Fetch template data
-    const result = await fetchTemplateData(templateIdUpper);
+    const result = await fetchTemplateData(templateIdNormalized);
 
     if (result.error) {
       return NextResponse.json(
@@ -53,16 +56,16 @@ export async function GET(
     }
 
     // Validate the data
-    const validation = validateTemplate(templateIdUpper, result.data);
+    const validation = validateTemplate(templateIdNormalized, result.data);
 
     // Get template metadata
-    const template = ROI_TEMPLATES[templateIdUpper];
-    const columns = getColumnOrder(templateIdUpper);
+    const template = ROI_TEMPLATES[templateIdNormalized];
+    const columns = getColumnOrder(templateIdNormalized);
 
     return NextResponse.json({
       success: true,
       data: {
-        templateId: templateIdUpper,
+        templateId: templateIdNormalized,
         name: template.name,
         description: template.description,
         esaReference: template.esaReference,
