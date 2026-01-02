@@ -122,6 +122,7 @@ export function buildPackageFiles(options: BuildPackageOptions): PackageFile[] {
 
 /**
  * Build the complete package as a ZIP file
+ * Uses Uint8Array for cross-platform compatibility (Node.js + Vercel Edge)
  */
 export async function buildPackageZip(
   options: BuildPackageOptions
@@ -134,11 +135,15 @@ export async function buildPackageZip(
     zip.file(file.path, file.content);
   }
 
-  const buffer = await zip.generateAsync({
-    type: 'nodebuffer',
+  // Use uint8array for cross-platform compatibility, then convert to Buffer
+  const uint8Array = await zip.generateAsync({
+    type: 'uint8array',
     compression: 'DEFLATE',
     compressionOptions: { level: 9 },
   });
+
+  // Convert Uint8Array to Buffer for Node.js compatibility
+  const buffer = Buffer.from(uint8Array);
 
   // Extract folder name from first file path
   const folderName = files[0].path.split('/')[0];
@@ -252,11 +257,14 @@ export async function buildPackageWithProgress(
     }
   }
 
-  const buffer = await zip.generateAsync({
-    type: 'nodebuffer',
+  // Use uint8array for cross-platform compatibility, then convert to Buffer
+  const uint8Array = await zip.generateAsync({
+    type: 'uint8array',
     compression: 'DEFLATE',
     compressionOptions: { level: 9 },
   });
+
+  const buffer = Buffer.from(uint8Array);
 
   return { buffer, fileName: `${folderName}.zip` };
 }

@@ -7,3 +7,4 @@ export { VendorESAFields } from './vendor-esa-fields';
 export { VendorGleifStatus } from './vendor-gleif-status';
 export { VendorAlertBanner } from './vendor-alert-banner';
 export { VendorEnrichmentTab } from './vendor-enrichment-tab';
+export { VendorCertifications } from './vendor-certifications';

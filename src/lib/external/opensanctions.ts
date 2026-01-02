@@ -1,14 +1,20 @@
 /**
  * OpenSanctions API Integration
  *
- * OpenSanctions provides a free, open dataset of sanctions lists, watchlists,
+ * OpenSanctions provides a comprehensive dataset of sanctions lists, watchlists,
  * and politically exposed persons (PEPs) from around the world.
  *
  * API Docs: https://www.opensanctions.org/docs/api/
- * No API key required for basic matching.
+ *
+ * NOTE: API key is required. Free trial keys available for business email signups.
+ * Set OPENSANCTIONS_API_KEY environment variable with your API key.
+ *
+ * Alternatively, use the EU Consolidated Sanctions List (free, no API key required)
+ * via the fallback endpoint.
  */
 
 const OPENSANCTIONS_API = 'https://api.opensanctions.org';
+const OPENSANCTIONS_API_KEY = process.env.OPENSANCTIONS_API_KEY;
 
 export interface SanctionsMatch {
   id: string;
@@ -53,6 +59,13 @@ export const SANCTIONS_DATASETS = {
 };
 
 /**
+ * Check if OpenSanctions API key is configured
+ */
+export function isApiKeyConfigured(): boolean {
+  return !!OPENSANCTIONS_API_KEY;
+}
+
+/**
  * Check an entity name against global sanctions lists
  *
  * @param name - The entity name to check
@@ -63,6 +76,15 @@ export async function checkSanctions(
   name: string,
   country?: string
 ): Promise<SanctionsResult | SanctionsError> {
+  // Check for API key first
+  if (!OPENSANCTIONS_API_KEY) {
+    return {
+      error: true,
+      message: 'OpenSanctions API key not configured. To enable sanctions screening, sign up for a free API key at opensanctions.org and add OPENSANCTIONS_API_KEY to your environment variables.',
+      code: 'API_KEY_MISSING',
+    };
+  }
+
   try {
     // Build query parameters
     const params = new URLSearchParams({
@@ -80,12 +102,20 @@ export async function checkSanctions(
       method: 'GET',
       headers: {
         'Accept': 'application/json',
+        'Authorization': `ApiKey ${OPENSANCTIONS_API_KEY}`,
       },
       // Cache for 1 hour
       next: { revalidate: 3600 },
     });
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        return {
+          error: true,
+          message: 'Invalid or expired API key. Please check your OPENSANCTIONS_API_KEY environment variable.',
+          code: 'API_KEY_INVALID',
+        };
+      }
       if (response.status === 429) {
         return {
           error: true,
