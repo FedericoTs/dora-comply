@@ -7,6 +7,7 @@ import {
   Users,
   ScrollText,
   Sparkles,
+  Target,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,7 @@ import {
 import { VendorDocuments } from './vendor-documents';
 import { VendorContacts } from '@/components/vendors/vendor-contacts';
 import { VendorContracts } from '@/components/vendors/vendor-contracts';
+import { VendorDORACompliance } from '@/components/vendors/vendor-dora-compliance';
 
 interface VendorDetailPageProps {
   params: Promise<{ id: string }>;
@@ -157,6 +159,10 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
           <TabsTrigger value="enrichment">
             <Sparkles className="h-4 w-4 mr-1.5" />
             Enrichment
+          </TabsTrigger>
+          <TabsTrigger value="dora">
+            <Target className="h-4 w-4 mr-1.5" />
+            DORA
           </TabsTrigger>
         </TabsList>
 
@@ -367,6 +373,10 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
 
         <TabsContent value="enrichment">
           <VendorEnrichmentTab vendor={vendor} />
+        </TabsContent>
+
+        <TabsContent value="dora">
+          <VendorDORACompliance vendorId={vendor.id} vendorName={vendor.name} />
         </TabsContent>
       </Tabs>
     </div>
