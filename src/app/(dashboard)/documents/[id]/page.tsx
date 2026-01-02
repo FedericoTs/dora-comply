@@ -2,10 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
-  ChevronLeft,
-  Download,
   Building2,
-  Calendar,
   FileText,
   Shield,
   Award,
@@ -14,10 +11,7 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle2,
-  Edit,
-  Trash2,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -33,12 +27,14 @@ import {
   isDocumentExpired,
   type DocumentType,
 } from '@/lib/documents/types';
+import { PageBreadcrumb } from '@/components/navigation';
 import { DocumentActions } from './document-actions';
 import { DocumentAIAnalysisCard, SOC2AnalysisCard } from '@/components/documents';
 import { createClient } from '@/lib/supabase/server';
 
 interface DocumentDetailPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 const documentTypeIcons: Record<DocumentType, React.ElementType> = {
@@ -65,13 +61,19 @@ export async function generateMetadata({
   };
 }
 
-export default async function DocumentDetailPage({ params }: DocumentDetailPageProps) {
+export default async function DocumentDetailPage({ params, searchParams }: DocumentDetailPageProps) {
   const { id } = await params;
+  const resolvedSearchParams = await searchParams;
   const document = await getDocumentWithVendor(id);
 
   if (!document) {
     notFound();
   }
+
+  // Extract navigation context from search params
+  const fromVendor = resolvedSearchParams.from === 'vendor';
+  const vendorId = typeof resolvedSearchParams.vendorId === 'string' ? resolvedSearchParams.vendorId : undefined;
+  const vendorName = typeof resolvedSearchParams.vendorName === 'string' ? resolvedSearchParams.vendorName : undefined;
 
   // Fetch existing analysis, vendor contracts, and SOC 2 parsed data in parallel
   const supabase = await createClient();
@@ -91,15 +93,23 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
 
   const expiryDate = document.metadata?.valid_until || document.metadata?.expiry_date;
 
+  // Build breadcrumb segments based on context
+  const breadcrumbSegments = fromVendor && vendorId
+    ? [
+        { label: 'Vendors', href: '/vendors' },
+        { label: vendorName || document.vendor?.name || 'Vendor', href: `/vendors/${vendorId}?tab=documents` },
+      ]
+    : undefined;
+
   return (
     <div className="space-y-6">
-      {/* Back Button */}
-      <Button variant="ghost" size="sm" asChild className="-ml-2">
-        <Link href="/documents">
-          <ChevronLeft className="mr-1 h-4 w-4" />
-          Back to Documents
-        </Link>
-      </Button>
+      {/* Breadcrumb Navigation */}
+      <PageBreadcrumb
+        segments={breadcrumbSegments}
+        currentPage={document.filename}
+        backHref={fromVendor && vendorId ? `/vendors/${vendorId}?tab=documents` : '/documents'}
+        backLabel={fromVendor ? `Back to ${vendorName || 'Vendor'}` : 'Back to Documents'}
+      />
 
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -443,7 +453,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
             <CardContent>
               {document.vendor ? (
                 <Link
-                  href={`/vendors/${document.vendor.id}`}
+                  href={`/vendors/${document.vendor.id}?tab=documents`}
                   className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                 >
                   <div className="rounded-full bg-muted p-2">

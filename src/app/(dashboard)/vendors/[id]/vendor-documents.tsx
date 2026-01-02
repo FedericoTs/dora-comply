@@ -291,7 +291,7 @@ export function VendorDocuments({ vendorId, vendorName }: VendorDocumentsProps) 
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem asChild>
-                                <Link href={`/documents/${doc.id}`}>
+                                <Link href={`/documents/${doc.id}?from=vendor&vendorId=${vendorId}&vendorName=${encodeURIComponent(vendorName)}`}>
                                   <Eye className="mr-2 h-4 w-4" />
                                   View Details
                                 </Link>

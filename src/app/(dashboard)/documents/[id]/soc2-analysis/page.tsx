@@ -13,7 +13,6 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
-  ChevronLeft,
   Shield,
   AlertTriangle,
   CheckCircle2,
@@ -26,8 +25,10 @@ import {
   Award,
   Target,
   Info,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PageBreadcrumb } from '@/components/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -50,12 +51,14 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
 
-// Client components for charts and export
+// Client components for charts, export, and evidence view
 import { SOC2AnalysisClient } from './soc2-analysis-client';
 import { ExportButtons } from './export-buttons';
+import { EvidenceViewTab } from './evidence-view-tab';
 
 interface SOC2AnalysisPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export async function generateMetadata({
@@ -147,15 +150,22 @@ interface ParsedSOC2 {
   created_at: string;
 }
 
-export default async function SOC2AnalysisPage({ params }: SOC2AnalysisPageProps) {
+export default async function SOC2AnalysisPage({ params, searchParams }: SOC2AnalysisPageProps) {
   const { id } = await params;
+  const resolvedSearchParams = await searchParams;
   const supabase = await createClient();
+
+  // Extract navigation context
+  const fromVendor = resolvedSearchParams.from === 'vendor';
+  const vendorId = typeof resolvedSearchParams.vendorId === 'string' ? resolvedSearchParams.vendorId : undefined;
+  const vendorName = typeof resolvedSearchParams.vendorName === 'string' ? resolvedSearchParams.vendorName : undefined;
+  const documentName = typeof resolvedSearchParams.documentName === 'string' ? resolvedSearchParams.documentName : undefined;
 
   // Fetch document and parsed SOC 2 data
   const [{ data: document }, { data: parsedSoc2 }] = await Promise.all([
     supabase
       .from('documents')
-      .select('id, filename, vendor_id, created_at, vendors(id, name)')
+      .select('id, filename, vendor_id, storage_path, created_at, vendors(id, name)')
       .eq('id', id)
       .single(),
     supabase.from('parsed_soc2').select('*').eq('document_id', id).single(),
@@ -163,6 +173,15 @@ export default async function SOC2AnalysisPage({ params }: SOC2AnalysisPageProps
 
   if (!document || !parsedSoc2) {
     notFound();
+  }
+
+  // Generate signed URL for PDF viewing (valid for 1 hour)
+  let pdfUrl: string | null = null;
+  if (document.storage_path) {
+    const { data: signedUrlData } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(document.storage_path, 3600);
+    pdfUrl = signedUrlData?.signedUrl || null;
   }
 
   const analysis = parsedSoc2 as unknown as ParsedSOC2;
@@ -253,22 +272,45 @@ export default async function SOC2AnalysisPage({ params }: SOC2AnalysisPageProps
 
   const opinion = opinionConfig[analysis.opinion];
 
+  // Build breadcrumb segments based on navigation context
+  const buildDocumentHref = () => {
+    if (fromVendor && vendorId) {
+      const params = new URLSearchParams();
+      params.set('from', 'vendor');
+      params.set('vendorId', vendorId);
+      if (vendorName) params.set('vendorName', vendorName);
+      return `/documents/${id}?${params.toString()}`;
+    }
+    return `/documents/${id}`;
+  };
+
+  const breadcrumbSegments = fromVendor && vendorId
+    ? [
+        { label: 'Vendors', href: '/vendors' },
+        { label: vendorName || vendor?.name || 'Vendor', href: `/vendors/${vendorId}?tab=documents` },
+        { label: documentName || document.filename, href: buildDocumentHref() },
+      ]
+    : [
+        { label: 'Documents', href: '/documents' },
+        { label: document.filename, href: `/documents/${id}` },
+      ];
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
         {/* Navigation */}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" asChild className="-ml-2">
-            <Link href={`/documents/${id}`}>
-              <ChevronLeft className="mr-1 h-4 w-4" />
-              Back to Document
-            </Link>
-          </Button>
+          <PageBreadcrumb
+            segments={breadcrumbSegments}
+            currentPage="SOC 2 Analysis"
+            backHref={buildDocumentHref()}
+            backLabel="Back to Document"
+          />
           <div className="flex items-center gap-2">
             <ExportButtons documentId={id} documentName={document.filename} />
             {vendor && (
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/vendors/${vendor.id}`}>
+                <Link href={`/vendors/${vendor.id}?tab=documents`}>
                   <Building2 className="mr-2 h-4 w-4" />
                   View Vendor
                 </Link>
@@ -416,7 +458,11 @@ export default async function SOC2AnalysisPage({ params }: SOC2AnalysisPageProps
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="controls" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="evidence" className="gap-2">
+              <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">Evidence</span>
+            </TabsTrigger>
             <TabsTrigger value="controls" className="gap-2">
               <Shield className="h-4 w-4" />
               <span className="hidden sm:inline">Controls</span>
@@ -444,6 +490,34 @@ export default async function SOC2AnalysisPage({ params }: SOC2AnalysisPageProps
               <span className="hidden sm:inline">DORA</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Evidence View Tab - 10X Differentiator */}
+          <TabsContent value="evidence" className="space-y-4">
+            <Card className="bg-primary/5 border-primary/20 mb-4">
+              <CardContent className="py-4">
+                <div className="flex items-start gap-3">
+                  <Eye className="h-5 w-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-primary">Evidence Traceability View</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Click on any extracted control, exception, or subservice organization to see exactly
+                      where it was found in the source document. This side-by-side view ensures full
+                      auditability and DORA compliance.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <EvidenceViewTab
+              pdfUrl={pdfUrl}
+              controls={controls}
+              exceptions={exceptions}
+              subserviceOrgs={subserviceOrgs}
+              cuecs={cuecs}
+              documentId={id}
+              documentName={document.filename}
+            />
+          </TabsContent>
 
           {/* Controls Tab */}
           <TabsContent value="controls" className="space-y-4">

@@ -151,6 +151,14 @@ export async function POST(
       );
     }
 
+    // Populate evidence_locations table for traceability
+    await populateEvidenceLocations(
+      supabase,
+      document.organization_id,
+      documentId,
+      databaseRecord
+    );
+
     // Calculate DORA coverage if we have mappings
     let doraCoverage = null;
     if (doraMapping && doraMapping.length > 0) {
@@ -326,5 +334,154 @@ async function createVendorAssessments(
     }
   } catch (error) {
     console.error('[parse-soc2] Error creating assessments:', error);
+  }
+}
+
+// ============================================================================
+// Helper: Populate evidence_locations table for traceability
+// ============================================================================
+
+interface ParsedDatabaseRecord {
+  controls: Array<{
+    controlId: string;
+    controlArea?: string;
+    tscCategory?: string;
+    description: string;
+    testResult: string;
+    location?: string;
+    confidence: number;
+  }>;
+  exceptions: Array<{
+    controlId: string;
+    controlArea?: string;
+    exceptionDescription: string;
+    location?: string;
+  }>;
+  subservice_orgs: Array<{
+    name: string;
+    serviceDescription: string;
+    location?: string;
+  }>;
+  cuecs: Array<{
+    id?: string;
+    description: string;
+    customerResponsibility: string;
+    location?: string;
+  }>;
+}
+
+function parseLocation(location?: string): { pageNumber?: number; sectionReference?: string } {
+  if (!location) return {};
+
+  // Parse patterns like "Page 26, Section 4.1" or "p. 42" or "Section 3"
+  const pageMatch = location.match(/(?:page|p\.?)\s*(\d+)/i);
+  const sectionMatch = location.match(/(?:section|sec\.?)\s*([\d.]+)/i);
+
+  return {
+    pageNumber: pageMatch ? parseInt(pageMatch[1], 10) : undefined,
+    sectionReference: sectionMatch ? `Section ${sectionMatch[1]}` : undefined,
+  };
+}
+
+async function populateEvidenceLocations(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  organizationId: string,
+  documentId: string,
+  databaseRecord: ParsedDatabaseRecord
+): Promise<void> {
+  try {
+    const evidenceLocations: Array<{
+      organization_id: string;
+      source_document_id: string;
+      evidence_type: string;
+      evidence_id: string;
+      page_number?: number;
+      section_reference?: string;
+      extracted_text: string;
+      confidence: number;
+      extraction_method: string;
+    }> = [];
+
+    // Add controls
+    for (const control of databaseRecord.controls || []) {
+      const { pageNumber, sectionReference } = parseLocation(control.location);
+      evidenceLocations.push({
+        organization_id: organizationId,
+        source_document_id: documentId,
+        evidence_type: 'control',
+        evidence_id: control.controlId,
+        page_number: pageNumber,
+        section_reference: sectionReference || control.controlArea,
+        extracted_text: control.description.substring(0, 2000), // Limit text length
+        confidence: control.confidence,
+        extraction_method: 'ai',
+      });
+    }
+
+    // Add exceptions
+    for (const exception of databaseRecord.exceptions || []) {
+      const { pageNumber, sectionReference } = parseLocation(exception.location);
+      evidenceLocations.push({
+        organization_id: organizationId,
+        source_document_id: documentId,
+        evidence_type: 'exception',
+        evidence_id: exception.controlId,
+        page_number: pageNumber,
+        section_reference: sectionReference || exception.controlArea,
+        extracted_text: exception.exceptionDescription.substring(0, 2000),
+        confidence: 0.85, // Exceptions typically high confidence
+        extraction_method: 'ai',
+      });
+    }
+
+    // Add subservice organizations
+    for (let i = 0; i < (databaseRecord.subservice_orgs || []).length; i++) {
+      const org = databaseRecord.subservice_orgs[i];
+      const { pageNumber, sectionReference } = parseLocation(org.location);
+      evidenceLocations.push({
+        organization_id: organizationId,
+        source_document_id: documentId,
+        evidence_type: 'subservice',
+        evidence_id: `subservice-${i}`,
+        page_number: pageNumber,
+        section_reference: sectionReference,
+        extracted_text: `${org.name}: ${org.serviceDescription}`.substring(0, 2000),
+        confidence: 0.9,
+        extraction_method: 'ai',
+      });
+    }
+
+    // Add CUECs
+    for (let i = 0; i < (databaseRecord.cuecs || []).length; i++) {
+      const cuec = databaseRecord.cuecs[i];
+      const { pageNumber, sectionReference } = parseLocation(cuec.location);
+      evidenceLocations.push({
+        organization_id: organizationId,
+        source_document_id: documentId,
+        evidence_type: 'cuec',
+        evidence_id: cuec.id || `CUEC-${i + 1}`,
+        page_number: pageNumber,
+        section_reference: sectionReference,
+        extracted_text: cuec.customerResponsibility.substring(0, 2000),
+        confidence: 0.88,
+        extraction_method: 'ai',
+      });
+    }
+
+    if (evidenceLocations.length > 0) {
+      const { error: evidenceError } = await supabase
+        .from('evidence_locations')
+        .insert(evidenceLocations);
+
+      if (evidenceError) {
+        console.error('[parse-soc2] Evidence locations insert error:', evidenceError);
+      } else {
+        console.log(
+          `[parse-soc2] Created ${evidenceLocations.length} evidence location records`
+        );
+      }
+    }
+  } catch (error) {
+    console.error('[parse-soc2] Error populating evidence locations:', error);
   }
 }

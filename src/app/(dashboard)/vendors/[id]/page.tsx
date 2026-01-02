@@ -6,13 +6,10 @@ import {
   Shield,
   Users,
   ScrollText,
-  Sparkles,
-  Target,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { getVendorWithRelations } from '@/lib/vendors/queries';
 import {
@@ -30,10 +27,12 @@ import {
   VendorESAFields,
   VendorEnrichmentTab,
 } from '@/components/vendors/detail';
+import { SimpleBreadcrumb } from '@/components/navigation';
 import { VendorDocuments } from './vendor-documents';
 import { VendorContacts } from '@/components/vendors/vendor-contacts';
 import { VendorContracts } from '@/components/vendors/vendor-contracts';
 import { VendorDORACompliance } from '@/components/vendors/vendor-dora-compliance';
+import { VendorTabs } from './vendor-tabs';
 
 interface VendorDetailPageProps {
   params: Promise<{ id: string }>;
@@ -75,6 +74,13 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb Navigation */}
+      <SimpleBreadcrumb
+        parent="Vendors"
+        parentHref="/vendors"
+        current={vendor.name}
+      />
+
       {/* Hero Section */}
       <VendorHero vendor={vendor} />
 
@@ -141,32 +147,9 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
       )}
 
       {/* Main Content */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="contacts">
-            <Users className="h-4 w-4 mr-1.5" />
-            Contacts
-          </TabsTrigger>
-          <TabsTrigger value="documents">
-            <FileText className="h-4 w-4 mr-1.5" />
-            Documents
-          </TabsTrigger>
-          <TabsTrigger value="contracts">
-            <ScrollText className="h-4 w-4 mr-1.5" />
-            Contracts
-          </TabsTrigger>
-          <TabsTrigger value="enrichment">
-            <Sparkles className="h-4 w-4 mr-1.5" />
-            Enrichment
-          </TabsTrigger>
-          <TabsTrigger value="dora">
-            <Target className="h-4 w-4 mr-1.5" />
-            DORA
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
+      <VendorTabs
+        overview={
+          <>
           {/* Corporate Structure & Addresses */}
           <div className="grid gap-6 lg:grid-cols-2">
             <VendorParentHierarchy vendor={vendor} />
@@ -350,35 +333,27 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
               </CardContent>
             </Card>
           )}
-        </TabsContent>
-
-        <TabsContent value="contacts">
+          </>
+        }
+        contacts={
           <VendorContacts
             vendorId={vendor.id}
             contacts={vendor.contacts || []}
           />
-        </TabsContent>
-
-        <TabsContent value="documents">
+        }
+        documents={
           <VendorDocuments vendorId={vendor.id} vendorName={vendor.name} />
-        </TabsContent>
-
-        <TabsContent value="contracts">
+        }
+        contracts={
           <VendorContracts
             vendorId={vendor.id}
             contracts={vendor.contracts || []}
             isCriticalFunction={vendor.supports_critical_function}
           />
-        </TabsContent>
-
-        <TabsContent value="enrichment">
-          <VendorEnrichmentTab vendor={vendor} />
-        </TabsContent>
-
-        <TabsContent value="dora">
-          <VendorDORACompliance vendorId={vendor.id} vendorName={vendor.name} />
-        </TabsContent>
-      </Tabs>
+        }
+        enrichment={<VendorEnrichmentTab vendor={vendor} />}
+        dora={<VendorDORACompliance vendorId={vendor.id} vendorName={vendor.name} />}
+      />
     </div>
   );
 }

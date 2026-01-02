@@ -11,10 +11,9 @@ import {
   LogOut,
   Search,
   Bell,
-  MoreHorizontal,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { ThemeToggleSimple } from '@/components/ui/theme-toggle';
+import { NavigationProviders } from '@/components/navigation';
 import { checkAuthStatus, logout } from '@/lib/auth';
 
 const navigation = [
@@ -141,7 +140,9 @@ export default async function DashboardLayout({
 
           {/* Page Content */}
           <div className="p-8">
-            {children}
+            <NavigationProviders>
+              {children}
+            </NavigationProviders>
           </div>
         </main>
       </div>
