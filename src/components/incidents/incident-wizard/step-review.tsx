@@ -1,0 +1,299 @@
+'use client';
+
+import {
+  AlertTriangle,
+  Shield,
+  Info,
+  Calendar,
+  Users,
+  Globe,
+  Building2,
+  FileText,
+  Edit,
+  Check,
+  DollarSign,
+  Database,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import type { WizardData } from './index';
+import {
+  getClassificationLabel,
+  getIncidentTypeLabel,
+  calculateDeadline,
+} from '@/lib/incidents/types';
+
+interface StepReviewProps {
+  data: WizardData;
+  goToStep: (step: number) => void;
+}
+
+function SectionHeader({
+  title,
+  step,
+  onEdit,
+}: {
+  title: string;
+  step: number;
+  onEdit: (step: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <h3 className="font-medium">{title}</h3>
+      <Button variant="ghost" size="sm" onClick={() => onEdit(step)}>
+        <Edit className="h-3 w-3 mr-1" />
+        Edit
+      </Button>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  if (value === null || value === undefined || value === '') return null;
+  return (
+    <div className="flex justify-between py-1.5 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium text-right max-w-[60%]">{value}</span>
+    </div>
+  );
+}
+
+export function StepReview({ data, goToStep }: StepReviewProps) {
+  const detectionDate = new Date(data.detection_datetime);
+  const classificationIcon =
+    data.classification === 'major' ? AlertTriangle :
+    data.classification === 'significant' ? Shield : Info;
+  const ClassificationIcon = classificationIcon;
+
+  const deadlines = {
+    initial: calculateDeadline(detectionDate, 'initial'),
+    intermediate: calculateDeadline(detectionDate, 'intermediate'),
+    final: calculateDeadline(detectionDate, 'final'),
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Header */}
+      <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/30">
+        <div
+          className={cn(
+            'flex h-12 w-12 shrink-0 items-center justify-center rounded-full',
+            data.classification === 'major'
+              ? 'bg-red-100 text-red-600'
+              : data.classification === 'significant'
+              ? 'bg-amber-100 text-amber-600'
+              : 'bg-slate-100 text-slate-600'
+          )}
+        >
+          <ClassificationIcon className="h-6 w-6" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-semibold truncate">{data.title || 'Untitled Incident'}</h2>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <Badge
+              variant="outline"
+              className={cn(
+                data.classification === 'major'
+                  ? 'border-red-500 text-red-700'
+                  : data.classification === 'significant'
+                  ? 'border-amber-500 text-amber-700'
+                  : 'border-slate-400 text-slate-700'
+              )}
+            >
+              {getClassificationLabel(data.classification)}
+            </Badge>
+            <Badge variant="outline">{getIncidentTypeLabel(data.incident_type)}</Badge>
+            {data.data_breach && (
+              <Badge variant="destructive">Data Breach</Badge>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Classification Section */}
+      <div className="space-y-3">
+        <SectionHeader title="Classification" step={0} onEdit={goToStep} />
+        <div className="rounded-lg border p-4 space-y-1">
+          <InfoRow
+            label="Classification"
+            value={getClassificationLabel(data.classification)}
+          />
+          <InfoRow
+            label="Incident Type"
+            value={getIncidentTypeLabel(data.incident_type)}
+          />
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Impact Section */}
+      <div className="space-y-3">
+        <SectionHeader title="Impact Assessment" step={1} onEdit={goToStep} />
+        <div className="rounded-lg border p-4 space-y-1">
+          {data.services_affected.length > 0 && (
+            <InfoRow
+              label="Services Affected"
+              value={`${data.services_affected.length} service(s)`}
+            />
+          )}
+          {data.critical_functions_affected.length > 0 && (
+            <InfoRow
+              label="Critical Functions"
+              value={`${data.critical_functions_affected.length} function(s)`}
+            />
+          )}
+          <InfoRow
+            label="Clients Affected"
+            value={
+              data.clients_affected_count
+                ? `${data.clients_affected_count.toLocaleString()} (${data.clients_affected_percentage ?? 0}%)`
+                : undefined
+            }
+          />
+          <InfoRow
+            label="Transactions Affected"
+            value={
+              data.transactions_affected_count
+                ? data.transactions_affected_count.toLocaleString()
+                : undefined
+            }
+          />
+          <InfoRow
+            label="Transaction Value"
+            value={
+              data.transactions_value_affected
+                ? `€${data.transactions_value_affected.toLocaleString()}`
+                : undefined
+            }
+          />
+          <InfoRow
+            label="Economic Impact"
+            value={
+              data.economic_impact
+                ? `€${data.economic_impact.toLocaleString()}`
+                : undefined
+            }
+          />
+          <InfoRow
+            label="Data Breach"
+            value={
+              data.data_breach
+                ? `Yes - ${data.data_records_affected?.toLocaleString() ?? 'unknown'} records`
+                : 'No'
+            }
+          />
+          {data.geographic_spread.length > 0 && (
+            <InfoRow
+              label="Geographic Spread"
+              value={data.geographic_spread.join(', ')}
+            />
+          )}
+          <InfoRow label="Reputational Impact" value={data.reputational_impact} />
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Timeline Section */}
+      <div className="space-y-3">
+        <SectionHeader title="Timeline" step={2} onEdit={goToStep} />
+        <div className="rounded-lg border p-4 space-y-1">
+          <InfoRow
+            label="Detection Time"
+            value={detectionDate.toLocaleString('en-GB')}
+          />
+          {data.occurrence_datetime && (
+            <InfoRow
+              label="Occurrence Time"
+              value={new Date(data.occurrence_datetime).toLocaleString('en-GB')}
+            />
+          )}
+        </div>
+
+        {data.classification === 'major' && (
+          <div className="grid gap-2 sm:grid-cols-3 mt-2">
+            <div className="rounded-lg border p-3 text-center">
+              <p className="text-xs text-muted-foreground">Initial Report Due</p>
+              <p className="text-sm font-mono mt-1">
+                {deadlines.initial.toLocaleString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+            <div className="rounded-lg border p-3 text-center">
+              <p className="text-xs text-muted-foreground">Intermediate Due</p>
+              <p className="text-sm font-mono mt-1">
+                {deadlines.intermediate.toLocaleString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+            <div className="rounded-lg border p-3 text-center">
+              <p className="text-xs text-muted-foreground">Final Report Due</p>
+              <p className="text-sm font-mono mt-1">
+                {deadlines.final.toLocaleString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Details Section */}
+      <div className="space-y-3">
+        <SectionHeader title="Details" step={3} onEdit={goToStep} />
+        <div className="rounded-lg border p-4 space-y-3">
+          <InfoRow label="Title" value={data.title} />
+          {data.description && (
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Description</p>
+              <p className="text-sm">{data.description}</p>
+            </div>
+          )}
+          <InfoRow label="Related Vendor" value={data.vendor_id ? 'Selected' : 'None'} />
+          {data.root_cause && (
+            <div className="space-y-1 pt-2 border-t">
+              <p className="text-sm text-muted-foreground">Root Cause</p>
+              <p className="text-sm">{data.root_cause}</p>
+            </div>
+          )}
+          {data.remediation_actions && (
+            <div className="space-y-1 pt-2 border-t">
+              <p className="text-sm text-muted-foreground">Remediation Actions</p>
+              <p className="text-sm">{data.remediation_actions}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Confirmation */}
+      <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 p-4">
+        <div className="flex items-start gap-3">
+          <Check className="h-5 w-5 text-green-600 mt-0.5" />
+          <div>
+            <h4 className="font-medium text-green-900 dark:text-green-300">
+              Ready to Create Incident
+            </h4>
+            <p className="text-sm text-green-800 dark:text-green-400 mt-1">
+              Review the information above and click &quot;Create Incident&quot; to save.
+              You can edit details and submit reports after creation.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
