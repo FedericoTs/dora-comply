@@ -11,21 +11,23 @@ import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import type { PDFHighlight, PDFHighlightLayerProps } from './types';
 
+// Light, readable highlight colors - 15% base opacity, 25% on hover
 const highlightColors: Record<string, string> = {
-  yellow: 'bg-yellow-400/40 border-yellow-500 hover:bg-yellow-400/60',
-  green: 'bg-green-400/40 border-green-500 hover:bg-green-400/60',
-  blue: 'bg-blue-400/40 border-blue-500 hover:bg-blue-400/60',
-  red: 'bg-red-400/40 border-red-500 hover:bg-red-400/60',
-  orange: 'bg-orange-400/40 border-orange-500 hover:bg-orange-400/60',
-  purple: 'bg-purple-400/40 border-purple-500 hover:bg-purple-400/60',
+  yellow: 'bg-yellow-300/15 border-yellow-500/50 hover:bg-yellow-300/25',
+  green: 'bg-green-300/15 border-green-500/50 hover:bg-green-300/25',
+  blue: 'bg-blue-300/15 border-blue-500/50 hover:bg-blue-300/25',
+  red: 'bg-red-300/15 border-red-500/50 hover:bg-red-300/25',
+  orange: 'bg-orange-300/15 border-orange-500/50 hover:bg-orange-300/25',
+  purple: 'bg-purple-300/15 border-purple-500/50 hover:bg-purple-300/25',
 };
 
+// Evidence type colors - subtle enough to read through
 const evidenceTypeColors: Record<string, string> = {
-  control: 'bg-blue-400/40 border-blue-500 hover:bg-blue-400/60',
-  exception: 'bg-red-400/40 border-red-500 hover:bg-red-400/60',
-  cuec: 'bg-orange-400/40 border-orange-500 hover:bg-orange-400/60',
-  subservice: 'bg-purple-400/40 border-purple-500 hover:bg-purple-400/60',
-  finding: 'bg-yellow-400/40 border-yellow-500 hover:bg-yellow-400/60',
+  control: 'bg-blue-300/15 border-blue-500/60 hover:bg-blue-300/25',
+  exception: 'bg-red-300/15 border-red-500/60 hover:bg-red-300/25',
+  cuec: 'bg-orange-300/15 border-orange-500/60 hover:bg-orange-300/25',
+  subservice: 'bg-purple-300/15 border-purple-500/60 hover:bg-purple-300/25',
+  finding: 'bg-yellow-300/15 border-yellow-500/60 hover:bg-yellow-300/25',
 };
 
 interface HighlightBoxProps {
@@ -53,10 +55,10 @@ const HighlightBox = memo(function HighlightBox({
       role="button"
       tabIndex={0}
       className={cn(
-        'absolute cursor-pointer border-2 rounded-sm transition-all duration-200',
+        'absolute cursor-pointer border rounded-sm transition-all duration-200',
         colorClass,
-        isSelected && 'ring-2 ring-primary ring-offset-1 shadow-lg z-10',
-        !isSelected && 'hover:z-10'
+        isSelected && 'ring-2 ring-primary ring-offset-1 shadow-lg z-10 border-2 !bg-primary/20',
+        !isSelected && 'hover:z-10 hover:border-2'
       )}
       style={{
         left: `${boundingBox.x}%`,
