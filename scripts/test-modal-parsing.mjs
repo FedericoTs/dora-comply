@@ -12,11 +12,20 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Load environment variables
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://oipwlrhyzayuxgcabsvu.supabase.co';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '${SUPABASE_SERVICE_ROLE_KEY:-MISSING_ENV_VAR}';
+// Load environment variables (required - no hardcoded secrets)
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MODAL_PARSE_URL = process.env.MODAL_PARSE_SOC2_URL || 'https://federicots--dora-comply-soc2-parser-parse-soc2.modal.run';
 const MODAL_HEALTH_URL = 'https://federicots--dora-comply-soc2-parser-health.modal.run';
+
+// Validate required environment variables
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  console.error('❌ Missing required environment variables:');
+  if (!SUPABASE_URL) console.error('   - NEXT_PUBLIC_SUPABASE_URL');
+  if (!SUPABASE_SERVICE_KEY) console.error('   - SUPABASE_SERVICE_ROLE_KEY');
+  console.error('\nPlease set these in your .env.local file or export them before running.');
+  process.exit(1);
+}
 
 // Create Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);

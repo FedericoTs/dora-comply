@@ -92,6 +92,7 @@ interface ParsedControl {
   testingProcedure?: string;
   exceptionDescription?: string;
   location?: string;
+  pageRef?: number;
   confidence: number;
 }
 
@@ -104,6 +105,7 @@ interface ParsedException {
   remediationDate?: string;
   impact: 'low' | 'medium' | 'high';
   location?: string;
+  pageRef?: number;
 }
 
 interface ParsedSubserviceOrg {
@@ -113,6 +115,7 @@ interface ParsedSubserviceOrg {
   controlsSupported: string[];
   hasOwnSoc2?: boolean;
   location?: string;
+  pageRef?: number;
 }
 
 interface ParsedCUEC {
@@ -122,6 +125,7 @@ interface ParsedCUEC {
   customerResponsibility: string;
   category?: string;
   location?: string;
+  pageRef?: number;
 }
 
 interface ParsedSOC2 {
@@ -219,10 +223,26 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
       SHARING: 0,
     };
 
-    // Count controls per TSC category
+    // Normalize TSC category names from database format to standard TSC codes
+    const normalizeTscCategory = (category: string): string => {
+      const upper = category.toUpperCase();
+      // Map full names to abbreviations
+      const nameMapping: Record<string, string> = {
+        'AVAILABILITY': 'A',
+        'CONFIDENTIALITY': 'C',
+        'PROCESSING_INTEGRITY': 'PI',
+        'PRIVACY': 'P',
+      };
+      if (nameMapping[upper]) return nameMapping[upper];
+      // For CC categories, keep the full code (CC1, CC6, etc.)
+      if (upper.startsWith('CC')) return upper;
+      return upper;
+    };
+
+    // Count controls per TSC category (keeping full category codes)
     const categoryCount: Record<string, { total: number; effective: number }> = {};
     for (const control of controls) {
-      const cat = control.tscCategory.replace(/\d+$/, '').toUpperCase();
+      const cat = normalizeTscCategory(control.tscCategory);
       if (!categoryCount[cat]) categoryCount[cat] = { total: 0, effective: 0 };
       categoryCount[cat].total++;
       if (control.testResult === 'operating_effectively') {
@@ -230,13 +250,13 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
       }
     }
 
-    // Map to DORA pillars
+    // Map to DORA pillars - each pillar maps to specific TSC categories
     const pillarMapping: Record<string, string[]> = {
       ICT_RISK: ['CC1', 'CC3', 'CC4', 'CC5', 'CC6', 'CC7', 'CC8'],
       INCIDENT: ['CC7'],
       RESILIENCE: ['A', 'CC7', 'CC9'],
       TPRM: ['CC9', 'C'],
-      SHARING: [],
+      SHARING: ['CC2', 'CC5'], // Communication & monitoring activities support information sharing
     };
 
     for (const [pillar, categories] of Object.entries(pillarMapping)) {
@@ -244,12 +264,18 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
       let pillarScore = 0;
       let catCount = 0;
       for (const cat of categories) {
-        if (categoryCount[cat]) {
-          const catScore = categoryCount[cat].total > 0
-            ? (categoryCount[cat].effective / categoryCount[cat].total) * 100
-            : 0;
-          pillarScore += catScore;
-          catCount++;
+        // Check for exact match or prefix match (e.g., "CC6" matches category count for "CC6")
+        const matchingCats = Object.keys(categoryCount).filter(
+          k => k === cat || k.startsWith(cat)
+        );
+        for (const matchCat of matchingCats) {
+          if (categoryCount[matchCat]) {
+            const catScore = categoryCount[matchCat].total > 0
+              ? (categoryCount[matchCat].effective / categoryCount[matchCat].total) * 100
+              : 0;
+            pillarScore += catScore;
+            catCount++;
+          }
         }
       }
       coverageByPillar[pillar as keyof typeof coverageByPillar] = catCount > 0 ? Math.round(pillarScore / catCount) : 0;
@@ -866,14 +892,18 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
                       { article: 'Art. 10', title: 'Backup Policies', categories: ['CC7'] },
                       { article: 'Art. 17', title: 'Incident Classification', categories: ['CC7'] },
                       { article: 'Art. 19', title: 'Major Incident Reporting', categories: ['CC7'] },
-                      { article: 'Art. 24', title: 'Resilience Testing', categories: ['A'] },
+                      { article: 'Art. 24', title: 'Resilience Testing', categories: ['A', 'AVAILABILITY'] },
                       { article: 'Art. 28', title: 'Third-Party Risk Management', categories: ['CC9'] },
                       { article: 'Art. 29', title: 'Register of Information', categories: ['CC9'] },
-                      { article: 'Art. 30', title: 'Contractual Requirements', categories: ['CC6', 'A', 'C'] },
+                      { article: 'Art. 30', title: 'Contractual Requirements', categories: ['CC6', 'A', 'AVAILABILITY', 'C', 'CONFIDENTIALITY'] },
                     ].map((row) => {
-                      const matchingControls = controls.filter(c =>
-                        row.categories.some(cat => c.tscCategory.toUpperCase().startsWith(cat))
-                      );
+                      // Match controls using both short codes (A, C) and full names (availability, confidentiality)
+                      const matchingControls = controls.filter(c => {
+                        const tsc = c.tscCategory.toUpperCase();
+                        return row.categories.some(cat =>
+                          tsc === cat.toUpperCase() || tsc.startsWith(cat.toUpperCase())
+                        );
+                      });
                       const effectiveCount = matchingControls.filter(c => c.testResult === 'operating_effectively').length;
                       const coverage = matchingControls.length > 0
                         ? Math.round((effectiveCount / matchingControls.length) * 100)

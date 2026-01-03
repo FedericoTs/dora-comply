@@ -39,6 +39,7 @@ interface ParsedControl {
   testingProcedure?: string;
   exceptionDescription?: string;
   location?: string;
+  pageRef?: number;
   confidence: number;
 }
 
@@ -51,6 +52,7 @@ interface ParsedException {
   remediationDate?: string;
   impact: 'low' | 'medium' | 'high';
   location?: string;
+  pageRef?: number;
 }
 
 interface ParsedSubserviceOrg {
@@ -60,6 +62,7 @@ interface ParsedSubserviceOrg {
   controlsSupported: string[];
   hasOwnSoc2?: boolean;
   location?: string;
+  pageRef?: number;
 }
 
 interface ParsedCUEC {
@@ -69,6 +72,7 @@ interface ParsedCUEC {
   customerResponsibility: string;
   category?: string;
   location?: string;
+  pageRef?: number;
 }
 
 interface EvidenceViewTabProps {
@@ -96,22 +100,39 @@ export function EvidenceViewTab({
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Helper to get page number from pageRef or parse from location string
+  const getPageNumber = (pageRef?: number, location?: string, fallback: number = 1): number => {
+    // Prefer direct pageRef if available
+    if (typeof pageRef === 'number' && pageRef > 0) return pageRef;
+    // Fall back to parsing location string (e.g., "Page 26, Section 4.1")
+    if (location) {
+      const pageMatch = location.match(/page\s*(\d+)/i);
+      if (pageMatch) return parseInt(pageMatch[1], 10);
+    }
+    return fallback;
+  };
+
   // Convert all evidence items to PDF highlights
   const highlights = useMemo<PDFHighlight[]>(() => {
     const items: PDFHighlight[] = [];
 
+    // Group controls by page for better Y positioning
+    const controlsByPage: Record<number, number> = {};
+
     // Add controls as highlights
     controls.forEach((control, idx) => {
-      // Parse location if available (e.g., "Page 26, Section 4.1")
-      const pageMatch = control.location?.match(/page\s*(\d+)/i);
-      const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : idx % 30 + 1; // Fallback distribution
+      const pageNumber = getPageNumber(control.pageRef, control.location, 1);
+
+      // Track position on this page
+      if (!controlsByPage[pageNumber]) controlsByPage[pageNumber] = 0;
+      const positionOnPage = controlsByPage[pageNumber]++;
 
       items.push({
         id: `control-${control.controlId}`,
         pageNumber,
         boundingBox: {
           x: 5,
-          y: 10 + (idx % 5) * 15,
+          y: 10 + (positionOnPage % 6) * 14,
           width: 90,
           height: 12,
         },
@@ -124,8 +145,7 @@ export function EvidenceViewTab({
 
     // Add exceptions as highlights
     exceptions.forEach((exception, idx) => {
-      const pageMatch = exception.location?.match(/page\s*(\d+)/i);
-      const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 40 + idx;
+      const pageNumber = getPageNumber(exception.pageRef, exception.location, 40 + idx);
 
       items.push({
         id: `exception-${exception.controlId}-${idx}`,
@@ -145,8 +165,7 @@ export function EvidenceViewTab({
 
     // Add subservice orgs as highlights
     subserviceOrgs.forEach((org, idx) => {
-      const pageMatch = org.location?.match(/page\s*(\d+)/i);
-      const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 60 + idx;
+      const pageNumber = getPageNumber(org.pageRef, org.location, 60 + idx);
 
       items.push({
         id: `subservice-${idx}`,
@@ -166,8 +185,7 @@ export function EvidenceViewTab({
 
     // Add CUECs as highlights
     cuecs.forEach((cuec, idx) => {
-      const pageMatch = cuec.location?.match(/page\s*(\d+)/i);
-      const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 80 + idx;
+      const pageNumber = getPageNumber(cuec.pageRef, cuec.location, 80 + idx);
 
       items.push({
         id: `cuec-${cuec.id || idx}`,
