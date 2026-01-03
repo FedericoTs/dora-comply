@@ -111,6 +111,45 @@ export function SOC2AnalysisCard({
     }
   }, [analysisState]);
 
+  // Poll for job completion
+  const pollJobStatus = async (jobId: string) => {
+    const maxAttempts = 60; // 5 minutes max (5s intervals)
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+
+      try {
+        const response = await fetch(`/api/documents/${documentId}/parse-soc2`);
+        const result = await response.json();
+
+        if (result.status === 'complete' && result.parsedId) {
+          // Fetch the full parsed data
+          const parsedResponse = await fetch(`/api/documents/${documentId}/parse-soc2`);
+          const parsedResult = await parsedResponse.json();
+
+          // Refresh the page to get the full parsed data
+          setProgress(100);
+          toast.success('SOC 2 Analysis Complete!', {
+            description: 'Document has been parsed successfully.',
+          });
+          router.refresh();
+          return;
+        } else if (result.status === 'failed') {
+          throw new Error(result.error || 'Parsing failed');
+        } else {
+          // Update progress
+          setProgress(result.progress || Math.min(attempts * 2, 90));
+        }
+      } catch (err) {
+        console.error('[soc2-analysis-card] Poll error:', err);
+      }
+    }
+
+    throw new Error('Parsing timed out');
+  };
+
   const handleAnalyze = () => {
     setAnalysisState('analyzing');
     setProgress(5);
@@ -125,32 +164,55 @@ export function SOC2AnalysisCard({
         const result = await response.json();
 
         if (response.ok && result.success) {
-          // Transform API response to component format
-          setAnalysis({
-            id: result.parsedId,
-            report_type: result.summary.reportType,
-            audit_firm: result.summary.auditFirm,
-            opinion: result.summary.opinion,
-            period_start: result.summary.periodStart,
-            period_end: result.summary.periodEnd,
-            criteria: result.summary.trustServicesCriteria,
-            controls: Array(result.summary.totalControls).fill({}),
-            exceptions: Array(result.summary.exceptionsCount).fill({}),
-            subservice_orgs: Array(result.summary.subserviceOrgsCount).fill({}),
-            cuecs: Array(result.summary.cuecsCount).fill({}),
-            confidence_scores: {
-              overall: result.summary.confidenceOverall,
-              metadata: result.summary.confidenceOverall,
-              controls: result.summary.confidenceOverall,
-            },
-            created_at: new Date().toISOString(),
-          });
-          setAnalysisState('completed');
-          setProgress(100);
-          toast.success('SOC 2 Analysis Complete!', {
-            description: `Extracted ${result.summary.totalControls} controls from ${result.summary.auditFirm} report`,
-          });
-          router.refresh();
+          // Check if this is an async job (Modal parsing) or sync result
+          if (result.jobId && !result.summary) {
+            // Async case: Start polling for completion
+            setProgress(10);
+            try {
+              await pollJobStatus(result.jobId);
+            } catch (pollErr) {
+              setError(pollErr instanceof Error ? pollErr.message : 'Polling failed');
+              setAnalysisState('failed');
+              toast.error('Analysis failed', {
+                description: pollErr instanceof Error ? pollErr.message : 'Polling failed',
+              });
+            }
+          } else if (result.summary) {
+            // Sync case: Transform API response to component format
+            setAnalysis({
+              id: result.parsedId,
+              report_type: result.summary.reportType,
+              audit_firm: result.summary.auditFirm,
+              opinion: result.summary.opinion,
+              period_start: result.summary.periodStart,
+              period_end: result.summary.periodEnd,
+              criteria: result.summary.trustServicesCriteria,
+              controls: Array(result.summary.totalControls).fill({}),
+              exceptions: Array(result.summary.exceptionsCount).fill({}),
+              subservice_orgs: Array(result.summary.subserviceOrgsCount).fill({}),
+              cuecs: Array(result.summary.cuecsCount).fill({}),
+              confidence_scores: {
+                overall: result.summary.confidenceOverall,
+                metadata: result.summary.confidenceOverall,
+                controls: result.summary.confidenceOverall,
+              },
+              created_at: new Date().toISOString(),
+            });
+            setAnalysisState('completed');
+            setProgress(100);
+            toast.success('SOC 2 Analysis Complete!', {
+              description: `Extracted ${result.summary.totalControls} controls from ${result.summary.auditFirm} report`,
+            });
+            router.refresh();
+          } else {
+            // Parsing already in progress message
+            if (result.message === 'Parsing already in progress' && result.jobId) {
+              setProgress(result.progress || 20);
+              await pollJobStatus(result.jobId);
+            } else {
+              throw new Error('Unexpected response format');
+            }
+          }
         } else {
           setError(result.error || 'Analysis failed');
           setAnalysisState('failed');
