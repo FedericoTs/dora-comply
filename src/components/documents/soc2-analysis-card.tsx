@@ -93,28 +93,19 @@ export function SOC2AnalysisCard({
   );
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [isPolling, setIsPolling] = useState(false);
 
   const isPdf = mimeType === 'application/pdf';
   const isSOC2 = documentType === 'soc2';
   const canAnalyze = isPdf && isSOC2 && analysisState === 'idle';
 
-  // Simulate progress during analysis
-  useEffect(() => {
-    if (analysisState === 'analyzing') {
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 90) return prev;
-          return prev + Math.random() * 10;
-        });
-      }, 1500);
-      return () => clearInterval(interval);
-    }
-  }, [analysisState]);
-
-  // Poll for job completion
+  // Poll for job completion - designed for Modal's async architecture
   const pollJobStatus = async (jobId: string) => {
-    const maxAttempts = 60; // 5 minutes max (5s intervals)
+    setIsPolling(true);
+    const maxAttempts = 120; // 10 minutes max (5s intervals) - Modal can take time
     let attempts = 0;
+    let lastProgress = 0;
 
     while (attempts < maxAttempts) {
       attempts++;
@@ -125,29 +116,40 @@ export function SOC2AnalysisCard({
         const result = await response.json();
 
         if (result.status === 'complete' && result.parsedId) {
-          // Fetch the full parsed data
-          const parsedResponse = await fetch(`/api/documents/${documentId}/parse-soc2`);
-          const parsedResult = await parsedResponse.json();
-
-          // Refresh the page to get the full parsed data
+          // Parsing complete - refresh page to show results
           setProgress(100);
+          setStatusMessage('Complete! Loading results...');
           toast.success('SOC 2 Analysis Complete!', {
             description: 'Document has been parsed successfully.',
           });
+          // Small delay then refresh
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           router.refresh();
           return;
         } else if (result.status === 'failed') {
           throw new Error(result.error || 'Parsing failed');
         } else {
-          // Update progress
-          setProgress(result.progress || Math.min(attempts * 2, 90));
+          // Update progress - only increase, never decrease
+          const newProgress = result.progress || 0;
+          if (newProgress > lastProgress) {
+            lastProgress = newProgress;
+            setProgress(newProgress);
+          }
+          // Update status message from API
+          if (result.message) {
+            setStatusMessage(result.message);
+          } else if (result.phase) {
+            setStatusMessage(`Phase: ${result.phase}`);
+          }
         }
       } catch (err) {
+        // Don't fail on individual poll errors, just log
         console.error('[soc2-analysis-card] Poll error:', err);
       }
     }
 
-    throw new Error('Parsing timed out');
+    setIsPolling(false);
+    throw new Error('Parsing timed out after 10 minutes. The document may still be processing - please refresh the page in a few minutes.');
   };
 
   const handleAnalyze = () => {
@@ -332,49 +334,76 @@ export function SOC2AnalysisCard({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Progress value={progress} className="h-2" />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-medium">{Math.round(progress)}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+
+          {statusMessage && (
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+              <Loader2 className="h-4 w-4 animate-spin text-primary flex-shrink-0" />
+              <span className="text-sm">{statusMessage}</span>
+            </div>
+          )}
 
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
-              {progress < 15 ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
+              {progress >= 10 ? (
                 <CheckCircle2 className="h-4 w-4 text-success" />
+              ) : (
+                <Loader2 className="h-4 w-4 animate-spin" />
               )}
-              <span>Reading PDF document</span>
+              <span>Uploading to processing queue</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
-              {progress < 30 ? (
-                <Clock className="h-4 w-4" />
-              ) : progress < 60 ? (
+              {progress >= 30 ? (
+                <CheckCircle2 className="h-4 w-4 text-success" />
+              ) : progress >= 10 ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <CheckCircle2 className="h-4 w-4 text-success" />
+                <Clock className="h-4 w-4" />
               )}
-              <span>Extracting Trust Services Criteria controls</span>
+              <span>Extracting text from PDF</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
-              {progress < 60 ? (
-                <Clock className="h-4 w-4" />
-              ) : progress < 80 ? (
+              {progress >= 60 ? (
+                <CheckCircle2 className="h-4 w-4 text-success" />
+              ) : progress >= 30 ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <CheckCircle2 className="h-4 w-4 text-success" />
+                <Clock className="h-4 w-4" />
               )}
-              <span>Identifying exceptions &amp; subservice orgs</span>
+              <span>AI analyzing controls &amp; exceptions</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
-              {progress < 80 ? (
-                <Clock className="h-4 w-4" />
-              ) : (
+              {progress >= 90 ? (
+                <CheckCircle2 className="h-4 w-4 text-success" />
+              ) : progress >= 60 ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Clock className="h-4 w-4" />
               )}
               <span>Mapping to DORA requirements</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              {progress >= 100 ? (
+                <CheckCircle2 className="h-4 w-4 text-success" />
+              ) : progress >= 90 ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Clock className="h-4 w-4" />
+              )}
+              <span>Saving results</span>
             </div>
           </div>
 
           <p className="text-xs text-center text-muted-foreground">
-            Claude is analyzing your SOC 2 report...
+            {isPolling
+              ? 'Processing via Modal.com - this may take a few minutes for large documents...'
+              : 'Starting analysis...'}
           </p>
         </CardContent>
       </Card>

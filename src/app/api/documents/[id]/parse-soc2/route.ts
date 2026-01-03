@@ -138,11 +138,17 @@ export async function POST(
       );
     }
 
-    // Use Modal for parsing (fire-and-forget)
+    // Use Modal for parsing - await initial response to confirm job started
     if (USE_MODAL_PARSING && MODAL_PARSE_SOC2_URL) {
       try {
-        // Fire request to Modal (don't await response)
-        const modalRequest = fetch(MODAL_PARSE_SOC2_URL, {
+        console.log(`[parse-soc2] Triggering Modal parsing for document ${documentId}, job ${job.id}`);
+        console.log(`[parse-soc2] Modal URL: ${MODAL_PARSE_SOC2_URL}`);
+
+        // Make request to Modal with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+        const modalResponse = await fetch(MODAL_PARSE_SOC2_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -154,28 +160,55 @@ export async function POST(
             job_id: job.id,
             organization_id: document.organization_id,
           }),
+          signal: controller.signal,
         });
 
-        // Don't await - let it run in background
-        // Note: This will continue after response is sent
-        modalRequest.catch((err) => {
-          console.error('[parse-soc2] Modal request failed:', err);
-          // Update job to failed
-          serviceClient
-            .from('extraction_jobs')
-            .update({
-              status: 'failed',
-              error_message: `Modal request failed: ${err.message}`,
-              completed_at: new Date().toISOString(),
-            })
-            .eq('id', job.id)
-            .then(() => {});
-        });
+        clearTimeout(timeoutId);
 
-        console.log(`[parse-soc2] Triggered Modal parsing for document ${documentId}, job ${job.id}`);
+        if (!modalResponse.ok) {
+          const errorText = await modalResponse.text();
+          console.error(`[parse-soc2] Modal returned error: ${modalResponse.status} - ${errorText}`);
+          throw new Error(`Modal error: ${modalResponse.status}`);
+        }
+
+        const modalResult = await modalResponse.json();
+        console.log(`[parse-soc2] Modal accepted job:`, modalResult);
+
+        // Update job status to show Modal is processing
+        await serviceClient
+          .from('extraction_jobs')
+          .update({
+            status: 'analyzing',
+            progress_percentage: 5,
+            current_message: 'Processing via Modal.com',
+          })
+          .eq('id', job.id);
+
+        // Return success - Modal will update job progress via Supabase
+        return NextResponse.json({
+          success: true,
+          message: 'Parsing started via Modal',
+          jobId: job.id,
+          documentId,
+          status: 'analyzing',
+        });
       } catch (err) {
-        console.error('[parse-soc2] Failed to trigger Modal:', err);
-        // Fall through to return job ID anyway
+        console.error('[parse-soc2] Modal request failed:', err);
+
+        // Mark job as failed
+        await serviceClient
+          .from('extraction_jobs')
+          .update({
+            status: 'failed',
+            error_message: `Modal unavailable: ${err instanceof Error ? err.message : 'Unknown error'}. Please try again.`,
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', job.id);
+
+        return NextResponse.json(
+          { error: 'Modal parsing service unavailable. Please try again later.' },
+          { status: 503 }
+        );
       }
     } else {
       // Legacy mode: Parse locally (will likely timeout on Vercel)
