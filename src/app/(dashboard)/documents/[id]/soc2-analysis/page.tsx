@@ -55,6 +55,16 @@ import { SOC2AnalysisClient } from './soc2-analysis-client';
 import { ExportButtons } from './export-buttons';
 import { EvidenceViewTab } from './evidence-view-tab';
 
+// New DORA compliance components
+import {
+  DORAComplianceDashboard,
+  MaturityLevelBadge,
+  ComplianceStatusBadge,
+  VerificationChecklist,
+} from '@/components/compliance';
+import { calculateDORACompliance } from '@/lib/compliance/dora-calculator';
+import type { DORAComplianceResult } from '@/lib/compliance/dora-types';
+
 interface SOC2AnalysisPageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -291,6 +301,42 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
 
   const doraCoverage = calculateDORACoverage();
 
+  // Calculate DORA compliance using the new maturity-based system
+  const doraCompliance: DORAComplianceResult = calculateDORACompliance(
+    vendor?.id || 'unknown',
+    vendor?.name || 'Unknown Vendor',
+    {
+      id: analysis.id,
+      document_id: analysis.document_id,
+      report_type: analysis.report_type,
+      audit_firm: analysis.audit_firm,
+      opinion: analysis.opinion,
+      period_start: analysis.period_start,
+      period_end: analysis.period_end,
+      controls: controls.map(c => ({
+        id: c.controlId,
+        category: c.tscCategory,
+        description: c.description,
+        testResult: c.testResult,
+        pageRef: c.pageRef,
+      })),
+      exceptions: exceptions.map(e => ({
+        controlId: e.controlId,
+        description: e.exceptionDescription,
+      })),
+      cuecs: cuecs.map(c => ({
+        id: c.id || '',
+        description: c.description,
+      })),
+      subservice_orgs: subserviceOrgs.map(s => ({
+        name: s.name,
+        services: s.serviceDescription,
+      })),
+      confidence_score: analysis.confidence_scores?.overall || 0.85,
+    },
+    { id, name: document.filename, type: 'soc2' }
+  );
+
   // Group controls by TSC category
   const controlsByCategory = controls.reduce<Record<string, ParsedControl[]>>((acc, control) => {
     const cat = control.tscCategory || 'Other';
@@ -387,10 +433,14 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
             </div>
 
             {/* Right: Key Metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 lg:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 lg:gap-6">
+              <div className="text-center">
+                <MaturityLevelBadge level={doraCompliance.overallMaturity} size="lg" showDescription />
+                <div className="text-xs text-muted-foreground mt-1">DORA Readiness</div>
+              </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-success">{effectivenessRate}%</div>
-                <div className="text-xs text-muted-foreground">Effectiveness</div>
+                <div className="text-xs text-muted-foreground">SOC 2 Effective</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold">{totalControls}</div>
@@ -483,7 +533,7 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="controls" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="evidence" className="gap-2">
               <Eye className="h-4 w-4" />
               <span className="hidden sm:inline">Evidence</span>
@@ -513,6 +563,10 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
             <TabsTrigger value="dora" className="gap-2">
               <Target className="h-4 w-4" />
               <span className="hidden sm:inline">DORA</span>
+            </TabsTrigger>
+            <TabsTrigger value="verify" className="gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Verify</span>
             </TabsTrigger>
           </TabsList>
 
@@ -817,127 +871,63 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
             )}
           </TabsContent>
 
-          {/* DORA Mapping Tab */}
+          {/* DORA Mapping Tab - Now with Maturity-Based Scoring */}
           <TabsContent value="dora" className="space-y-4">
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="py-4">
-                <div className="flex items-start gap-3">
-                  <Target className="h-5 w-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="font-medium text-primary">DORA Compliance Mapping</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      This analysis maps SOC 2 Trust Services Criteria controls to DORA (Digital Operational Resilience Act)
-                      requirements. Coverage is calculated based on control effectiveness and mapping strength.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <DORAComplianceDashboard
+              compliance={doraCompliance}
+              onPillarClick={(pillar) => {
+                // Could scroll to pillar details or open modal
+                console.log('Pillar clicked:', pillar);
+              }}
+              onGapClick={(requirementId) => {
+                // Could open gap detail modal
+                console.log('Gap clicked:', requirementId);
+              }}
+            />
+          </TabsContent>
 
-            {/* DORA Pillar Summary */}
-            <div className="grid gap-4 md:grid-cols-5">
-              {Object.entries(doraCoverage.byPillar).map(([pillar, score]) => {
-                const pillarNames: Record<string, string> = {
-                  ICT_RISK: 'ICT Risk',
-                  INCIDENT: 'Incident',
-                  RESILIENCE: 'Resilience',
-                  TPRM: 'Third-Party',
-                  SHARING: 'Sharing',
-                };
-                const isGap = score < 50;
-                return (
-                  <Card key={pillar} className={cn(isGap && 'border-destructive/50')}>
-                    <CardContent className="pt-4 pb-3 text-center">
-                      <div className={cn(
-                        'text-2xl font-bold',
-                        score >= 80 ? 'text-success' : score >= 50 ? 'text-warning' : 'text-destructive'
-                      )}>
-                        {score}%
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">{pillarNames[pillar]}</p>
-                      {isGap && (
-                        <Badge variant="destructive" className="mt-2 text-xs">Gap</Badge>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-
-            {/* DORA Articles Mapping */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Article-Level Mapping</CardTitle>
-                <CardDescription>
-                  SOC 2 controls mapped to specific DORA articles
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>DORA Article</TableHead>
-                      <TableHead>Requirement</TableHead>
-                      <TableHead>SOC 2 Evidence</TableHead>
-                      <TableHead className="text-right">Coverage</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[
-                      { article: 'Art. 5', title: 'ICT Risk Management Framework', categories: ['CC1', 'CC3', 'CC9'] },
-                      { article: 'Art. 6', title: 'ICT Systems Documentation', categories: ['CC3'] },
-                      { article: 'Art. 7', title: 'ICT Systems Protection', categories: ['CC5', 'CC6', 'CC8'] },
-                      { article: 'Art. 8', title: 'Detection of Anomalies', categories: ['CC4'] },
-                      { article: 'Art. 9', title: 'Response and Recovery', categories: ['CC7'] },
-                      { article: 'Art. 10', title: 'Backup Policies', categories: ['CC7'] },
-                      { article: 'Art. 17', title: 'Incident Classification', categories: ['CC7'] },
-                      { article: 'Art. 19', title: 'Major Incident Reporting', categories: ['CC7'] },
-                      { article: 'Art. 24', title: 'Resilience Testing', categories: ['A', 'AVAILABILITY'] },
-                      { article: 'Art. 28', title: 'Third-Party Risk Management', categories: ['CC9'] },
-                      { article: 'Art. 29', title: 'Register of Information', categories: ['CC9'] },
-                      { article: 'Art. 30', title: 'Contractual Requirements', categories: ['CC6', 'A', 'AVAILABILITY', 'C', 'CONFIDENTIALITY'] },
-                    ].map((row) => {
-                      // Match controls using both short codes (A, C) and full names (availability, confidentiality)
-                      const matchingControls = controls.filter(c => {
-                        const tsc = c.tscCategory.toUpperCase();
-                        return row.categories.some(cat =>
-                          tsc === cat.toUpperCase() || tsc.startsWith(cat.toUpperCase())
-                        );
-                      });
-                      const effectiveCount = matchingControls.filter(c => c.testResult === 'operating_effectively').length;
-                      const coverage = matchingControls.length > 0
-                        ? Math.round((effectiveCount / matchingControls.length) * 100)
-                        : 0;
-
-                      return (
-                        <TableRow key={row.article}>
-                          <TableCell className="font-medium">{row.article}</TableCell>
-                          <TableCell>{row.title}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {row.categories.map(cat => (
-                                <Badge key={cat} variant="outline" className="font-mono text-xs">{cat}</Badge>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Badge
-                              variant={coverage >= 80 ? 'default' : coverage >= 50 ? 'outline' : 'destructive'}
-                              className={cn(
-                                coverage >= 80 ? 'bg-success' :
-                                coverage >= 50 ? 'border-warning text-warning' : ''
-                              )}
-                            >
-                              {coverage}%
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+          {/* Verification Tab - Ensures extraction accuracy */}
+          <TabsContent value="verify" className="space-y-4">
+            <VerificationChecklist
+              documentId={id}
+              documentName={document.filename}
+              extractionConfidence={(analysis.confidence_scores?.overall || 0.85) * 100}
+              extractedData={{
+                controlCount: totalControls,
+                exceptionCount: exceptions.length,
+                opinion: analysis.opinion,
+                auditFirm: analysis.audit_firm,
+                reportType: analysis.report_type === 'type2' ? 'SOC 2 Type II' : 'SOC 2 Type I',
+                periodStart: new Date(analysis.period_start).toLocaleDateString(),
+                periodEnd: new Date(analysis.period_end).toLocaleDateString(),
+                subserviceOrgs: subserviceOrgs.map(s => ({
+                  name: s.name,
+                  services: s.serviceDescription,
+                })),
+                sampleControls: controls.slice(0, 5).map(c => ({
+                  id: c.controlId,
+                  category: c.tscCategory,
+                  description: c.description,
+                  pageRef: c.pageRef,
+                })),
+              }}
+              onVerify={(result) => {
+                console.log('Verification result:', result);
+                // Could save verification to database
+              }}
+              onRequestReparse={() => {
+                console.log('Re-parse requested');
+                // Could trigger document re-parsing
+              }}
+              onReportIssue={(issue) => {
+                console.log('Issue reported:', issue);
+                // Could open support ticket
+              }}
+              onViewInPdf={(pageNumber) => {
+                console.log('View in PDF:', pageNumber);
+                // Could switch to evidence tab and scroll to page
+              }}
+            />
           </TabsContent>
         </Tabs>
       </div>
