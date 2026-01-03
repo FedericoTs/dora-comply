@@ -185,3 +185,11 @@ test-data/
 # ----------------------------------------
 .sentryclirc
 .vercel
+
+# Test Documents (large PDFs)
+test-documents/*.pdf
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

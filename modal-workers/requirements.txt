@@ -1,0 +1,24 @@
+# Modal Workers Dependencies
+# Run: pip install -r requirements.txt
+
+# Modal runtime
+modal>=0.64.0
+
+# Google AI SDK
+google-genai>=0.1.0
+google-generativeai>=0.8.0
+
+# Supabase client
+supabase>=2.0.0
+postgrest>=0.16.0
+
+# HTTP client
+httpx>=0.27.0
+aiohttp>=3.9.0
+
+# Data validation
+pydantic>=2.5.0
+
+# Utilities
+python-dateutil>=2.8.0
+tenacity>=8.2.0

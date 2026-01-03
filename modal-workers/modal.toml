@@ -1,0 +1,14 @@
+[project]
+name = "dora-comply-soc2-parser"
+
+[image]
+python_version = "3.11"
+poetry_version = "1.7.0"
+
+[scheduling]
+# Allow 24 hour timeout for very large documents
+timeout = 86400
+
+[gpu]
+# No GPU needed for this workload
+required = false

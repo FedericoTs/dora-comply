@@ -3,13 +3,19 @@
  *
  * POST /api/documents/[id]/parse-soc2
  *
- * Triggers AI parsing of a SOC 2 report document and stores results
+ * Triggers async parsing of a SOC 2 report via Modal.com.
+ * Returns immediately with a job ID for progress tracking.
+ *
+ * Architecture:
+ *   Vercel (fast) → Modal (long-running) → Supabase (data)
+ *
+ * The frontend subscribes to extraction_jobs via Supabase Realtime
+ * to get live progress updates.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { parseSOC2Report, calculateDORACoverageScore } from '@/lib/ai/parsers';
 
 interface RouteParams {
   params: Promise<{
@@ -17,11 +23,18 @@ interface RouteParams {
   }>;
 }
 
+// Modal endpoint URL from environment
+const MODAL_PARSE_SOC2_URL = process.env.MODAL_PARSE_SOC2_URL;
+const MODAL_AUTH_KEY = process.env.MODAL_AUTH_KEY;
+const MODAL_AUTH_SECRET = process.env.MODAL_AUTH_SECRET;
+
+// Feature flag: Use Modal for parsing (set to false to use legacy local parsing)
+const USE_MODAL_PARSING = process.env.USE_MODAL_PARSING === 'true';
+
 export async function POST(
   request: NextRequest,
   { params }: RouteParams
 ): Promise<NextResponse> {
-  const startTime = Date.now();
   const { id: documentId } = await params;
 
   try {
@@ -82,137 +95,173 @@ export async function POST(
       );
     }
 
-    // Download PDF from storage using service role client (bypasses RLS)
-    const storageClient = createServiceRoleClient();
-    const { data: fileData, error: downloadError } = await storageClient.storage
-      .from('documents')
-      .download(document.storage_path);
+    // Check if there's an active extraction job
+    const { data: activeJob } = await supabase
+      .from('extraction_jobs')
+      .select('id, status, progress_percentage, current_message')
+      .eq('document_id', documentId)
+      .not('status', 'in', '("complete","failed")')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
 
-    if (downloadError || !fileData) {
-      console.error('[parse-soc2] Download error:', downloadError);
-      console.error('[parse-soc2] Storage path:', document.storage_path);
-      return NextResponse.json(
-        { error: 'Failed to download document' },
-        { status: 500 }
-      );
+    if (activeJob) {
+      return NextResponse.json({
+        success: true,
+        message: 'Parsing already in progress',
+        jobId: activeJob.id,
+        status: activeJob.status,
+        progress: activeJob.progress_percentage,
+      });
     }
 
-    // Convert blob to buffer
-    const arrayBuffer = await fileData.arrayBuffer();
-    const pdfBuffer = Buffer.from(arrayBuffer);
-
-    console.log(`[parse-soc2] Starting AI parsing for document ${documentId}`);
-    console.log(`[parse-soc2] PDF size: ${pdfBuffer.length} bytes`);
-
-    // Parse with AI
-    const parseResult = await parseSOC2Report({
-      pdfBuffer,
-      documentId,
-      verbose: true,
-    });
-
-    if (!parseResult.success || !parseResult.data || !parseResult.databaseRecord) {
-      console.error('[parse-soc2] Parse error:', parseResult.error);
-      return NextResponse.json(
-        { error: parseResult.error || 'Failed to parse document' },
-        { status: 500 }
-      );
-    }
-
-    const { data: parsedData, databaseRecord, doraMapping } = parseResult;
-
-    // Store parsed data in database
-    const { data: insertedRecord, error: insertError } = await supabase
-      .from('parsed_soc2')
+    // Create extraction job
+    const serviceClient = createServiceRoleClient();
+    const { data: job, error: jobError } = await serviceClient
+      .from('extraction_jobs')
       .insert({
         document_id: documentId,
-        report_type: databaseRecord.report_type,
-        audit_firm: databaseRecord.audit_firm,
-        opinion: databaseRecord.opinion,
-        period_start: databaseRecord.period_start,
-        period_end: databaseRecord.period_end,
-        criteria: databaseRecord.criteria,
-        system_description: databaseRecord.system_description,
-        controls: databaseRecord.controls,
-        exceptions: databaseRecord.exceptions,
-        subservice_orgs: databaseRecord.subservice_orgs,
-        cuecs: databaseRecord.cuecs,
-        raw_extraction: databaseRecord.raw_extraction,
-        confidence_scores: databaseRecord.confidence_scores,
+        organization_id: document.organization_id,
+        status: 'pending',
+        progress_percentage: 0,
+        current_phase: 'initializing',
+        current_message: 'Queued for parsing',
       })
       .select('id')
       .single();
 
-    if (insertError) {
-      console.error('[parse-soc2] Insert error:', insertError);
+    if (jobError || !job) {
+      console.error('[parse-soc2] Failed to create job:', jobError);
       return NextResponse.json(
-        { error: 'Failed to store parsed data' },
+        { error: 'Failed to create extraction job' },
         { status: 500 }
       );
     }
 
-    // Populate evidence_locations table for traceability
-    await populateEvidenceLocations(
-      supabase,
-      document.organization_id,
-      documentId,
-      databaseRecord
-    );
+    // Use Modal for parsing (fire-and-forget)
+    if (USE_MODAL_PARSING && MODAL_PARSE_SOC2_URL) {
+      try {
+        // Fire request to Modal (don't await response)
+        const modalRequest = fetch(MODAL_PARSE_SOC2_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Modal-Key': MODAL_AUTH_KEY || '',
+            'X-Modal-Secret': MODAL_AUTH_SECRET || '',
+          },
+          body: JSON.stringify({
+            document_id: documentId,
+            job_id: job.id,
+            organization_id: document.organization_id,
+          }),
+        });
 
-    // Calculate DORA coverage if we have mappings
-    let doraCoverage = null;
-    if (doraMapping && doraMapping.length > 0) {
-      doraCoverage = calculateDORACoverageScore(doraMapping);
+        // Don't await - let it run in background
+        // Note: This will continue after response is sent
+        modalRequest.catch((err) => {
+          console.error('[parse-soc2] Modal request failed:', err);
+          // Update job to failed
+          serviceClient
+            .from('extraction_jobs')
+            .update({
+              status: 'failed',
+              error_message: `Modal request failed: ${err.message}`,
+              completed_at: new Date().toISOString(),
+            })
+            .eq('id', job.id)
+            .then(() => {});
+        });
+
+        console.log(`[parse-soc2] Triggered Modal parsing for document ${documentId}, job ${job.id}`);
+      } catch (err) {
+        console.error('[parse-soc2] Failed to trigger Modal:', err);
+        // Fall through to return job ID anyway
+      }
+    } else {
+      // Legacy mode: Parse locally (will likely timeout on Vercel)
+      console.warn('[parse-soc2] Modal parsing disabled, using legacy local parsing');
+      console.warn('[parse-soc2] This may timeout on Vercel!');
+
+      // Import legacy parser
+      const { parseSOC2ReportV2 } = await import('@/lib/ai/parsers');
+
+      // Start parsing in background (will likely be killed by Vercel timeout)
+      (async () => {
+        try {
+          // Download PDF
+          const { data: fileData } = await serviceClient.storage
+            .from('documents')
+            .download(document.storage_path);
+
+          if (!fileData) {
+            throw new Error('Failed to download document');
+          }
+
+          const arrayBuffer = await fileData.arrayBuffer();
+          const pdfBuffer = Buffer.from(arrayBuffer);
+
+          // Update job to analyzing
+          await serviceClient
+            .from('extraction_jobs')
+            .update({
+              status: 'analyzing',
+              progress_percentage: 10,
+              current_message: 'Analyzing document structure',
+            })
+            .eq('id', job.id);
+
+          // Parse with legacy parser
+          const result = await parseSOC2ReportV2({
+            pdfBuffer,
+            documentId,
+            verbose: true,
+          });
+
+          if (!result.success || !result.databaseRecord) {
+            throw new Error(result.error || 'Parsing failed');
+          }
+
+          // Store results (databaseRecord already contains document_id from parser)
+          const { data: parsed } = await serviceClient
+            .from('parsed_soc2')
+            .insert({
+              ...result.databaseRecord,
+              document_id: documentId, // Ensure we use our documentId
+            })
+            .select('id')
+            .single();
+
+          // Complete job
+          await serviceClient
+            .from('extraction_jobs')
+            .update({
+              status: 'complete',
+              progress_percentage: 100,
+              parsed_soc2_id: parsed?.id,
+              completed_at: new Date().toISOString(),
+            })
+            .eq('id', job.id);
+        } catch (err) {
+          console.error('[parse-soc2] Legacy parsing failed:', err);
+          await serviceClient
+            .from('extraction_jobs')
+            .update({
+              status: 'failed',
+              error_message: err instanceof Error ? err.message : 'Unknown error',
+              completed_at: new Date().toISOString(),
+            })
+            .eq('id', job.id);
+        }
+      })();
     }
 
-    // Update document to mark as parsed
-    await supabase
-      .from('documents')
-      .update({
-        ai_analysis: {
-          parsed: true,
-          parsedAt: new Date().toISOString(),
-          parsedId: insertedRecord.id,
-          parserVersion: parsedData.parserVersion,
-          processingTimeMs: parsedData.processingTimeMs,
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', documentId);
-
-    // If vendor_id exists, create/update vendor control assessments
-    if (document.vendor_id && doraMapping) {
-      await createVendorAssessments(
-        supabase,
-        document.vendor_id,
-        document.organization_id,
-        documentId,
-        doraMapping
-      );
-    }
-
-    const totalTimeMs = Date.now() - startTime;
-
+    // Return immediately with job ID
     return NextResponse.json({
       success: true,
-      parsedId: insertedRecord.id,
-      summary: {
-        reportType: parsedData.reportType,
-        auditFirm: parsedData.auditFirm,
-        opinion: parsedData.opinion,
-        periodStart: parsedData.periodStart,
-        periodEnd: parsedData.periodEnd,
-        trustServicesCriteria: parsedData.trustServicesCriteria,
-        totalControls: parsedData.totalControls,
-        controlsOperatingEffectively: parsedData.controlsOperatingEffectively,
-        controlsWithExceptions: parsedData.controlsWithExceptions,
-        exceptionsCount: parsedData.exceptions.length,
-        subserviceOrgsCount: parsedData.subserviceOrgs.length,
-        cuecsCount: parsedData.cuecs.length,
-        confidenceOverall: parsedData.confidenceScores.overall,
-        doraCoverage,
-      },
-      processingTimeMs: totalTimeMs,
+      message: 'Parsing started',
+      jobId: job.id,
+      documentId,
+      status: 'pending',
     });
   } catch (error) {
     console.error('[parse-soc2] Unexpected error:', error);
@@ -223,265 +272,69 @@ export async function POST(
   }
 }
 
-// ============================================================================
-// Helper: Create vendor control assessments from DORA mappings
-// ============================================================================
+// GET endpoint to check job status
+export async function GET(
+  request: NextRequest,
+  { params }: RouteParams
+): Promise<NextResponse> {
+  const { id: documentId } = await params;
 
-async function createVendorAssessments(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  vendorId: string,
-  organizationId: string,
-  documentId: string,
-  doraMapping: Array<{
-    doraArticle: string;
-    doraControlId: string;
-    coverageLevel: 'full' | 'partial' | 'none';
-    confidence: number;
-    soc2ControlId: string;
-  }>
-): Promise<void> {
   try {
-    // Get DORA framework ID
-    const { data: doraFramework } = await supabase
-      .from('frameworks')
-      .select('id')
-      .eq('code', 'dora')
+    const supabase = await createClient();
+
+    // Verify authentication
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get latest job for this document
+    const { data: job } = await supabase
+      .from('extraction_jobs')
+      .select('*')
+      .eq('document_id', documentId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
-    if (!doraFramework) {
-      console.log('[parse-soc2] DORA framework not found, skipping assessments');
-      return;
-    }
+    if (!job) {
+      // Check if document is already parsed
+      const { data: parsed } = await supabase
+        .from('parsed_soc2')
+        .select('id, created_at')
+        .eq('document_id', documentId)
+        .single();
 
-    // Get framework controls
-    const { data: frameworkControls } = await supabase
-      .from('framework_controls')
-      .select('id, control_id')
-      .eq('framework_id', doraFramework.id);
-
-    if (!frameworkControls || frameworkControls.length === 0) {
-      console.log('[parse-soc2] No DORA controls found, skipping assessments');
-      return;
-    }
-
-    // Create control ID lookup
-    const controlLookup = new Map(
-      frameworkControls.map((c) => [c.control_id, c.id])
-    );
-
-    // Group mappings by DORA article and get best coverage
-    const articleCoverage = new Map<
-      string,
-      { coverage: string; confidence: number; evidence: string }
-    >();
-
-    for (const mapping of doraMapping) {
-      const existing = articleCoverage.get(mapping.doraArticle);
-      const coverageRank = { full: 3, partial: 2, none: 1 };
-
-      if (
-        !existing ||
-        coverageRank[mapping.coverageLevel] >
-          coverageRank[existing.coverage as keyof typeof coverageRank]
-      ) {
-        articleCoverage.set(mapping.doraArticle, {
-          coverage: mapping.coverageLevel,
-          confidence: mapping.confidence,
-          evidence: mapping.soc2ControlId,
+      if (parsed) {
+        return NextResponse.json({
+          status: 'complete',
+          parsedId: parsed.id,
+          parsedAt: parsed.created_at,
         });
       }
+
+      return NextResponse.json({ error: 'No extraction job found' }, { status: 404 });
     }
 
-    // Create assessments
-    const assessments = [];
-    for (const [article, data] of articleCoverage) {
-      const controlId = controlLookup.get(article);
-      if (!controlId) continue;
-
-      assessments.push({
-        vendor_id: vendorId,
-        control_id: controlId,
-        organization_id: organizationId,
-        status:
-          data.coverage === 'full'
-            ? 'met'
-            : data.coverage === 'partial'
-              ? 'partially_met'
-              : 'not_met',
-        evidence_document_id: documentId,
-        evidence_notes: `SOC 2 control ${data.evidence} provides ${data.coverage} coverage`,
-        confidence: data.confidence,
-        assessment_source: 'ai_parsed',
-        valid_from: new Date().toISOString().split('T')[0],
-        is_current: true,
-      });
-    }
-
-    if (assessments.length > 0) {
-      const { error: assessmentError } = await supabase
-        .from('vendor_control_assessments')
-        .upsert(assessments, {
-          onConflict: 'vendor_id,control_id,organization_id,valid_from',
-        });
-
-      if (assessmentError) {
-        console.error('[parse-soc2] Assessment insert error:', assessmentError);
-      } else {
-        console.log(
-          `[parse-soc2] Created ${assessments.length} vendor assessments`
-        );
-      }
-    }
+    return NextResponse.json({
+      jobId: job.id,
+      status: job.status,
+      progress: job.progress_percentage,
+      phase: job.current_phase,
+      message: job.current_message,
+      expectedControls: job.expected_controls,
+      extractedControls: job.extracted_controls,
+      parsedId: job.parsed_soc2_id,
+      error: job.error_message,
+      startedAt: job.started_at,
+      completedAt: job.completed_at,
+    });
   } catch (error) {
-    console.error('[parse-soc2] Error creating assessments:', error);
-  }
-}
-
-// ============================================================================
-// Helper: Populate evidence_locations table for traceability
-// ============================================================================
-
-interface ParsedDatabaseRecord {
-  controls: Array<{
-    controlId: string;
-    controlArea?: string;
-    tscCategory?: string;
-    description: string;
-    testResult: string;
-    location?: string;
-    confidence: number;
-  }>;
-  exceptions: Array<{
-    controlId: string;
-    controlArea?: string;
-    exceptionDescription: string;
-    location?: string;
-  }>;
-  subservice_orgs: Array<{
-    name: string;
-    serviceDescription: string;
-    location?: string;
-  }>;
-  cuecs: Array<{
-    id?: string;
-    description: string;
-    customerResponsibility: string;
-    location?: string;
-  }>;
-}
-
-function parseLocation(location?: string): { pageNumber?: number; sectionReference?: string } {
-  if (!location) return {};
-
-  // Parse patterns like "Page 26, Section 4.1" or "p. 42" or "Section 3"
-  const pageMatch = location.match(/(?:page|p\.?)\s*(\d+)/i);
-  const sectionMatch = location.match(/(?:section|sec\.?)\s*([\d.]+)/i);
-
-  return {
-    pageNumber: pageMatch ? parseInt(pageMatch[1], 10) : undefined,
-    sectionReference: sectionMatch ? `Section ${sectionMatch[1]}` : undefined,
-  };
-}
-
-async function populateEvidenceLocations(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  organizationId: string,
-  documentId: string,
-  databaseRecord: ParsedDatabaseRecord
-): Promise<void> {
-  try {
-    const evidenceLocations: Array<{
-      organization_id: string;
-      source_document_id: string;
-      evidence_type: string;
-      evidence_id: string;
-      page_number?: number;
-      section_reference?: string;
-      extracted_text: string;
-      confidence: number;
-      extraction_method: string;
-    }> = [];
-
-    // Add controls
-    for (const control of databaseRecord.controls || []) {
-      const { pageNumber, sectionReference } = parseLocation(control.location);
-      evidenceLocations.push({
-        organization_id: organizationId,
-        source_document_id: documentId,
-        evidence_type: 'control',
-        evidence_id: control.controlId,
-        page_number: pageNumber,
-        section_reference: sectionReference || control.controlArea,
-        extracted_text: control.description.substring(0, 2000), // Limit text length
-        confidence: control.confidence,
-        extraction_method: 'ai',
-      });
-    }
-
-    // Add exceptions
-    for (const exception of databaseRecord.exceptions || []) {
-      const { pageNumber, sectionReference } = parseLocation(exception.location);
-      evidenceLocations.push({
-        organization_id: organizationId,
-        source_document_id: documentId,
-        evidence_type: 'exception',
-        evidence_id: exception.controlId,
-        page_number: pageNumber,
-        section_reference: sectionReference || exception.controlArea,
-        extracted_text: exception.exceptionDescription.substring(0, 2000),
-        confidence: 0.85, // Exceptions typically high confidence
-        extraction_method: 'ai',
-      });
-    }
-
-    // Add subservice organizations
-    for (let i = 0; i < (databaseRecord.subservice_orgs || []).length; i++) {
-      const org = databaseRecord.subservice_orgs[i];
-      const { pageNumber, sectionReference } = parseLocation(org.location);
-      evidenceLocations.push({
-        organization_id: organizationId,
-        source_document_id: documentId,
-        evidence_type: 'subservice',
-        evidence_id: `subservice-${i}`,
-        page_number: pageNumber,
-        section_reference: sectionReference,
-        extracted_text: `${org.name}: ${org.serviceDescription}`.substring(0, 2000),
-        confidence: 0.9,
-        extraction_method: 'ai',
-      });
-    }
-
-    // Add CUECs
-    for (let i = 0; i < (databaseRecord.cuecs || []).length; i++) {
-      const cuec = databaseRecord.cuecs[i];
-      const { pageNumber, sectionReference } = parseLocation(cuec.location);
-      evidenceLocations.push({
-        organization_id: organizationId,
-        source_document_id: documentId,
-        evidence_type: 'cuec',
-        evidence_id: cuec.id || `CUEC-${i + 1}`,
-        page_number: pageNumber,
-        section_reference: sectionReference,
-        extracted_text: cuec.customerResponsibility.substring(0, 2000),
-        confidence: 0.88,
-        extraction_method: 'ai',
-      });
-    }
-
-    if (evidenceLocations.length > 0) {
-      const { error: evidenceError } = await supabase
-        .from('evidence_locations')
-        .insert(evidenceLocations);
-
-      if (evidenceError) {
-        console.error('[parse-soc2] Evidence locations insert error:', evidenceError);
-      } else {
-        console.log(
-          `[parse-soc2] Created ${evidenceLocations.length} evidence location records`
-        );
-      }
-    }
-  } catch (error) {
-    console.error('[parse-soc2] Error populating evidence locations:', error);
+    console.error('[parse-soc2] Status check error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
