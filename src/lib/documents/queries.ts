@@ -23,15 +23,17 @@ import type {
 async function getCurrentUserOrganization(): Promise<string | null> {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  console.log('[getCurrentUserOrganization] auth.getUser:', user?.id, user?.email, authError?.message);
   if (!user) return null;
 
-  const { data: userData } = await supabase
+  const { data: userData, error: userQueryError } = await supabase
     .from('users')
     .select('organization_id')
     .eq('id', user.id)
     .single();
 
+  console.log('[getCurrentUserOrganization] users query:', userData?.organization_id, userQueryError?.message);
   return userData?.organization_id || null;
 }
 
@@ -88,12 +90,59 @@ export async function getDocument(documentId: string): Promise<Document | null> 
 }
 
 export async function getDocumentWithVendor(documentId: string): Promise<DocumentWithVendor | null> {
+  console.log('[getDocumentWithVendor] Called with documentId:', documentId);
   const supabase = await createClient();
 
-  const organizationId = await getCurrentUserOrganization();
-  if (!organizationId) return null;
+  // Get auth user
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  console.log('[getDocumentWithVendor] auth.getUser result:', {
+    hasUser: !!user,
+    userId: user?.id,
+    email: user?.email,
+    error: authError?.message
+  });
 
-  const { data, error } = await supabase
+  if (!user) {
+    console.log('[getDocumentWithVendor] No user from auth.getUser - trying session fallback');
+    // Try getting session as fallback
+    const { data: sessionData } = await supabase.auth.getSession();
+    console.log('[getDocumentWithVendor] session fallback:', {
+      hasSession: !!sessionData?.session,
+      hasUser: !!sessionData?.session?.user,
+      userId: sessionData?.session?.user?.id
+    });
+
+    if (!sessionData?.session?.user) {
+      console.log('[getDocumentWithVendor] No user - returning null');
+      return null;
+    }
+  }
+
+  const userId = user?.id;
+  if (!userId) {
+    return null;
+  }
+
+  // Use service role to bypass RLS for user lookup
+  const { createServiceRoleClient } = await import('@/lib/supabase/service-role');
+  const serviceClient = createServiceRoleClient();
+
+  const { data: userData, error: userError } = await serviceClient
+    .from('users')
+    .select('organization_id')
+    .eq('id', userId)
+    .single();
+
+  console.log('[getDocumentWithVendor] userData (service role):', userData?.organization_id, userError?.message);
+
+  const organizationId = userData?.organization_id;
+  if (!organizationId) {
+    console.log('[getDocumentWithVendor] No organizationId - returning null');
+    return null;
+  }
+
+  // Use service role for document lookup too (bypass RLS)
+  const { data, error } = await serviceClient
     .from('documents')
     .select(`
       *,
@@ -103,7 +152,10 @@ export async function getDocumentWithVendor(documentId: string): Promise<Documen
     .eq('organization_id', organizationId)
     .single();
 
+  console.log('[getDocumentWithVendor] Document query result (service role):', data?.id, error?.message);
+
   if (error || !data) {
+    console.log('[getDocumentWithVendor] No data - returning null');
     return null;
   }
 

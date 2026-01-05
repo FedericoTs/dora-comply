@@ -237,18 +237,41 @@ function reconstructParsedReport(dbRecord: Record<string, unknown>): ParsedSOC2R
   const subserviceOrgs = (dbRecord.subservice_orgs as unknown[]) || [];
   const cuecs = (dbRecord.cuecs as unknown[]) || [];
   const rawExtraction = dbRecord.raw_extraction as Record<string, unknown> | null;
+  const systemDescription = (dbRecord.system_description as string) || '';
+
+  // Extract vendor name from system_description if not in raw_extraction
+  // Format is typically: "Vendor Name – Description" or "Vendor Name - Description"
+  let serviceOrgName = (rawExtraction?.serviceOrgName as string) || '';
+  if (!serviceOrgName && systemDescription) {
+    // Try to extract vendor name from system description
+    const dashMatch = systemDescription.match(/^([^–\-]+)[–\-]/);
+    if (dashMatch) {
+      serviceOrgName = dashMatch[1].trim();
+    }
+  }
+
+  // Format dates from database columns
+  const periodStart = dbRecord.period_start
+    ? new Date(dbRecord.period_start as string).toISOString().split('T')[0]
+    : '';
+  const periodEnd = dbRecord.period_end
+    ? new Date(dbRecord.period_end as string).toISOString().split('T')[0]
+    : '';
 
   return {
     reportType: (dbRecord.report_type as 'type1' | 'type2') || 'type2',
-    auditFirm: (rawExtraction?.auditFirm as string) || '',
-    opinion: (rawExtraction?.opinion as 'unqualified' | 'qualified' | 'adverse') || 'unqualified',
-    periodStart: (rawExtraction?.periodStart as string) || '',
-    periodEnd: (rawExtraction?.periodEnd as string) || '',
-    reportDate: (rawExtraction?.reportDate as string) || '',
-    serviceOrgName: (rawExtraction?.serviceOrgName as string) || '',
-    serviceOrgDescription: (rawExtraction?.serviceOrgDescription as string) || '',
-    trustServicesCriteria: (rawExtraction?.trustServicesCriteria as ParsedSOC2Report['trustServicesCriteria']) || [],
-    systemDescription: (rawExtraction?.systemDescription as string) || '',
+    // Prefer database columns over raw_extraction for primary fields
+    auditFirm: (dbRecord.audit_firm as string) || (rawExtraction?.auditFirm as string) || '',
+    opinion: (dbRecord.opinion as 'unqualified' | 'qualified' | 'adverse') ||
+             (rawExtraction?.opinion as 'unqualified' | 'qualified' | 'adverse') || 'unqualified',
+    periodStart,
+    periodEnd,
+    reportDate: (rawExtraction?.reportDate as string) || periodEnd,
+    serviceOrgName,
+    serviceOrgDescription: (rawExtraction?.serviceOrgDescription as string) || systemDescription,
+    trustServicesCriteria: (dbRecord.criteria as ParsedSOC2Report['trustServicesCriteria']) ||
+                          (rawExtraction?.trustServicesCriteria as ParsedSOC2Report['trustServicesCriteria']) || [],
+    systemDescription,
     systemBoundaries: (rawExtraction?.systemBoundaries as string) || undefined,
     infrastructureComponents: (rawExtraction?.infrastructureComponents as string[]) || undefined,
     softwareComponents: (rawExtraction?.softwareComponents as string[]) || undefined,

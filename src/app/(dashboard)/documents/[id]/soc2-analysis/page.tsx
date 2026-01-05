@@ -170,25 +170,57 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
   const resolvedSearchParams = await searchParams;
   const supabase = await createClient();
 
+  // Debug: Check auth state
+  const { data: { user } } = await supabase.auth.getUser();
+  console.log('[soc2-analysis] Auth user:', user?.id, user?.email);
+
   // Extract navigation context
   const fromVendor = resolvedSearchParams.from === 'vendor';
   const vendorId = typeof resolvedSearchParams.vendorId === 'string' ? resolvedSearchParams.vendorId : undefined;
   const vendorName = typeof resolvedSearchParams.vendorName === 'string' ? resolvedSearchParams.vendorName : undefined;
   const documentName = typeof resolvedSearchParams.documentName === 'string' ? resolvedSearchParams.documentName : undefined;
 
-  // Fetch document and parsed SOC 2 data
-  const [{ data: document }, { data: parsedSoc2 }] = await Promise.all([
-    supabase
-      .from('documents')
-      .select('id, filename, vendor_id, storage_path, created_at, vendors(id, name)')
-      .eq('id', id)
-      .single(),
-    supabase.from('parsed_soc2').select('*').eq('document_id', id).single(),
-  ]);
+  // Debug: Check user's organization
+  if (user) {
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single();
+    console.log('[soc2-analysis] User org query:', userData?.organization_id, userError?.message);
+  }
 
-  if (!document || !parsedSoc2) {
+  // Use getDocumentWithVendor - same pattern as document detail page
+  const { getDocumentWithVendor } = await import('@/lib/documents/queries');
+  const documentWithVendor = await getDocumentWithVendor(id);
+  console.log('[soc2-analysis] getDocumentWithVendor result:', documentWithVendor ? 'found' : 'not found');
+
+  if (!documentWithVendor) {
+    console.log('[soc2-analysis] notFound() called - document not accessible');
     notFound();
   }
+
+  // Fetch parsed SOC2 data using fresh client - same pattern as document detail page
+  const { data: parsedSoc2 } = await supabase
+    .from('parsed_soc2')
+    .select('*')
+    .eq('document_id', id)
+    .single();
+
+  if (!parsedSoc2) {
+    notFound();
+  }
+
+  // Map to expected document format
+  const document = {
+    id: documentWithVendor.id,
+    filename: documentWithVendor.filename,
+    vendor_id: documentWithVendor.vendor_id,
+    storage_path: documentWithVendor.storage_path,
+    created_at: documentWithVendor.created_at,
+    organization_id: documentWithVendor.organization_id,
+    vendors: documentWithVendor.vendor ? { id: documentWithVendor.vendor.id, name: documentWithVendor.vendor.name } : null,
+  };
 
   // Generate signed URL for PDF viewing (valid for 1 hour)
   // Using service role client to bypass storage RLS (safe in server component)

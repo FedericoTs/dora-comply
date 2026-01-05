@@ -247,6 +247,11 @@ CREATE POLICY "Users can view org data"
 | **4th Party Detection** | P1 | 4 | Spec Complete |
 | **Risk Scoring** | P0 | 4 | Planned |
 | **Trust Exchange** | P2 | 6 | Future |
+| **SOC2-to-RoI Auto-Population** | P0 | 5 | **NEXT PRIORITY** |
+| **Incident Workflow (Full)** | P0 | 5 | Spec Complete |
+| **Continuous Monitoring** | P1 | 5 | Spec Complete |
+| **Complete DORA Coverage** | P0 | 5 | Spec Complete |
+| **Board Reporting Export** | P1 | 5 | Spec Complete |
 
 ---
 
@@ -1092,6 +1097,7 @@ export async function searchByName(name: string): Promise<LEIRecord[]>;
 | **2: AI Parsing** | 5-8 | Intelligence | SOC 2 parsing, ISO parsing, DORA mapping |
 | **3: RoI Engine** | 9-12 | Compliance | All 15 templates, Validation, Export |
 | **4: Scale** | 13-16 | Polish | Risk scoring, 4th party, Performance |
+| **5: Critical Improvements** | 17-24 | Market Leadership | Full DORA coverage, Continuous Monitoring, 10X Features |
 
 ### 8.2 Key Milestones
 
@@ -1116,6 +1122,712 @@ Week 9-10: RoI Data Model + Validation Engine
 Week 11: All 15 Template Export
     ↓
 Week 12: Incident Reporting Complete + Public Launch
+```
+
+### 8.4 Phase 5: Critical Improvements (Priority - Q1 2025)
+
+> **Status:** NEXT PRIORITY
+> **Gap Analysis:** See `/docs/analysis/CRITICAL-GAP-ANALYSIS-2025.md`
+> **Last Updated:** January 5, 2026
+
+Phase 5 addresses critical gaps identified through competitive analysis and regulatory accuracy review. These improvements are essential for market leadership and full DORA compliance.
+
+#### 8.4.1 Priority 1: Regulatory Compliance (Must-Have)
+
+| # | Feature | Effort | Impact | Deadline |
+|---|---------|--------|--------|----------|
+| 5.1.1 | **SOC2-to-RoI Auto-Population** | 3 weeks | 10X Differentiator | April 30, 2025 |
+| 5.1.2 | **Incident Reporting Workflow** | 2 weeks | Critical | Active |
+| 5.1.3 | **Complete DORA Article Coverage** (Art. 33-44) | 1 week | High | Immediate |
+| 5.1.4 | **Entity Type Differentiation** | 1 week | High | Immediate |
+
+#### 8.4.2 Priority 2: Competitive Parity
+
+| # | Feature | Effort | Impact |
+|---|---------|--------|--------|
+| 5.2.1 | **Continuous Monitoring Integration** (SecurityScorecard/BitSight) | 2 weeks | High |
+| 5.2.2 | **Contract Clause Analyzer** (Art. 30 compliance) | 2 weeks | High |
+| 5.2.3 | **Concentration Risk Dashboard** | 1 week | Medium |
+| 5.2.4 | **PDF Split View Verification** | 1 week | Medium |
+| 5.2.5 | **Board Reporting Export** (PDF/PPTX) | 1 week | Medium |
+
+#### 8.4.3 Priority 3: Market Leadership
+
+| # | Feature | Effort | Impact |
+|---|---------|--------|--------|
+| 5.3.1 | **Fourth-Party Risk Mapping** (Visual supply chain) | 2 weeks | High |
+| 5.3.2 | **AI Gap Remediation Suggestions** | 1 week | Medium |
+| 5.3.3 | **Historical Maturity Tracking** | 1 week | Medium |
+| 5.3.4 | **Multi-Framework Mapping** (NIS2, GDPR, ISO 27001) | 3 weeks | High |
+
+---
+
+## 8.5 Module Specifications: Phase 5
+
+### 8.5.1 SOC2-to-RoI Auto-Population (10X Differentiator)
+
+**Purpose:** One-click generation of ESA-compliant Register of Information from parsed SOC 2 reports
+
+**Why This Is 10X:**
+- **No competitor does this automatically**
+- OneTrust/Prevalent require manual RoI population
+- Reduces RoI generation from 4 weeks → 4 hours
+
+**Technical Specification:**
+
+```typescript
+interface SOC2ToRoIMapping {
+  // Extract from parsed SOC 2
+  vendorName: string;           // → B_02.01 Provider identification
+  vendorLEI?: string;           // → B_02.01 LEI (validate via GLEIF)
+  auditFirm: string;            // → B_02.01 Additional info
+  reportPeriod: {
+    start: Date;                // → B_03.01 Contract period validation
+    end: Date;
+  };
+
+  // Extract subservice orgs → B_06.01 Subcontractors
+  subserviceOrgs: Array<{
+    name: string;               // → subcontractor_name
+    service: string;            // → service_description
+    inclusionMethod: string;    // → 'inclusive' | 'carve_out'
+  }>;
+
+  // Extract from SOC 2 scope → B_04.01 ICT Services
+  systemDescription: string;    // → service_description
+  criteria: string[];           // → Maps to service_type
+
+  // Data locations (if mentioned) → B_04.02
+  dataLocations?: Array<{
+    country: string;            // ISO 3166-1
+    dataCenter?: string;
+  }>;
+}
+
+// Auto-population workflow
+async function populateRoIFromSOC2(
+  documentId: string,
+  vendorId: string
+): Promise<RoIPopulationResult> {
+  // 1. Get parsed SOC 2 data
+  const parsedData = await getParsedSOC2(documentId);
+
+  // 2. Validate LEI via GLEIF
+  if (parsedData.vendorLEI) {
+    await validateLEI(parsedData.vendorLEI);
+  }
+
+  // 3. Map to RoI templates
+  const roiData = mapSOC2ToRoI(parsedData);
+
+  // 4. Validate against ESA rules
+  const validation = await validateRoIData(roiData);
+
+  // 5. Store in RoI tables (B_02.01, B_04.01, B_06.01)
+  await populateRoITables(vendorId, roiData);
+
+  return {
+    templatesPopulated: ['B_02.01', 'B_04.01', 'B_04.02', 'B_06.01'],
+    fieldsPopulated: roiData.fieldsCount,
+    validationWarnings: validation.warnings,
+    manualReviewRequired: validation.requiresReview,
+  };
+}
+```
+
+**UI Flow:**
+
+```
+SOC 2 Analysis Page
+    │
+    └─── [New Button] "Auto-Populate RoI"
+              │
+              ▼
+         ┌─────────────────────────────────┐
+         │   RoI Population Preview        │
+         │                                 │
+         │   ✓ Provider: AWS Inc.          │
+         │   ✓ LEI: 5493001KJTIIGC8Y1R12   │
+         │   ✓ Services: 3 detected        │
+         │   ⚠ Data Locations: 2 (verify)  │
+         │   ✓ Subcontractors: 4 detected  │
+         │                                 │
+         │   [Review & Confirm] [Cancel]   │
+         └─────────────────────────────────┘
+              │
+              ▼
+         RoI Dashboard (pre-populated)
+```
+
+**Database Changes:**
+
+```sql
+-- Migration 010: SOC2 to RoI mapping
+CREATE TABLE soc2_roi_mappings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id UUID REFERENCES documents(id),
+  vendor_id UUID REFERENCES vendors(id),
+  organization_id UUID REFERENCES organizations(id),
+
+  -- Mapping results
+  templates_populated TEXT[] NOT NULL,
+  fields_populated INTEGER NOT NULL,
+  auto_populated_at TIMESTAMPTZ DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ,
+  reviewed_by UUID REFERENCES users(id),
+
+  -- Validation
+  validation_warnings JSONB DEFAULT '[]',
+  requires_manual_review BOOLEAN DEFAULT true,
+
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+### 8.5.2 Incident Reporting Workflow (DORA Art. 17-23)
+
+**Purpose:** Full compliance with DORA ICT incident reporting requirements
+
+**Regulatory Reference:**
+- DORA Articles 17-23
+- EU Regulation 2025/302 (ITS on incident reporting)
+- ESA Annex I notification template
+
+**Three-Stage Reporting System:**
+
+| Report | Deadline | Mandatory Fields | Full Fields |
+|--------|----------|------------------|-------------|
+| **Initial** | 4h from classification (max 24h from detection) | 7 | 59 |
+| **Intermediate** | 72h from initial | 59 | 59 |
+| **Final** | 30 days (or when root cause complete) | 59 | 59 |
+
+**Classification Thresholds (EU 2024/1772):**
+
+```typescript
+interface IncidentClassificationCriteria {
+  // ANY of these triggers "MAJOR" classification
+  major: {
+    clientsAffectedPercentage: 10;        // >10% of total clients
+    clientsAffectedCount: 100000;         // >100,000 clients
+    durationCriticalHours: 2;             // >2 hours for critical services
+    geographicSpread: 2;                  // >2 EU member states
+    economicImpactEUR: 100000;            // >€100,000 direct costs
+    transactionsAffectedPercentage: 10;   // >10% of daily transactions
+    dataBreach: true;                     // Any personal data breach
+    reputationalImpact: 'high';           // Significant media coverage
+  };
+
+  // Below major but material impact
+  significant: {
+    operationalImpact: 'material';
+    recoveryTimeHours: 4;
+  };
+
+  // Limited impact
+  minor: {
+    internalOnly: true;
+  };
+}
+```
+
+**Workflow State Machine:**
+
+```
+┌──────────────┐
+│   DRAFT      │
+└──────┬───────┘
+       │ Classify
+       ▼
+┌──────────────┐     4h timer
+│   DETECTED   │◄─────────────────┐
+└──────┬───────┘                  │
+       │ Submit Initial           │ Auto-alert if overdue
+       ▼                          │
+┌──────────────┐                  │
+│   INITIAL    │──────────────────┘
+│   SUBMITTED  │
+└──────┬───────┘
+       │ 72h timer
+       ▼
+┌──────────────┐
+│ INTERMEDIATE │
+│   SUBMITTED  │
+└──────┬───────┘
+       │ 30d timer (or root cause complete)
+       ▼
+┌──────────────┐
+│    FINAL     │
+│   SUBMITTED  │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│    CLOSED    │
+└──────────────┘
+```
+
+**Data Model Extension:**
+
+```typescript
+interface IncidentReportContent {
+  // ESA Annex I Template Fields (7 mandatory for initial)
+  mandatory: {
+    incidentReference: string;           // Auto-generated
+    detectionDateTime: Date;
+    classificationJustification: string;
+    shortDescription: string;
+    servicesAffected: string[];
+    initialMitigation: string;
+    estimatedImpact: 'high' | 'medium' | 'low';
+  };
+
+  // Full template (59 fields for intermediate/final)
+  full: {
+    // Timeline
+    occurrenceDateTime?: Date;
+    recoveryDateTime?: Date;
+    resolutionDateTime?: Date;
+
+    // Impact metrics
+    clientsAffectedCount?: number;
+    clientsAffectedPercentage?: number;
+    transactionsAffectedCount?: number;
+    transactionsValueAffected?: number;
+    economicImpact?: number;
+
+    // Root cause (required for final)
+    rootCauseAnalysis?: string;
+    attackVector?: string;
+    vulnerabilitiesExploited?: string[];
+
+    // Remediation
+    remediationActions?: string;
+    lessonsLearned?: string;
+    preventiveMeasures?: string;
+
+    // Third-party involvement
+    thirdPartyInvolved?: boolean;
+    vendorId?: string;
+    vendorNotified?: boolean;
+    vendorNotificationDate?: Date;
+  };
+}
+```
+
+**UI Components:**
+
+```
+/incidents                     → Incident list with status badges
+/incidents/new                 → New incident wizard
+/incidents/[id]                → Incident detail with timeline
+/incidents/[id]/report/initial → Initial report form (7 fields)
+/incidents/[id]/report/intermediate → Intermediate report (full)
+/incidents/[id]/report/final   → Final report with root cause
+```
+
+---
+
+### 8.5.3 Continuous Monitoring Integration
+
+**Purpose:** Real-time vendor cyber risk ratings via external APIs
+
+**Supported Providers:**
+
+| Provider | API Type | Key Features | Cost Tier |
+|----------|----------|--------------|-----------|
+| **SecurityScorecard** | REST | 10 risk factors, A-F rating | $$$$  |
+| **BitSight** | REST | Security ratings, industry benchmarks | $$$$ |
+| **RiskRecon** (OneTrust) | REST | Third-party risk data | $$$$ |
+
+**Integration Architecture:**
+
+```typescript
+// Generic provider interface
+interface CyberRatingProvider {
+  name: string;
+  authenticate(): Promise<void>;
+  getVendorRating(domain: string): Promise<VendorRating>;
+  getAlerts(since: Date): Promise<Alert[]>;
+  subscribeToChanges(domain: string): Promise<Subscription>;
+}
+
+interface VendorRating {
+  provider: string;
+  domain: string;
+  overallScore: number;           // 0-100 or letter grade
+  ratingDate: Date;
+
+  // Risk factor breakdown
+  factors: Array<{
+    name: string;                 // e.g., "Network Security"
+    score: number;
+    grade: string;
+    issues: number;
+  }>;
+
+  // Trend
+  trend: 'improving' | 'stable' | 'declining';
+  scoreChange30d?: number;
+
+  // Industry comparison
+  industryAverage?: number;
+  percentile?: number;
+}
+
+// SecurityScorecard implementation
+class SecurityScorecardProvider implements CyberRatingProvider {
+  private apiToken: string;
+  private baseUrl = 'https://api.securityscorecard.io';
+
+  async getVendorRating(domain: string): Promise<VendorRating> {
+    const response = await fetch(
+      `${this.baseUrl}/companies/${domain}`,
+      { headers: { Authorization: `Token ${this.apiToken}` } }
+    );
+    return this.mapToVendorRating(await response.json());
+  }
+}
+
+// BitSight implementation
+class BitSightProvider implements CyberRatingProvider {
+  private apiToken: string;
+  private baseUrl = 'https://api.bitsighttech.com/ratings/v1';
+
+  async getVendorRating(domain: string): Promise<VendorRating> {
+    const response = await fetch(
+      `${this.baseUrl}/companies`,
+      {
+        headers: { Authorization: `Basic ${btoa(this.apiToken + ':')}` },
+        body: JSON.stringify({ domain })
+      }
+    );
+    return this.mapToVendorRating(await response.json());
+  }
+}
+```
+
+**Database Schema:**
+
+```sql
+-- Migration 011: Continuous monitoring
+CREATE TABLE vendor_cyber_ratings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vendor_id UUID REFERENCES vendors(id),
+  organization_id UUID REFERENCES organizations(id),
+
+  -- Rating data
+  provider TEXT NOT NULL,         -- 'securityscorecard', 'bitsight'
+  domain TEXT NOT NULL,
+  overall_score INTEGER,          -- 0-100
+  grade TEXT,                     -- 'A', 'B', 'C', etc.
+  rating_date TIMESTAMPTZ NOT NULL,
+
+  -- Breakdown
+  factors JSONB DEFAULT '[]',
+
+  -- Trend
+  score_change_30d INTEGER,
+  trend TEXT,                     -- 'improving', 'stable', 'declining'
+
+  -- Industry comparison
+  industry_average INTEGER,
+  percentile INTEGER,
+
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE vendor_rating_alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vendor_id UUID REFERENCES vendors(id),
+  organization_id UUID REFERENCES organizations(id),
+
+  provider TEXT NOT NULL,
+  alert_type TEXT NOT NULL,       -- 'score_drop', 'new_vulnerability', 'breach_reported'
+  severity TEXT NOT NULL,         -- 'critical', 'high', 'medium', 'low'
+  title TEXT NOT NULL,
+  description TEXT,
+
+  -- Status
+  acknowledged_at TIMESTAMPTZ,
+  acknowledged_by UUID REFERENCES users(id),
+  resolved_at TIMESTAMPTZ,
+
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for fast lookups
+CREATE INDEX idx_vendor_cyber_ratings_vendor ON vendor_cyber_ratings(vendor_id, rating_date DESC);
+CREATE INDEX idx_vendor_rating_alerts_unread ON vendor_rating_alerts(organization_id)
+  WHERE acknowledged_at IS NULL;
+```
+
+**Sync Schedule:**
+
+```typescript
+// Cron job: Daily rating sync
+async function syncVendorRatings() {
+  const vendors = await getActiveVendorsWithDomains();
+
+  for (const vendor of vendors) {
+    // Rate limit: 100 requests/minute
+    await rateLimiter.acquire();
+
+    const rating = await provider.getVendorRating(vendor.domain);
+
+    // Check for significant changes
+    const previousRating = await getLatestRating(vendor.id);
+    if (hasSignificantChange(previousRating, rating)) {
+      await createAlert(vendor.id, rating);
+    }
+
+    await saveRating(vendor.id, rating);
+  }
+}
+
+function hasSignificantChange(previous: VendorRating, current: VendorRating): boolean {
+  // Alert on >10 point drop or grade change
+  return (
+    (previous.overallScore - current.overallScore) > 10 ||
+    previous.grade !== current.grade
+  );
+}
+```
+
+---
+
+### 8.5.4 Complete DORA Article Coverage (Art. 33-44)
+
+**Purpose:** Add missing TPRM pillar requirements for full DORA compliance
+
+**Current Coverage:** 22 articles (34% of 64 total)
+**Target Coverage:** 64 articles (100%)
+
+**Missing Articles to Add:**
+
+```typescript
+// Add to dora-requirements-data.ts
+const ADDITIONAL_DORA_REQUIREMENTS: DORARequirement[] = [
+  // TPRM Pillar - Critical ICT Third-Party Provider Oversight
+  {
+    id: 'dora-art-31',
+    article_number: 'Art. 31',
+    article_title: 'Designation of Critical ICT Third-Party Providers',
+    pillar: 'TPRM',
+    requirement_text: 'ESAs shall designate ICT third-party service providers as critical based on systemic importance to financial entities...',
+    evidence_needed: [
+      'CTPP assessment documentation',
+      'Systemic importance analysis',
+      'ESA notification records'
+    ],
+    is_mandatory: true,
+    applies_to: ['ctpp'],
+    priority: 'critical',
+    soc2_mappings: [],  // No SOC 2 equivalent
+    gap_if_missing: 'No CTPP designation process. Entity may be subject to ESA oversight without preparation.'
+  },
+  {
+    id: 'dora-art-33',
+    article_number: 'Art. 33',
+    article_title: 'Tasks of the Lead Overseer',
+    pillar: 'TPRM',
+    requirement_text: 'Lead Overseer shall assess comprehensive ICT risk management arrangements of CTPPs...',
+    evidence_needed: [
+      'ICT security assessment reports',
+      'Physical security documentation',
+      'Risk management policies',
+      'Governance structure documentation',
+      'Incident reporting procedures'
+    ],
+    is_mandatory: true,
+    applies_to: ['ctpp'],
+    priority: 'critical',
+    soc2_mappings: ['CC1', 'CC6', 'CC7'],
+    gap_if_missing: 'CTPPs must demonstrate comprehensive ICT risk management to Lead Overseer.'
+  },
+  {
+    id: 'dora-art-35',
+    article_number: 'Art. 35',
+    article_title: 'Powers of the Lead Overseer',
+    pillar: 'TPRM',
+    requirement_text: 'Lead Overseer may issue recommendations on ICT security requirements, processes, patches, updates, encryption...',
+    evidence_needed: [
+      'Response to Lead Overseer recommendations',
+      'Remediation action plans',
+      'Compliance timelines'
+    ],
+    is_mandatory: true,
+    applies_to: ['ctpp'],
+    priority: 'critical',
+    penalty_for_non_compliance: 'Up to 1% of average worldwide daily turnover',
+    soc2_mappings: [],
+    gap_if_missing: 'Non-compliance with Lead Overseer recommendations may result in daily penalty payments.'
+  },
+  // ... Additional articles 32, 34, 36-44
+];
+```
+
+**Entity Type Differentiation:**
+
+```typescript
+type EntityType = 'significant' | 'non_significant' | 'ctpp';
+
+interface EntityClassification {
+  type: EntityType;
+
+  // Different requirements per type
+  requirements: {
+    tlptMandatory: boolean;           // Only for significant
+    tlptFrequency?: '3_years';
+    roiRequired: boolean;             // All types
+    incidentReporting: boolean;       // All types
+    leadOverseerOversight: boolean;   // Only for ctpp
+  };
+}
+
+// Add to organization settings
+interface OrganizationSettings {
+  // ... existing fields
+
+  // DORA entity classification
+  doraEntityType: EntityType;
+  doraClassificationDate?: Date;
+  doraClassificationJustification?: string;
+}
+```
+
+---
+
+### 8.5.5 UI Improvements
+
+**A. PDF Split View Verification:**
+
+```tsx
+// New component: src/components/documents/split-verification-view.tsx
+export function SplitVerificationView({
+  documentId,
+  parsedData,
+}: {
+  documentId: string;
+  parsedData: ParsedSOC2;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-4 h-[80vh]">
+      {/* Left: PDF Viewer */}
+      <div className="border rounded-lg overflow-hidden">
+        <PDFViewer
+          url={`/api/documents/${documentId}/pdf`}
+          highlights={parsedData.pageReferences}
+        />
+      </div>
+
+      {/* Right: Verification Checklist */}
+      <div className="overflow-y-auto">
+        <VerificationChecklist
+          extractedData={parsedData}
+          onJumpToPage={(page) => pdfViewer.goToPage(page)}
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+**B. DORA Deadline Countdown:**
+
+```tsx
+// src/components/compliance/dora-deadline-widget.tsx
+export function DORADeadlineWidget() {
+  const roiDeadline = new Date('2025-04-30');
+  const daysRemaining = differenceInDays(roiDeadline, new Date());
+
+  return (
+    <Card className={cn(
+      'p-4',
+      daysRemaining <= 30 && 'border-destructive bg-destructive/5'
+    )}>
+      <div className="flex items-center gap-3">
+        <Clock className="h-8 w-8 text-primary" />
+        <div>
+          <p className="text-sm text-muted-foreground">RoI Submission Deadline</p>
+          <p className="text-2xl font-bold">{daysRemaining} days</p>
+          <p className="text-xs text-muted-foreground">April 30, 2025</p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+```
+
+**C. Board Reporting Export:**
+
+```typescript
+// src/lib/exports/board-report.ts
+export async function generateBoardReport(
+  organizationId: string,
+  options: {
+    format: 'pdf' | 'pptx';
+    includeVendorList: boolean;
+    includeRiskScores: boolean;
+    includeDORACompliance: boolean;
+  }
+): Promise<Blob> {
+  // Generate executive summary
+  const summary = await getExecutiveSummary(organizationId);
+
+  // Generate charts
+  const charts = {
+    riskDistribution: await getRiskDistributionChart(),
+    complianceTrend: await getComplianceTrendChart(),
+    vendorTierBreakdown: await getVendorTierChart(),
+    doraMaturity: await getDORAMaturityChart(),
+  };
+
+  // Generate report
+  if (options.format === 'pdf') {
+    return generatePDFReport(summary, charts);
+  } else {
+    return generatePPTXReport(summary, charts);
+  }
+}
+```
+
+---
+
+### 8.5.6 Phase 5 Implementation Timeline
+
+```
+Week 17-18: SOC2-to-RoI Auto-Population
+├── Day 1-3: Design mapping schema
+├── Day 4-6: Implement SOC2→RoI field mapping
+├── Day 7-8: Build preview UI
+├── Day 9-10: Add GLEIF LEI validation
+└── Testing + Documentation
+
+Week 19-20: Incident Reporting Workflow
+├── Day 1-2: State machine implementation
+├── Day 3-5: ESA template forms (Initial, Intermediate, Final)
+├── Day 6-7: Classification logic
+├── Day 8-9: Deadline timers + notifications
+└── Day 10: Submission workflow
+
+Week 21-22: Continuous Monitoring
+├── Day 1-3: Provider interface + SecurityScorecard integration
+├── Day 4-5: BitSight integration
+├── Day 6-7: Alert system
+├── Day 8-10: Dashboard widgets + sync jobs
+
+Week 23: Complete DORA Coverage
+├── Day 1-2: Add Art. 31-44 requirements
+├── Day 3-4: Entity type differentiation
+├── Day 5: Update gap analysis algorithm
+
+Week 24: UI Polish + Market Differentiators
+├── Day 1-2: PDF split view
+├── Day 3-4: Board reporting export
+├── Day 5: DORA deadline widgets
+└── Final testing + documentation
 ```
 
 ---
@@ -1216,6 +1928,14 @@ compliance-app/
 | **DPM** | Data Point Model - ESA semantic data model |
 | **RTS** | Regulatory Technical Standards |
 | **ITS** | Implementing Technical Standards |
+| **CTPP** | Critical Third-Party Provider - ICT provider designated by ESAs for oversight |
+| **Lead Overseer** | ESA appointed to supervise a specific CTPP |
+| **JON** | Joint Oversight Network - coordination body for CTPP oversight |
+| **TLPT** | Threat-Led Penetration Testing - mandatory for significant entities |
+| **NIS2** | Network and Information Security Directive 2 (EU 2022/2555) |
+| **ESA** | European Supervisory Authority (EBA, ESMA, EIOPA) |
+| **EU 2024/1772** | RTS on incident classification criteria |
+| **EU 2025/302** | ITS on incident reporting templates |
 
 ---
 
