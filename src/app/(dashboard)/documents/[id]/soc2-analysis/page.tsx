@@ -25,6 +25,7 @@ import {
   Target,
   Info,
   Eye,
+  Layers,
 } from 'lucide-react';
 import { PageBreadcrumb } from '@/components/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -54,6 +55,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { SOC2AnalysisClient } from './soc2-analysis-client';
 import { ExportButtons } from './export-buttons';
 import { EvidenceViewTab } from './evidence-view-tab';
+import { RoiPopulationTab } from '@/components/soc2/roi-population-tab';
 
 // New DORA compliance components
 import {
@@ -533,7 +535,7 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="controls" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="evidence" className="gap-2">
               <Eye className="h-4 w-4" />
               <span className="hidden sm:inline">Evidence</span>
@@ -563,6 +565,10 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
             <TabsTrigger value="dora" className="gap-2">
               <Target className="h-4 w-4" />
               <span className="hidden sm:inline">DORA</span>
+            </TabsTrigger>
+            <TabsTrigger value="roi" className="gap-2">
+              <Layers className="h-4 w-4" />
+              <span className="hidden sm:inline">RoI</span>
             </TabsTrigger>
             <TabsTrigger value="verify" className="gap-2">
               <CheckCircle2 className="h-4 w-4" />
@@ -874,6 +880,15 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
           {/* DORA Mapping Tab - Now with Maturity-Based Scoring */}
           <TabsContent value="dora" className="space-y-4">
             <DORAComplianceDashboard compliance={doraCompliance} />
+          </TabsContent>
+
+          {/* RoI Population Tab - 10X Differentiator: One-Click SOC2-to-RoI */}
+          <TabsContent value="roi" className="space-y-4">
+            <RoiPopulationTab
+              documentId={id}
+              vendorName={vendor?.name}
+              vendorId={vendor?.id}
+            />
           </TabsContent>
 
           {/* Verification Tab - Ensures extraction accuracy */}
