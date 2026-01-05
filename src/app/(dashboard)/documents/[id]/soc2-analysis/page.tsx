@@ -228,7 +228,7 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
     const coverageByPillar = {
       ICT_RISK: 0,
       INCIDENT: 0,
-      RESILIENCE: 0,
+      TESTING: 0,  // Fixed: was 'RESILIENCE', should match DORAPillar type
       TPRM: 0,
       SHARING: 0,
     };
@@ -264,7 +264,7 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
     const pillarMapping: Record<string, string[]> = {
       ICT_RISK: ['CC1', 'CC3', 'CC4', 'CC5', 'CC6', 'CC7', 'CC8'],
       INCIDENT: ['CC7'],
-      RESILIENCE: ['A', 'CC7', 'CC9'],
+      TESTING: ['A', 'CC7', 'CC9'],  // Fixed: was 'RESILIENCE', should match DORAPillar type
       TPRM: ['CC9', 'C'],
       SHARING: ['CC2', 'CC5'], // Communication & monitoring activities support information sharing
     };

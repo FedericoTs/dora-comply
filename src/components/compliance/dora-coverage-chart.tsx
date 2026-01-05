@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 export interface DORAcoverageByPillar {
   ICT_RISK: number;
   INCIDENT: number;
-  RESILIENCE: number;
+  TESTING: number;  // Renamed from RESILIENCE to match DORAPillar type
   TPRM: number;
   SHARING: number;
 }
@@ -41,16 +41,16 @@ interface DORACoverageChartProps {
 const PILLAR_LABELS: Record<keyof DORAcoverageByPillar, string> = {
   ICT_RISK: 'ICT Risk Management',
   INCIDENT: 'Incident Reporting',
-  RESILIENCE: 'Resilience Testing',
+  TESTING: 'Digital Resilience Testing',
   TPRM: 'Third-Party Risk',
   SHARING: 'Information Sharing',
 };
 
 const PILLAR_ARTICLES: Record<keyof DORAcoverageByPillar, string[]> = {
-  ICT_RISK: ['Art. 5-11'],
+  ICT_RISK: ['Art. 5-16'],
   INCIDENT: ['Art. 17-23'],
-  RESILIENCE: ['Art. 24-27'],
-  TPRM: ['Art. 28-30'],
+  TESTING: ['Art. 24-27'],
+  TPRM: ['Art. 28-44'],
   SHARING: ['Art. 45'],
 };
 

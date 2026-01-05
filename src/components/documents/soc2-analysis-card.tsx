@@ -116,15 +116,18 @@ export function SOC2AnalysisCard({
         const result = await response.json();
 
         if (result.status === 'complete' && result.parsedId) {
-          // Parsing complete - refresh page to show results
+          // Parsing complete - update state and refresh page
           setProgress(100);
           setStatusMessage('Complete! Loading results...');
+          setIsPolling(false);
           toast.success('SOC 2 Analysis Complete!', {
             description: 'Document has been parsed successfully.',
           });
-          // Small delay then refresh
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          router.refresh();
+          // Update state to completed and redirect to force full reload
+          setAnalysisState('completed');
+          // Use replace to force a full page reload with fresh data
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          window.location.reload();
           return;
         } else if (result.status === 'failed') {
           throw new Error(result.error || 'Parsing failed');

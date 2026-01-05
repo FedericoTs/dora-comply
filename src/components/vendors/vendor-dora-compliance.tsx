@@ -173,7 +173,7 @@ export function VendorDORACompliance({ vendorId, vendorName }: VendorDORAComplia
     const coverageByPillar: DORAcoverageByPillar = {
       ICT_RISK: 0,
       INCIDENT: 0,
-      RESILIENCE: 0,
+      TESTING: 0,
       TPRM: 0,
       SHARING: 0,
     };
@@ -193,7 +193,7 @@ export function VendorDORACompliance({ vendorId, vendorName }: VendorDORAComplia
     const pillarMapping: Record<string, string[]> = {
       ICT_RISK: ['CC1', 'CC3', 'CC4', 'CC5', 'CC6', 'CC7', 'CC8'],
       INCIDENT: ['CC7'],
-      RESILIENCE: ['A', 'CC7', 'CC9'],
+      TESTING: ['A', 'CC7', 'CC9'],
       TPRM: ['CC9', 'C'],
       SHARING: [],
     };

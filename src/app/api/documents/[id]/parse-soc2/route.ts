@@ -23,19 +23,18 @@ interface RouteParams {
   }>;
 }
 
-// Modal endpoint URL from environment
-const MODAL_PARSE_SOC2_URL = process.env.MODAL_PARSE_SOC2_URL;
-const MODAL_AUTH_KEY = process.env.MODAL_AUTH_KEY;
-const MODAL_AUTH_SECRET = process.env.MODAL_AUTH_SECRET;
-
-// Feature flag: Use Modal for parsing (set to false to use legacy local parsing)
-const USE_MODAL_PARSING = process.env.USE_MODAL_PARSING === 'true';
-
 export async function POST(
   request: NextRequest,
   { params }: RouteParams
 ): Promise<NextResponse> {
   const { id: documentId } = await params;
+
+  // Read env vars inside handler to ensure fresh values in serverless
+  // Note: .trim() is needed because Vercel env vars may have trailing newlines
+  const MODAL_PARSE_SOC2_URL = process.env.MODAL_PARSE_SOC2_URL?.trim();
+  const MODAL_AUTH_KEY = process.env.MODAL_AUTH_KEY?.trim();
+  const MODAL_AUTH_SECRET = process.env.MODAL_AUTH_SECRET?.trim();
+  const USE_MODAL_PARSING = process.env.USE_MODAL_PARSING?.trim() === 'true';
 
   try {
     // Get authenticated Supabase client
