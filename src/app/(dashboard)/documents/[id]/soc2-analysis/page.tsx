@@ -873,17 +873,7 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
 
           {/* DORA Mapping Tab - Now with Maturity-Based Scoring */}
           <TabsContent value="dora" className="space-y-4">
-            <DORAComplianceDashboard
-              compliance={doraCompliance}
-              onPillarClick={(pillar) => {
-                // Could scroll to pillar details or open modal
-                console.log('Pillar clicked:', pillar);
-              }}
-              onGapClick={(requirementId) => {
-                // Could open gap detail modal
-                console.log('Gap clicked:', requirementId);
-              }}
-            />
+            <DORAComplianceDashboard compliance={doraCompliance} />
           </TabsContent>
 
           {/* Verification Tab - Ensures extraction accuracy */}
@@ -910,22 +900,6 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
                   description: c.description,
                   pageRef: c.pageRef,
                 })),
-              }}
-              onVerify={(result) => {
-                console.log('Verification result:', result);
-                // Could save verification to database
-              }}
-              onRequestReparse={() => {
-                console.log('Re-parse requested');
-                // Could trigger document re-parsing
-              }}
-              onReportIssue={(issue) => {
-                console.log('Issue reported:', issue);
-                // Could open support ticket
-              }}
-              onViewInPdf={(pageNumber) => {
-                console.log('View in PDF:', pageNumber);
-                // Could switch to evidence tab and scroll to page
               }}
             />
           </TabsContent>
