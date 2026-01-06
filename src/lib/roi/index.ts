@@ -4,8 +4,9 @@
  * Register of Information generation for ESA DORA compliance
  */
 
-// Types
+// Types & URL Utilities
 export * from './types';
+export { templateIdToUrl, urlToTemplateId, getTemplateUrl } from './types';
 
 // Mappings
 export {

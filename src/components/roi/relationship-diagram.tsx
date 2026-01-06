@@ -40,7 +40,7 @@ import {
   getCompletionOrder,
   type TemplateNode,
 } from '@/lib/roi/template-relationships';
-import type { RoiTemplateId } from '@/lib/roi/types';
+import { getTemplateUrl, type RoiTemplateId } from '@/lib/roi/types';
 
 // Minimal interface for template stats - works with both RoiStats and RoiTemplateStatus
 interface TemplateStatsBase {
@@ -150,7 +150,7 @@ export function RelationshipDiagram({
 
   const handleNavigate = useCallback(
     (nodeId: RoiTemplateId) => {
-      router.push(`/roi/${nodeId}`);
+      router.push(getTemplateUrl(nodeId));
     },
     [router]
   );
@@ -450,7 +450,7 @@ export function SimpleFlowDiagram({ className }: { className?: string }) {
         return (
           <div key={templateId} className="flex items-center">
             <Link
-              href={`/roi/${templateId}`}
+              href={getTemplateUrl(templateId)}
               className={cn(
                 'px-2 py-1.5 rounded text-[10px] font-medium text-white',
                 'hover:opacity-90 transition-opacity'

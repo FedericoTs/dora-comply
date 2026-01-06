@@ -502,3 +502,38 @@ export interface TemplateWithStatus extends RoiTemplateStatus {
   status: TemplateFilterStatus;
   group: 'entity' | 'contracts' | 'links' | 'providers' | 'functions' | 'exit';
 }
+
+// ============================================================================
+// URL Utilities
+// ============================================================================
+
+/**
+ * Convert template ID to URL-safe format
+ * B_01.01 → b_01_01
+ */
+export function templateIdToUrl(templateId: RoiTemplateId): string {
+  return templateId.toLowerCase().replace('.', '_');
+}
+
+/**
+ * Convert URL param back to template ID
+ * b_01_01 → B_01.01
+ */
+export function urlToTemplateId(urlId: string): RoiTemplateId | null {
+  // URL format: b_01_01 → Template format: B_01.01
+  const parts = urlId.toUpperCase().split('_');
+  if (parts.length === 3) {
+    const normalized = `${parts[0]}_${parts[1]}.${parts[2]}`;
+    if (normalized in ROI_TEMPLATES) {
+      return normalized as RoiTemplateId;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get the full URL path for a template
+ */
+export function getTemplateUrl(templateId: RoiTemplateId): string {
+  return `/roi/${templateIdToUrl(templateId)}`;
+}
