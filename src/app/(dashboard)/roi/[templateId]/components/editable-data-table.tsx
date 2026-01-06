@@ -438,6 +438,14 @@ export function EditableDataTable({
                           Required
                         </Badge>
                       )}
+                      {col.dbColumn === '_computed' && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1 py-0 h-4 bg-muted text-muted-foreground border-muted-foreground/30"
+                        >
+                          Computed
+                        </Badge>
+                      )}
                     </div>
                     <span className="font-medium">{col.description}</span>
                   </div>
@@ -497,6 +505,7 @@ export function EditableDataTable({
                           hasError={hasError}
                           isSelected={isSelected}
                           isEditing={isEditing}
+                          readOnly={col.dbColumn === '_computed'}
                           rowIndex={rowIndex}
                           columnCode={col.esaCode}
                           onSelect={() => handleCellSelect(rowIndex, colIndex)}

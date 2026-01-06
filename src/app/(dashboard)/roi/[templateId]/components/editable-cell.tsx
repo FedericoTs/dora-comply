@@ -43,6 +43,7 @@ export interface EditableCellProps {
   hasError?: boolean;
   isSelected?: boolean;
   isEditing?: boolean;
+  readOnly?: boolean; // Computed columns are read-only
   rowIndex: number;
   columnCode: string;
   onSelect?: () => void;
@@ -61,6 +62,7 @@ export function EditableCell({
   hasError,
   isSelected,
   isEditing,
+  readOnly,
   rowIndex,
   columnCode,
   onSelect,
@@ -138,7 +140,9 @@ export function EditableCell({
         case 'Enter':
         case 'F2':
           e.preventDefault();
-          onStartEdit?.();
+          if (!readOnly) {
+            onStartEdit?.();
+          }
           break;
         case 'ArrowUp':
           e.preventDefault();
@@ -162,7 +166,7 @@ export function EditableCell({
           break;
       }
     }
-  }, [isEditing, isSelected, handleSave, handleCancel, onStartEdit, onNavigate]);
+  }, [isEditing, isSelected, readOnly, handleSave, handleCancel, onStartEdit, onNavigate]);
 
   const handleClick = useCallback(() => {
     if (!isSelected) {
@@ -171,8 +175,10 @@ export function EditableCell({
   }, [isSelected, onSelect]);
 
   const handleDoubleClick = useCallback(() => {
-    onStartEdit?.();
-  }, [onStartEdit]);
+    if (!readOnly) {
+      onStartEdit?.();
+    }
+  }, [onStartEdit, readOnly]);
 
   // Determine empty state
   const isEmpty = value === null || value === undefined || value === '';
@@ -372,13 +378,15 @@ export function EditableCell({
     <div
       ref={cellRef}
       className={cn(
-        'relative h-full min-h-[40px] px-3 py-2 cursor-pointer transition-all',
+        'relative h-full min-h-[40px] px-3 py-2 transition-all',
         'border-2 border-transparent',
-        isSelected && 'border-primary bg-primary/5',
+        readOnly ? 'cursor-default bg-muted/30' : 'cursor-pointer',
+        isSelected && !readOnly && 'border-primary bg-primary/5',
+        isSelected && readOnly && 'border-muted-foreground/30 bg-muted/40',
         isEditing && 'border-primary bg-background shadow-sm',
         hasError && 'bg-red-100',
         isMissingRequired && !hasError && 'bg-amber-50',
-        !isSelected && !isEditing && 'hover:bg-muted/50'
+        !isSelected && !isEditing && !readOnly && 'hover:bg-muted/50'
       )}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
@@ -386,7 +394,7 @@ export function EditableCell({
       tabIndex={isSelected ? 0 : -1}
       role="gridcell"
       aria-selected={isSelected}
-      aria-readonly={!isEditing}
+      aria-readonly={readOnly || !isEditing}
       data-row={rowIndex}
       data-column={columnCode}
     >

@@ -165,6 +165,10 @@ async function TemplateDetailContent({ templateId }: { templateId: RoiTemplateId
           <div className="w-4 h-4 rounded bg-red-100 border border-red-200" />
           <span>Validation error</span>
         </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded bg-muted/60 border border-muted-foreground/30" />
+          <span>Computed (read-only)</span>
+        </div>
         <div className="flex items-center gap-1.5 ml-auto">
           <Edit3 className="h-3 w-3" />
           <span className="font-medium">Inline editing enabled</span>

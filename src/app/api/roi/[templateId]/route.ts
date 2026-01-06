@@ -245,6 +245,8 @@ export async function PATCH(
     const body = await request.json();
     const { rowIndex, columnCode, value, recordId } = body;
 
+    console.log(`[RoI API] PATCH request:`, { templateId: templateIdNormalized, rowIndex, columnCode, value });
+
     // Get template mapping to find the database column
     const mapping = TEMPLATE_MAPPINGS[templateIdNormalized];
     if (!mapping) {
@@ -263,17 +265,60 @@ export async function PATCH(
     }
 
     const { dbColumn, dbTable } = columnMapping;
+    console.log(`[RoI API] Mapping: ${columnCode} -> ${dbTable}.${dbColumn}`);
+
+    // Check if this is a computed column (not editable)
+    if (dbColumn === '_computed') {
+      return NextResponse.json(
+        { error: { code: 'READ_ONLY', message: `Column ${columnCode} is computed and cannot be edited` } },
+        { status: 400 }
+      );
+    }
+
+    // Get user's organization for RLS
+    const { data: userOrg, error: orgError } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single();
+
+    if (orgError || !userOrg?.organization_id) {
+      console.error('[RoI API] Organization lookup error:', orgError);
+      return NextResponse.json(
+        { error: { code: 'NO_ORG', message: 'User organization not found' } },
+        { status: 403 }
+      );
+    }
+
+    const organizationId = userOrg.organization_id;
 
     // Get record ID if not provided (need to fetch data first)
     let actualRecordId = recordId;
     if (!actualRecordId) {
-      // Fetch data to get the record ID at the given index
-      const { data: records, error: fetchError } = await supabase
-        .from(dbTable)
-        .select('id')
-        .order('created_at');
+      // Build query based on table type
+      let query = supabase.from(dbTable).select('id').order('created_at');
 
-      if (fetchError || !records || !records[rowIndex]) {
+      // Apply organization filter for tables that have it
+      if (dbTable === 'organizations') {
+        // Organizations table - the record IS the organization
+        query = supabase.from(dbTable).select('id').eq('id', organizationId);
+      } else if (dbTable === 'vendors' || dbTable === 'contracts') {
+        // Tables with organization_id column
+        query = supabase.from(dbTable).select('id').eq('organization_id', organizationId).order('created_at');
+      }
+
+      const { data: records, error: fetchError } = await query;
+
+      if (fetchError) {
+        console.error('[RoI API] Fetch error:', fetchError);
+        return NextResponse.json(
+          { error: { code: 'FETCH_ERROR', message: fetchError.message } },
+          { status: 500 }
+        );
+      }
+
+      if (!records || !records[rowIndex]) {
+        console.error('[RoI API] Record not found at index:', rowIndex, 'Total records:', records?.length);
         return NextResponse.json(
           { error: { code: 'RECORD_NOT_FOUND', message: `Record at index ${rowIndex} not found` } },
           { status: 404 }
@@ -281,6 +326,8 @@ export async function PATCH(
       }
       actualRecordId = records[rowIndex].id;
     }
+
+    console.log(`[RoI API] Target record ID: ${actualRecordId}`);
 
     // Convert EBA enum values back to database values if needed
     let dbValue = value;
@@ -294,11 +341,14 @@ export async function PATCH(
       }
     }
 
+    console.log(`[RoI API] Updating ${dbTable}.${dbColumn} = "${dbValue}" for record ${actualRecordId}`);
+
     // Update the record
-    const { error: updateError } = await supabase
+    const { data: updateData, error: updateError } = await supabase
       .from(dbTable)
       .update({ [dbColumn]: dbValue })
-      .eq('id', actualRecordId);
+      .eq('id', actualRecordId)
+      .select();
 
     if (updateError) {
       console.error('[RoI API] Update error:', updateError);
@@ -308,7 +358,7 @@ export async function PATCH(
       );
     }
 
-    console.log(`[RoI API] Updated ${dbTable}.${dbColumn} = ${dbValue} for record ${actualRecordId}`);
+    console.log(`[RoI API] Update successful:`, updateData);
 
     return NextResponse.json({
       success: true,
@@ -316,6 +366,7 @@ export async function PATCH(
       rowIndex,
       columnCode,
       value: dbValue,
+      updated: updateData,
     });
   } catch (error) {
     console.error('[RoI Template API] PATCH Error:', error);

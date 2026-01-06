@@ -231,7 +231,7 @@ export const B_01_01_MAPPING: TemplateMapping = {
   },
   c0030: {
     esaCode: 'c0030',
-    dbColumn: 'country',
+    dbColumn: 'jurisdiction',
     dbTable: 'organizations',
     description: 'Country of entity',
     required: true,
@@ -290,7 +290,7 @@ export const B_01_02_MAPPING: TemplateMapping = {
   },
   c0030: {
     esaCode: 'c0030',
-    dbColumn: 'country',
+    dbColumn: 'jurisdiction',
     dbTable: 'organizations',
     description: 'Country of entity',
     required: true,
@@ -663,6 +663,7 @@ export const B_04_01_MAPPING: TemplateMapping = {
 /**
  * B_05.01 - ICT Providers
  * Source: vendors table
+ * Note: Some columns are computed at query time and marked readonly
  */
 export const B_05_01_MAPPING: TemplateMapping = {
   c0010: {
@@ -675,7 +676,7 @@ export const B_05_01_MAPPING: TemplateMapping = {
   },
   c0020: {
     esaCode: 'c0020',
-    dbColumn: 'lei_type',
+    dbColumn: '_computed', // Computed from LEI presence
     dbTable: 'vendors',
     description: 'Provider code type',
     required: true,
@@ -693,7 +694,7 @@ export const B_05_01_MAPPING: TemplateMapping = {
   },
   c0040: {
     esaCode: 'c0040',
-    dbColumn: 'registration_type',
+    dbColumn: '_computed', // Computed from registration_number presence
     dbTable: 'vendors',
     description: 'Additional code type',
     required: false,
@@ -710,7 +711,7 @@ export const B_05_01_MAPPING: TemplateMapping = {
   },
   c0060: {
     esaCode: 'c0060',
-    dbColumn: 'name_latin',
+    dbColumn: 'name', // Uses same column as c0050 (no separate Latin name column)
     dbTable: 'vendors',
     description: 'Name in Latin alphabet',
     required: false,
@@ -718,7 +719,7 @@ export const B_05_01_MAPPING: TemplateMapping = {
   },
   c0070: {
     esaCode: 'c0070',
-    dbColumn: 'provider_type',
+    dbColumn: '_computed', // Always legal person
     dbTable: 'vendors',
     description: 'Type of person',
     required: true,
@@ -737,7 +738,7 @@ export const B_05_01_MAPPING: TemplateMapping = {
   },
   c0090: {
     esaCode: 'c0090',
-    dbColumn: 'currency',
+    dbColumn: 'expense_currency',
     dbTable: 'vendors',
     description: 'Currency',
     required: true,
@@ -755,7 +756,7 @@ export const B_05_01_MAPPING: TemplateMapping = {
   },
   c0110: {
     esaCode: 'c0110',
-    dbColumn: 'parent_provider_lei',
+    dbColumn: 'ultimate_parent_lei',
     dbTable: 'vendors',
     description: 'Ultimate parent ID',
     required: false,
