@@ -11,6 +11,7 @@ export { templateIdToUrl, urlToTemplateId, getTemplateUrl } from './types';
 // Mappings
 export {
   TEMPLATE_MAPPINGS,
+  TEMPLATE_PRIMARY_TABLES,
   EBA_COUNTRY_CODES,
   EBA_ENTITY_TYPES,
   EBA_CONTRACT_TYPES,
@@ -135,6 +136,14 @@ export {
   type TemplateNode,
   type TemplateRelationship,
 } from './template-relationships';
+
+// Smart Defaults
+export {
+  getSmartDefaults,
+  getRequiredFields,
+  transformEsaToDb,
+  type DefaultsContext,
+} from './defaults';
 
 // Submissions Types (client-safe)
 export {

@@ -4,6 +4,7 @@
  * GET /api/roi/[templateId] - Get data for a specific template
  * PUT /api/roi/[templateId] - Update existing record
  * POST /api/roi/[templateId] - Create new record
+ * DELETE /api/roi/[templateId] - Soft delete records
  * PATCH /api/roi/[templateId] - Update single cell
  */
 
@@ -15,6 +16,8 @@ import {
   ROI_TEMPLATES,
   getColumnOrder,
   TEMPLATE_MAPPINGS,
+  TEMPLATE_PRIMARY_TABLES,
+  getSmartDefaults,
   type RoiTemplateId,
 } from '@/lib/roi';
 
@@ -159,8 +162,7 @@ export async function PUT(
 }
 
 /**
- * POST - Create new record
- * Note: Full implementation depends on template type and database schema
+ * POST - Create new record with smart defaults
  */
 export async function POST(
   request: NextRequest,
@@ -189,18 +191,86 @@ export async function POST(
       );
     }
 
+    // Get primary table for this template
+    const primaryTable = TEMPLATE_PRIMARY_TABLES[templateIdNormalized];
+    if (!primaryTable) {
+      return NextResponse.json(
+        { error: { code: 'NO_TABLE', message: `Template ${templateIdNormalized} does not support record creation` } },
+        { status: 400 }
+      );
+    }
+
+    // Get user's organization
+    const { data: userOrg, error: orgError } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single();
+
+    if (orgError || !userOrg?.organization_id) {
+      console.error('[RoI API] Organization lookup error:', orgError);
+      return NextResponse.json(
+        { error: { code: 'NO_ORG', message: 'User organization not found' } },
+        { status: 403 }
+      );
+    }
+
+    const organizationId = userOrg.organization_id;
+
+    // Get organization LEI for smart defaults
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('lei')
+      .eq('id', organizationId)
+      .single();
+
     const body = await request.json();
-    const { record } = body;
+    const { record = {} } = body;
 
-    // Log the create (TODO: implement actual database inserts)
-    console.log(`[RoI API] Create ${templateIdNormalized} record:`, record);
+    // Get smart defaults for this template
+    const defaults = getSmartDefaults(templateIdNormalized, {
+      organizationLei: org?.lei,
+      organizationId,
+      userId: user.id,
+    });
 
-    // TODO: Implement per-template create logic
+    // Merge defaults with provided record (provided values override defaults)
+    const mergedRecord = { ...defaults, ...record };
+
+    console.log(`[RoI API] Creating ${templateIdNormalized} record in ${primaryTable}:`, mergedRecord);
+
+    // Build the database record based on template type
+    const dbRecord = await buildDbRecord(
+      templateIdNormalized,
+      primaryTable,
+      mergedRecord,
+      organizationId,
+      user.id
+    );
+
+    console.log(`[RoI API] DB record to insert:`, dbRecord);
+
+    // Insert the record
+    const { data: insertedData, error: insertError } = await supabase
+      .from(primaryTable)
+      .insert(dbRecord)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('[RoI API] Insert error:', insertError);
+      return NextResponse.json(
+        { error: { code: 'INSERT_FAILED', message: insertError.message } },
+        { status: 500 }
+      );
+    }
+
+    console.log(`[RoI API] Record created successfully:`, insertedData);
 
     return NextResponse.json({
       success: true,
-      message: 'Record creation acknowledged',
       templateId: templateIdNormalized,
+      data: insertedData,
     });
   } catch (error) {
     console.error('[RoI Template API] POST Error:', error);
@@ -209,6 +279,197 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+/**
+ * DELETE - Soft delete records
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ templateId: string }> }
+) {
+  try {
+    const { templateId } = await params;
+
+    // Verify authentication
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+        { status: 401 }
+      );
+    }
+
+    const templateIdNormalized = normalizeTemplateId(templateId);
+
+    if (!ROI_TEMPLATES[templateIdNormalized]) {
+      return NextResponse.json(
+        { error: { code: 'NOT_FOUND', message: `Template ${templateId} not found` } },
+        { status: 404 }
+      );
+    }
+
+    // Get primary table for this template
+    const primaryTable = TEMPLATE_PRIMARY_TABLES[templateIdNormalized];
+    if (!primaryTable) {
+      return NextResponse.json(
+        { error: { code: 'NO_TABLE', message: `Template ${templateIdNormalized} does not support record deletion` } },
+        { status: 400 }
+      );
+    }
+
+    // Get user's organization
+    const { data: userOrg, error: orgError } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single();
+
+    if (orgError || !userOrg?.organization_id) {
+      console.error('[RoI API] Organization lookup error:', orgError);
+      return NextResponse.json(
+        { error: { code: 'NO_ORG', message: 'User organization not found' } },
+        { status: 403 }
+      );
+    }
+
+    const organizationId = userOrg.organization_id;
+
+    const body = await request.json();
+    const { rowIndices, recordIds } = body;
+
+    if ((!rowIndices || rowIndices.length === 0) && (!recordIds || recordIds.length === 0)) {
+      return NextResponse.json(
+        { error: { code: 'NO_RECORDS', message: 'No records specified for deletion' } },
+        { status: 400 }
+      );
+    }
+
+    console.log(`[RoI API] DELETE request for ${templateIdNormalized}:`, { rowIndices, recordIds });
+
+    // Get record IDs if only indices provided
+    let idsToDelete: string[] = recordIds || [];
+
+    if (rowIndices && rowIndices.length > 0 && idsToDelete.length === 0) {
+      // Fetch records to get IDs
+      let query = supabase.from(primaryTable).select('id').order('created_at');
+
+      // Apply organization filter
+      if (primaryTable === 'organizations') {
+        query = supabase.from(primaryTable).select('id').eq('id', organizationId);
+      } else {
+        query = supabase.from(primaryTable).select('id').eq('organization_id', organizationId).order('created_at');
+      }
+
+      const { data: records, error: fetchError } = await query;
+
+      if (fetchError) {
+        console.error('[RoI API] Fetch error:', fetchError);
+        return NextResponse.json(
+          { error: { code: 'FETCH_ERROR', message: fetchError.message } },
+          { status: 500 }
+        );
+      }
+
+      // Map indices to IDs
+      idsToDelete = rowIndices
+        .filter((idx: number) => records && records[idx])
+        .map((idx: number) => records![idx].id);
+    }
+
+    if (idsToDelete.length === 0) {
+      return NextResponse.json(
+        { error: { code: 'NO_RECORDS', message: 'No valid records found for deletion' } },
+        { status: 404 }
+      );
+    }
+
+    console.log(`[RoI API] Soft deleting ${idsToDelete.length} records:`, idsToDelete);
+
+    // Soft delete: set deleted_at timestamp
+    const { data: deletedData, error: deleteError } = await supabase
+      .from(primaryTable)
+      .update({ deleted_at: new Date().toISOString() })
+      .in('id', idsToDelete)
+      .select();
+
+    if (deleteError) {
+      console.error('[RoI API] Delete error:', deleteError);
+      return NextResponse.json(
+        { error: { code: 'DELETE_FAILED', message: deleteError.message } },
+        { status: 500 }
+      );
+    }
+
+    console.log(`[RoI API] Soft deleted ${deletedData?.length || 0} records`);
+
+    return NextResponse.json({
+      success: true,
+      templateId: templateIdNormalized,
+      deletedCount: deletedData?.length || 0,
+      deletedIds: idsToDelete,
+    });
+  } catch (error) {
+    console.error('[RoI Template API] DELETE Error:', error);
+    return NextResponse.json(
+      { error: { code: 'INTERNAL_ERROR', message: 'Failed to delete records' } },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Build database record from ESA column values
+ */
+async function buildDbRecord(
+  templateId: RoiTemplateId,
+  primaryTable: string,
+  esaRecord: Record<string, unknown>,
+  organizationId: string,
+  userId: string
+): Promise<Record<string, unknown>> {
+  const mapping = TEMPLATE_MAPPINGS[templateId];
+  const dbRecord: Record<string, unknown> = {
+    organization_id: organizationId,
+    created_by: userId,
+  };
+
+  // For organizations table, we don't set organization_id or created_by
+  if (primaryTable === 'organizations') {
+    delete dbRecord.organization_id;
+    delete dbRecord.created_by;
+  }
+
+  if (!mapping) {
+    // No mapping, return just org context
+    return dbRecord;
+  }
+
+  // Transform ESA codes to DB columns
+  for (const [esaCode, value] of Object.entries(esaRecord)) {
+    const columnMapping = mapping[esaCode];
+    if (!columnMapping) continue;
+    if (columnMapping.dbColumn === '_computed') continue; // Skip computed columns
+    if (columnMapping.dbTable !== primaryTable) continue; // Skip columns from other tables
+
+    let dbValue = value;
+
+    // Reverse transform enum values
+    if (columnMapping.enumeration && typeof value === 'string') {
+      const entry = Object.entries(columnMapping.enumeration).find(
+        ([_, ebaCode]) => ebaCode === value
+      );
+      if (entry) {
+        dbValue = entry[0];
+      }
+    }
+
+    dbRecord[columnMapping.dbColumn] = dbValue;
+  }
+
+  return dbRecord;
 }
 
 /**

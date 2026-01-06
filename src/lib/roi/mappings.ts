@@ -996,6 +996,23 @@ export const TEMPLATE_MAPPINGS: Record<RoiTemplateId, TemplateMapping | null> = 
   'B_99.01': null, // Lookup table, not exported
 };
 
+/**
+ * Primary database table for each template
+ * Used for POST/DELETE operations
+ */
+export const TEMPLATE_PRIMARY_TABLES: Partial<Record<RoiTemplateId, string>> = {
+  'B_01.01': 'organizations',
+  'B_01.02': 'organizations',
+  'B_01.03': 'organization_branches',
+  'B_02.01': 'contracts',
+  'B_02.02': 'ict_services',
+  'B_04.01': 'ict_services', // Service recipients
+  'B_05.01': 'vendors',
+  'B_05.02': 'vendor_subcontractors',
+  'B_06.01': 'critical_functions',
+  'B_07.01': 'contracts', // Exit arrangements
+};
+
 // ============================================================================
 // Helper Functions
 // ============================================================================

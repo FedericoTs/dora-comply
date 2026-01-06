@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { EditableCell, CellSaveStatus } from './editable-cell';
+import { AddRowZone } from './add-row-zone';
 import { templateIdToUrl, type RoiTemplateId } from '@/lib/roi/types';
 
 // Serializable version of ColumnMapping (without transform function)
@@ -78,6 +79,8 @@ interface EditableDataTableProps {
   onCellUpdate?: (rowIndex: number, columnCode: string, value: unknown) => Promise<void>;
   onRowAdd?: () => Promise<void>;
   onRowDelete?: (rowIndices: number[]) => Promise<void>;
+  newRowIndex?: number | null;
+  isLoading?: boolean;
 }
 
 export function EditableDataTable({
@@ -88,6 +91,8 @@ export function EditableDataTable({
   onCellUpdate,
   onRowAdd,
   onRowDelete,
+  newRowIndex,
+  isLoading,
 }: EditableDataTableProps) {
   // Selection state
   const [selectedCell, setSelectedCell] = useState<CellPosition | null>(null);
@@ -287,16 +292,35 @@ export function EditableDataTable({
   // Global keyboard handler
   useEffect(() => {
     const handleGlobalKeyDown = (e: globalThis.KeyboardEvent) => {
-      // Undo: Ctrl+Z
-      if (e.ctrlKey && e.key === 'z' && !editingCell) {
+      // Don't handle when editing a cell
+      if (editingCell) return;
+
+      // Undo: Ctrl+Z / Cmd+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
         handleUndo();
+        return;
+      }
+
+      // Add Row: Ctrl+Enter / Cmd+Enter
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && onRowAdd && !isLoading) {
+        e.preventDefault();
+        onRowAdd();
+        return;
+      }
+
+      // Delete selected rows: Backspace (when rows are selected, not editing)
+      if (e.key === 'Backspace' && selectedRows.size > 0 && onRowDelete) {
+        e.preventDefault();
+        onRowDelete(Array.from(selectedRows));
+        setSelectedRows(new Set());
+        return;
       }
     };
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [editingCell, handleUndo]);
+  }, [editingCell, handleUndo, onRowAdd, onRowDelete, selectedRows, isLoading]);
 
   // Empty state
   if (localData.length === 0) {
@@ -387,11 +411,12 @@ export function EditableDataTable({
       </div>
 
       {/* Keyboard hint */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground px-1">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground px-1">
         <span><kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px]">Click</kbd> to select</span>
         <span><kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px]">Double-click</kbd> or <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px]">Enter</kbd> to edit</span>
         <span><kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px]">Tab</kbd> / <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px]">Arrows</kbd> to navigate</span>
-        <span><kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px]">Ctrl+Z</kbd> to undo</span>
+        <span><kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px]">{typeof navigator !== 'undefined' && navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}+Enter</kbd> add row</span>
+        <span><kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px]">{typeof navigator !== 'undefined' && navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}+Z</kbd> to undo</span>
       </div>
 
       {/* Table */}
@@ -459,14 +484,16 @@ export function EditableDataTable({
             {localData.map((row, rowIndex) => {
               const rowErrors = validationErrors?.get(rowIndex);
               const isRowSelected = selectedRows.has(rowIndex);
+              const isNewRow = newRowIndex === rowIndex;
 
               return (
                 <TableRow
                   key={rowIndex}
                   className={cn(
-                    'group',
+                    'group transition-colors',
                     rowErrors && rowErrors.size > 0 && 'bg-red-50/30',
-                    isRowSelected && 'bg-primary/5'
+                    isRowSelected && 'bg-primary/5',
+                    isNewRow && 'bg-green-50 animate-pulse'
                   )}
                 >
                   {/* Selection cell */}
@@ -557,6 +584,15 @@ export function EditableDataTable({
           </TableBody>
         </Table>
       </div>
+
+      {/* Add Row Zone */}
+      {onRowAdd && (
+        <AddRowZone
+          onAddRow={onRowAdd}
+          disabled={isLoading}
+          className="mt-2"
+        />
+      )}
 
       {/* Footer stats */}
       <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
