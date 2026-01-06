@@ -442,6 +442,56 @@ export async function DELETE(
 // Tables that have a created_by column
 const TABLES_WITH_CREATED_BY = ['incidents', 'roi_submissions', 'vendor_certifications'];
 
+/**
+ * Extract database-native value from ESA-formatted string
+ * Examples:
+ *   'iso4217:EUR' → 'EUR'
+ *   'eba_GA:DE' → 'DE'
+ *   'eba_CU:EUR' → 'EUR'
+ *   'eba_CT:x212' → 'x212' (or lookup in enumeration)
+ */
+function extractDbValue(esaValue: string, enumeration?: Record<string, string>): string {
+  // Try direct enum reverse lookup first (exact match)
+  if (enumeration) {
+    const entry = Object.entries(enumeration).find(([_, ebaCode]) => ebaCode === esaValue);
+    if (entry) {
+      return entry[0]; // Return the key (DB value)
+    }
+  }
+
+  // Handle ISO 4217 currency format: 'iso4217:EUR' → 'EUR'
+  if (esaValue.startsWith('iso4217:')) {
+    return esaValue.substring(8); // 'iso4217:'.length = 8
+  }
+
+  // Handle EBA currency format: 'eba_CU:EUR' → 'EUR'
+  if (esaValue.startsWith('eba_CU:')) {
+    return esaValue.substring(7);
+  }
+
+  // Handle EBA country format: 'eba_GA:DE' → 'DE'
+  if (esaValue.startsWith('eba_GA:')) {
+    return esaValue.substring(7);
+  }
+
+  // Handle other EBA formats: extract the code after the colon
+  const colonIndex = esaValue.lastIndexOf(':');
+  if (colonIndex !== -1 && colonIndex < esaValue.length - 1) {
+    const suffix = esaValue.substring(colonIndex + 1);
+    // For enum values like 'eba_CT:x212', check if suffix is in enumeration values
+    if (enumeration) {
+      const entry = Object.entries(enumeration).find(([key]) => key === suffix);
+      if (entry) {
+        return entry[0];
+      }
+    }
+    return suffix;
+  }
+
+  // Return as-is if no transformation needed
+  return esaValue;
+}
+
 async function buildDbRecord(
   templateId: RoiTemplateId,
   primaryTable: string,
@@ -476,14 +526,9 @@ async function buildDbRecord(
 
     let dbValue = value;
 
-    // Reverse transform enum values
-    if (columnMapping.enumeration && typeof value === 'string') {
-      const entry = Object.entries(columnMapping.enumeration).find(
-        ([_, ebaCode]) => ebaCode === value
-      );
-      if (entry) {
-        dbValue = entry[0];
-      }
+    // Transform ESA-formatted string values to DB-native values
+    if (typeof value === 'string' && value.length > 0) {
+      dbValue = extractDbValue(value, columnMapping.enumeration);
     }
 
     dbRecord[columnMapping.dbColumn] = dbValue;
