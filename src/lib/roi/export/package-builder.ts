@@ -10,24 +10,47 @@ import { generateCsv } from './csv-generator';
 import { generateParametersCsv } from './parameters';
 
 // ============================================================================
-// Package Structure
+// Package Structure (ESA xBRL-CSV format)
 // ============================================================================
 
 /**
- * ESA Package Structure:
+ * Official ESA Package Structure:
  *
  * {LEI}.CON_FR_DORA010100_DORA_{date}_{timestamp}/
  * ├── META-INF/
- * │   └── reports/
- * │       ├── parameters.csv
- * │       ├── report.json
- * │       ├── b_01.01.csv
- * │       ├── b_01.02.csv
- * │       └── ... (all template CSVs)
+ * │   └── reportPackage.json     <- Package metadata
+ * └── reports/
+ *     ├── report.json            <- Links to EBA taxonomy
+ *     ├── parameters.csv         <- Entity, period, currency
+ *     ├── FilingIndicators.csv   <- Which templates are reported
+ *     ├── b_01.01.csv
+ *     ├── b_01.02.csv
+ *     └── ... (all template CSVs)
  */
 
+// All 15 DORA RoI templates
+const ALL_TEMPLATES: RoiTemplateId[] = [
+  'B_01.01', 'B_01.02', 'B_01.03',
+  'B_02.01', 'B_02.02', 'B_02.03',
+  'B_03.01', 'B_03.02', 'B_03.03',
+  'B_04.01', 'B_05.01', 'B_05.02',
+  'B_06.01', 'B_07.01', 'B_99.01',
+];
+
 // ============================================================================
-// Report.json Generation
+// META-INF/reportPackage.json Generation
+// ============================================================================
+
+function generateReportPackageJson(): string {
+  return JSON.stringify({
+    documentInfo: {
+      documentType: 'https://xbrl.org/report-package/2023',
+    },
+  }, null, 2);
+}
+
+// ============================================================================
+// reports/report.json Generation
 // ============================================================================
 
 interface ReportJson {
@@ -51,6 +74,28 @@ function generateReportJson(): string {
 }
 
 // ============================================================================
+// FilingIndicators.csv Generation
+// ============================================================================
+
+/**
+ * Generate FilingIndicators.csv that declares which templates are reported
+ */
+function generateFilingIndicatorsCsv(
+  templateData: Partial<Record<RoiTemplateId, Record<string, unknown>[]>>
+): string {
+  const lines: string[] = ['templateID,reported'];
+
+  for (const templateId of ALL_TEMPLATES) {
+    const data = templateData[templateId];
+    // Template is "reported" if it has data (even empty array means it was attempted)
+    const reported = data !== undefined && data.length > 0;
+    lines.push(`${templateId},${reported}`);
+  }
+
+  return lines.join('\n') + '\n';
+}
+
+// ============================================================================
 // Package Building
 // ============================================================================
 
@@ -67,6 +112,7 @@ export interface PackageFile {
 
 /**
  * Build the complete package as a collection of files
+ * Uses official ESA folder structure
  */
 export function buildPackageFiles(options: BuildPackageOptions): PackageFile[] {
   const { parameters, templateData, timestamp = new Date() } = options;
@@ -81,38 +127,43 @@ export function buildPackageFiles(options: BuildPackageOptions): PackageFile[] {
   // Extract LEI from entityId (format: rs:LEI123...)
   const lei = parameters.entityId.replace('rs:', '');
 
-  // Build folder name
-  const folderName = `${lei}_FR_DORA010100_DORA_${parameters.refPeriod}_${ts}`;
-  const basePath = `${folderName}/META-INF/reports`;
+  // Build folder name - ESA format: {LEI}.CON_FR_DORA010100_DORA_{date}_{timestamp}
+  const folderName = `${lei}.CON_FR_DORA010100_DORA_${parameters.refPeriod}_${ts}`;
+  const reportsPath = `${folderName}/reports`;
+  const metaInfPath = `${folderName}/META-INF`;
 
-  // Add parameters.csv
-  const paramsCsv = generateParametersCsv(parameters);
+  // Add META-INF/reportPackage.json
   files.push({
-    path: `${basePath}/parameters.csv`,
-    content: paramsCsv,
+    path: `${metaInfPath}/reportPackage.json`,
+    content: generateReportPackageJson(),
   });
 
-  // Add report.json
+  // Add reports/report.json
   files.push({
-    path: `${basePath}/report.json`,
+    path: `${reportsPath}/report.json`,
     content: generateReportJson(),
   });
 
-  // Add template CSV files
-  const templates: RoiTemplateId[] = [
-    'B_01.01', 'B_01.02', 'B_01.03',
-    'B_02.01', 'B_02.02', 'B_02.03',
-    'B_03.01', 'B_03.02', 'B_03.03',
-    'B_04.01', 'B_05.01', 'B_05.02',
-    'B_06.01', 'B_07.01',
-  ];
+  // Add reports/parameters.csv
+  const paramsCsv = generateParametersCsv(parameters);
+  files.push({
+    path: `${reportsPath}/parameters.csv`,
+    content: paramsCsv,
+  });
 
-  for (const templateId of templates) {
+  // Add reports/FilingIndicators.csv
+  files.push({
+    path: `${reportsPath}/FilingIndicators.csv`,
+    content: generateFilingIndicatorsCsv(templateData),
+  });
+
+  // Add template CSV files
+  for (const templateId of ALL_TEMPLATES) {
     const data = templateData[templateId] || [];
     const result = generateCsv({ templateId, data });
 
     files.push({
-      path: `${basePath}/${result.fileName}`,
+      path: `${reportsPath}/${result.fileName}`,
       content: result.csv,
     });
   }
@@ -158,23 +209,16 @@ export async function buildPackageZip(
 export async function buildRoiPackage(
   options: BuildPackageOptions
 ): Promise<RoiExportResult> {
-  const { parameters, templateData, timestamp = new Date() } = options;
+  const { templateData, timestamp = new Date() } = options;
 
   try {
-    const files = buildPackageFiles(options);
+    buildPackageFiles(options);
 
     // Count rows per template
-    const templates: RoiTemplateId[] = [
-      'B_01.01', 'B_01.02', 'B_01.03',
-      'B_02.01', 'B_02.02', 'B_02.03',
-      'B_03.01', 'B_03.02', 'B_03.03',
-      'B_04.01', 'B_05.01', 'B_05.02',
-      'B_06.01', 'B_07.01',
-    ];
-
-    const templateFiles = templates.map(templateId => {
+    const templateFiles = ALL_TEMPLATES.map(templateId => {
       const data = templateData[templateId] || [];
-      const fileName = templateId.toLowerCase().replace('.', '_') + '.csv';
+      // ESA format uses lowercase with dot: b_01.01.csv
+      const fileName = templateId.toLowerCase() + '.csv';
       return {
         templateId,
         fileName,
@@ -229,31 +273,29 @@ export async function buildPackageWithProgress(
     .slice(0, 17);
 
   const lei = parameters.entityId.replace('rs:', '');
-  const folderName = `${lei}_FR_DORA010100_DORA_${parameters.refPeriod}_${ts}`;
-  const basePath = `${folderName}/META-INF/reports`;
+  // ESA format: {LEI}.CON_FR_DORA010100_DORA_{date}_{timestamp}
+  const folderName = `${lei}.CON_FR_DORA010100_DORA_${parameters.refPeriod}_${ts}`;
+  const reportsPath = `${folderName}/reports`;
+  const metaInfPath = `${folderName}/META-INF`;
 
-  // Add static files first
-  zip.file(`${basePath}/parameters.csv`, generateParametersCsv(parameters));
-  zip.file(`${basePath}/report.json`, generateReportJson());
+  // Add META-INF/reportPackage.json
+  zip.file(`${metaInfPath}/reportPackage.json`, generateReportPackageJson());
+
+  // Add static files in reports/
+  zip.file(`${reportsPath}/report.json`, generateReportJson());
+  zip.file(`${reportsPath}/parameters.csv`, generateParametersCsv(parameters));
+  zip.file(`${reportsPath}/FilingIndicators.csv`, generateFilingIndicatorsCsv(templateData));
 
   // Add template files with progress
-  const templates: RoiTemplateId[] = [
-    'B_01.01', 'B_01.02', 'B_01.03',
-    'B_02.01', 'B_02.02', 'B_02.03',
-    'B_03.01', 'B_03.02', 'B_03.03',
-    'B_04.01', 'B_05.01', 'B_05.02',
-    'B_06.01', 'B_07.01',
-  ];
-
-  for (let i = 0; i < templates.length; i++) {
-    const templateId = templates[i];
+  for (let i = 0; i < ALL_TEMPLATES.length; i++) {
+    const templateId = ALL_TEMPLATES[i];
     const data = templateData[templateId] || [];
     const result = generateCsv({ templateId, data });
 
-    zip.file(`${basePath}/${result.fileName}`, result.csv);
+    zip.file(`${reportsPath}/${result.fileName}`, result.csv);
 
     if (onProgress) {
-      onProgress(templateId, ((i + 1) / templates.length) * 100);
+      onProgress(templateId, ((i + 1) / ALL_TEMPLATES.length) * 100);
     }
   }
 

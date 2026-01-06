@@ -80,7 +80,8 @@ export function generateCsv(options: CsvGeneratorOptions): CsvGeneratorResult {
   const columns = getColumnOrder(templateId);
 
   if (columns.length === 0 || data.length === 0) {
-    const fileName = templateId.toLowerCase().replace('.', '_') + '.csv';
+    // ESA format: lowercase with dot preserved (e.g., b_01.01.csv)
+    const fileName = templateId.toLowerCase() + '.csv';
     return {
       csv: includeHeader ? columns.join(',') + '\n' : '',
       rowCount: 0,
@@ -105,7 +106,8 @@ export function generateCsv(options: CsvGeneratorOptions): CsvGeneratorResult {
   // ESA requires trailing newline
   const csv = lines.join('\n') + '\n';
 
-  const fileName = templateId.toLowerCase().replace('.', '_') + '.csv';
+  // ESA format: lowercase with dot preserved (e.g., b_01.01.csv)
+  const fileName = templateId.toLowerCase() + '.csv';
 
   return {
     csv,
@@ -115,6 +117,15 @@ export function generateCsv(options: CsvGeneratorOptions): CsvGeneratorResult {
   };
 }
 
+// All 15 DORA RoI templates
+const ALL_TEMPLATES: RoiTemplateId[] = [
+  'B_01.01', 'B_01.02', 'B_01.03',
+  'B_02.01', 'B_02.02', 'B_02.03',
+  'B_03.01', 'B_03.02', 'B_03.03',
+  'B_04.01', 'B_05.01', 'B_05.02',
+  'B_06.01', 'B_07.01', 'B_99.01',
+];
+
 /**
  * Generate all CSV files for the RoI package
  */
@@ -123,15 +134,7 @@ export function generateAllCsvFiles(
 ): Map<string, CsvGeneratorResult> {
   const results = new Map<string, CsvGeneratorResult>();
 
-  const templates: RoiTemplateId[] = [
-    'B_01.01', 'B_01.02', 'B_01.03',
-    'B_02.01', 'B_02.02', 'B_02.03',
-    'B_03.01', 'B_03.02', 'B_03.03',
-    'B_04.01', 'B_05.01', 'B_05.02',
-    'B_06.01', 'B_07.01',
-  ];
-
-  for (const templateId of templates) {
+  for (const templateId of ALL_TEMPLATES) {
     const data = templateData[templateId] || [];
     const result = generateCsv({ templateId, data });
     results.set(templateId, result);
