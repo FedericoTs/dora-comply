@@ -280,7 +280,7 @@ export function DataEntrySheet({
         <div className="px-6 py-4 border-t shrink-0 bg-background">
           <div className="flex items-center justify-between">
             <Button variant="ghost" asChild>
-              <a href={`/roi/templates/${template.templateId}`} target="_blank" rel="noopener">
+              <a href={`/roi/${template.templateId}`} target="_blank" rel="noopener">
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Full Editor
               </a>

@@ -79,7 +79,7 @@ function TemplateCard({ template, onQuickEdit, enableInlineEdit }: TemplateCardP
                   className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(`/roi/templates/${template.templateId}`, '_blank');
+                    window.open(`/roi/${template.templateId}`, '_blank');
                   }}
                 >
                   <ExternalLink className="h-3 w-3" />
@@ -137,7 +137,7 @@ function TemplateCard({ template, onQuickEdit, enableInlineEdit }: TemplateCardP
   }
 
   return (
-    <Link href={`/roi/templates/${template.templateId}`} className="h-full">
+    <Link href={`/roi/${template.templateId}`} className="h-full">
       {cardContent}
     </Link>
   );

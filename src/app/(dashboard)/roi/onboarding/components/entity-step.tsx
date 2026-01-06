@@ -4,15 +4,29 @@
  * Entity Information Step (Step 1)
  *
  * Collects organization details required for RoI B_01.01
+ * Includes GLEIF LEI search and validation
  */
 
-import { useState, useEffect } from 'react';
-import { Building2, Globe, Hash, FileText, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Building2,
+  Globe,
+  Hash,
+  FileText,
+  AlertCircle,
+  Search,
+  Loader2,
+  CheckCircle2,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WizardStep, StepSection } from './wizard-step';
 import { EBA_COUNTRY_CODES, EBA_ENTITY_TYPES } from '@/lib/roi/mappings';
+import { searchEntities, validateLEI, getCountryFlag } from '@/lib/external/gleif';
+import type { GLEIFEntity } from '@/lib/vendors/types';
 import type { OnboardingStepData, WizardStepId } from '@/lib/roi/onboarding-types';
 
 interface EntityStepProps {
@@ -32,6 +46,10 @@ interface EntityFormData {
 
 export function EntityStep({ validation, onBack, onNext }: EntityStepProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSearchingLei, setIsSearchingLei] = useState(false);
+  const [leiSuggestions, setLeiSuggestions] = useState<GLEIFEntity[]>([]);
+  const [selectedEntity, setSelectedEntity] = useState<GLEIFEntity | null>(null);
+  const [leiError, setLeiError] = useState<string | null>(null);
   const [formData, setFormData] = useState<EntityFormData>({
     legalName: '',
     tradingName: '',
@@ -56,6 +74,18 @@ export function EntityStep({ validation, onBack, onNext }: EntityStepProps) {
             entityType: org.entity_type || '',
             registrationNumber: org.registration_number || '',
           });
+          // If LEI exists, mark as verified
+          if (org.lei_code && org.lei_code.length === 20) {
+            setSelectedEntity({
+              lei: org.lei_code,
+              legalName: org.legal_name || org.name || '',
+              legalAddress: {
+                country: org.country || '',
+                city: '',
+              },
+              registrationStatus: 'ISSUED',
+            });
+          }
         }
       } catch (error) {
         console.error('Failed to load organization:', error);
@@ -66,6 +96,73 @@ export function EntityStep({ validation, onBack, onNext }: EntityStepProps) {
 
   const handleChange = (field: keyof EntityFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    if (field === 'leiCode') {
+      setLeiError(null);
+      setSelectedEntity(null);
+    }
+  };
+
+  // Search for entities by name (GLEIF)
+  const handleNameSearch = useCallback(async () => {
+    if (!formData.legalName || formData.legalName.length < 3) return;
+
+    setIsSearchingLei(true);
+    setLeiSuggestions([]);
+
+    try {
+      const result = await searchEntities(formData.legalName, 5);
+      if (result.results.length > 0) {
+        setLeiSuggestions(result.results);
+      }
+    } catch (error) {
+      console.error('LEI search error:', error);
+    } finally {
+      setIsSearchingLei(false);
+    }
+  }, [formData.legalName]);
+
+  // Verify LEI code directly
+  const handleLeiVerify = useCallback(async () => {
+    if (!formData.leiCode || formData.leiCode.length !== 20) {
+      setLeiError('LEI must be exactly 20 characters');
+      return;
+    }
+
+    setIsSearchingLei(true);
+    setLeiError(null);
+
+    try {
+      const result = await validateLEI(formData.leiCode);
+
+      if (result.valid && result.entity) {
+        setSelectedEntity(result.entity);
+        setFormData((prev) => ({
+          ...prev,
+          legalName: result.entity!.legalName,
+          country: result.entity!.legalAddress.country,
+        }));
+      } else {
+        setLeiError(result.error || 'LEI not found');
+      }
+    } catch (error) {
+      setLeiError('Failed to verify LEI');
+      console.error('LEI verification error:', error);
+    } finally {
+      setIsSearchingLei(false);
+    }
+  }, [formData.leiCode]);
+
+  // Select entity from suggestions
+  const handleSelectEntity = (entity: GLEIFEntity) => {
+    setSelectedEntity(entity);
+    setFormData((prev) => ({
+      ...prev,
+      legalName: entity.legalName,
+      leiCode: entity.lei,
+      country: entity.legalAddress.country,
+    }));
+    setLeiSuggestions([]);
+    setLeiError(null);
   };
 
   const handleNext = async () => {
@@ -112,31 +209,85 @@ export function EntityStep({ validation, onBack, onNext }: EntityStepProps) {
           description="Official registration details for your financial entity"
           icon={<FileText className="h-5 w-5" />}
         >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="legalName">
-                Legal Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="legalName"
-                value={formData.legalName}
-                onChange={(e) => handleChange('legalName', e.target.value)}
-                placeholder="Full legal name as registered"
-              />
-              <p className="text-xs text-muted-foreground">
-                As it appears in official registration documents
-              </p>
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="legalName">
+                  Legal Name <span className="text-destructive">*</span>
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="legalName"
+                    value={formData.legalName}
+                    onChange={(e) => handleChange('legalName', e.target.value)}
+                    placeholder="Full legal name as registered"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleNameSearch}
+                    disabled={isSearchingLei || formData.legalName.length < 3}
+                    title="Search GLEIF for LEI"
+                  >
+                    {isSearchingLei ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Search by name to find your LEI automatically
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tradingName">Trading Name</Label>
+                <Input
+                  id="tradingName"
+                  value={formData.tradingName}
+                  onChange={(e) => handleChange('tradingName', e.target.value)}
+                  placeholder="Brand or trading name (if different)"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="tradingName">Trading Name</Label>
-              <Input
-                id="tradingName"
-                value={formData.tradingName}
-                onChange={(e) => handleChange('tradingName', e.target.value)}
-                placeholder="Brand or trading name (if different)"
-              />
-            </div>
+            {/* LEI Suggestions */}
+            {leiSuggestions.length > 0 && (
+              <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  Matching entities from GLEIF:
+                </p>
+                <div className="space-y-1">
+                  {leiSuggestions.map((entity) => (
+                    <button
+                      key={entity.lei}
+                      type="button"
+                      className="w-full text-left p-3 rounded-md hover:bg-muted transition-colors border border-transparent hover:border-primary/20"
+                      onClick={() => handleSelectEntity(entity)}
+                    >
+                      <p className="font-medium text-sm">{entity.legalName}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-2">
+                        <span>{getCountryFlag(entity.legalAddress.country)} {entity.legalAddress.country}</span>
+                        <span>•</span>
+                        <span className="font-mono">LEI: {entity.lei}</span>
+                        {entity.registrationStatus === 'ISSUED' && (
+                          <>
+                            <span>•</span>
+                            <Badge variant="outline" className="text-green-600 border-green-200 h-5">
+                              Active
+                            </Badge>
+                          </>
+                        )}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </StepSection>
 
@@ -151,13 +302,33 @@ export function EntityStep({ validation, onBack, onNext }: EntityStepProps) {
               <Label htmlFor="leiCode">
                 LEI Code <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="leiCode"
-                value={formData.leiCode}
-                onChange={(e) => handleChange('leiCode', e.target.value.toUpperCase())}
-                placeholder="20-character LEI"
-                maxLength={20}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="leiCode"
+                  value={formData.leiCode}
+                  onChange={(e) => handleChange('leiCode', e.target.value.toUpperCase())}
+                  placeholder="20-character LEI"
+                  maxLength={20}
+                  className={`flex-1 font-mono uppercase ${
+                    leiError ? 'border-destructive' : selectedEntity ? 'border-green-500' : ''
+                  }`}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleLeiVerify}
+                  disabled={isSearchingLei || formData.leiCode.length !== 20}
+                >
+                  {isSearchingLei ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Verify'
+                  )}
+                </Button>
+              </div>
+              {leiError && (
+                <p className="text-xs text-destructive">{leiError}</p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Legal Entity Identifier (mandatory for DORA reporting)
               </p>
@@ -174,7 +345,30 @@ export function EntityStep({ validation, onBack, onNext }: EntityStepProps) {
             </div>
           </div>
 
-          {!formData.leiCode && (
+          {/* Verified Entity Info */}
+          {selectedEntity && (
+            <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 p-4 mt-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium text-green-700 dark:text-green-400">Entity verified via GLEIF</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedEntity.legalName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {getCountryFlag(selectedEntity.legalAddress.country)}{' '}
+                    {selectedEntity.legalAddress.city && `${selectedEntity.legalAddress.city}, `}
+                    {selectedEntity.legalAddress.country}
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                  {selectedEntity.registrationStatus}
+                </Badge>
+              </div>
+            </div>
+          )}
+
+          {!formData.leiCode && !selectedEntity && (
             <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md mt-3">
               <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
               <div className="text-sm">
@@ -217,7 +411,7 @@ export function EntityStep({ validation, onBack, onNext }: EntityStepProps) {
                 <SelectContent>
                   {Object.entries(EBA_COUNTRY_CODES).map(([code, name]) => (
                     <SelectItem key={code} value={code}>
-                      {code} - {name}
+                      {getCountryFlag(code)} {code} - {name}
                     </SelectItem>
                   ))}
                 </SelectContent>
