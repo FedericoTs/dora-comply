@@ -4,6 +4,7 @@
  * GET /api/roi/[templateId] - Get data for a specific template
  * PUT /api/roi/[templateId] - Update existing record
  * POST /api/roi/[templateId] - Create new record
+ * PATCH /api/roi/[templateId] - Update single cell
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -13,6 +14,7 @@ import {
   validateTemplate,
   ROI_TEMPLATES,
   getColumnOrder,
+  TEMPLATE_MAPPINGS,
   type RoiTemplateId,
 } from '@/lib/roi';
 
@@ -204,6 +206,121 @@ export async function POST(
     console.error('[RoI Template API] POST Error:', error);
     return NextResponse.json(
       { error: { code: 'INTERNAL_ERROR', message: 'Failed to create record' } },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH - Update single cell value
+ * More efficient for inline editing - updates one field at a time
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ templateId: string }> }
+) {
+  try {
+    const { templateId } = await params;
+
+    // Verify authentication
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+        { status: 401 }
+      );
+    }
+
+    const templateIdNormalized = normalizeTemplateId(templateId);
+
+    if (!ROI_TEMPLATES[templateIdNormalized]) {
+      return NextResponse.json(
+        { error: { code: 'NOT_FOUND', message: `Template ${templateId} not found` } },
+        { status: 404 }
+      );
+    }
+
+    const body = await request.json();
+    const { rowIndex, columnCode, value, recordId } = body;
+
+    // Get template mapping to find the database column
+    const mapping = TEMPLATE_MAPPINGS[templateIdNormalized];
+    if (!mapping) {
+      return NextResponse.json(
+        { error: { code: 'NO_MAPPING', message: `Template ${templateIdNormalized} has no direct mapping` } },
+        { status: 400 }
+      );
+    }
+
+    const columnMapping = mapping[columnCode];
+    if (!columnMapping) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_COLUMN', message: `Column ${columnCode} not found in mapping` } },
+        { status: 400 }
+      );
+    }
+
+    const { dbColumn, dbTable } = columnMapping;
+
+    // Get record ID if not provided (need to fetch data first)
+    let actualRecordId = recordId;
+    if (!actualRecordId) {
+      // Fetch data to get the record ID at the given index
+      const { data: records, error: fetchError } = await supabase
+        .from(dbTable)
+        .select('id')
+        .order('created_at');
+
+      if (fetchError || !records || !records[rowIndex]) {
+        return NextResponse.json(
+          { error: { code: 'RECORD_NOT_FOUND', message: `Record at index ${rowIndex} not found` } },
+          { status: 404 }
+        );
+      }
+      actualRecordId = records[rowIndex].id;
+    }
+
+    // Convert EBA enum values back to database values if needed
+    let dbValue = value;
+    if (columnMapping.enumeration) {
+      // Check if the value is an EBA code (e.g., "eba_GA:DE") and convert to key
+      const enumEntry = Object.entries(columnMapping.enumeration).find(
+        ([_, ebaCode]) => ebaCode === value
+      );
+      if (enumEntry) {
+        dbValue = enumEntry[0]; // Use the key (e.g., "DE")
+      }
+    }
+
+    // Update the record
+    const { error: updateError } = await supabase
+      .from(dbTable)
+      .update({ [dbColumn]: dbValue })
+      .eq('id', actualRecordId);
+
+    if (updateError) {
+      console.error('[RoI API] Update error:', updateError);
+      return NextResponse.json(
+        { error: { code: 'UPDATE_FAILED', message: updateError.message } },
+        { status: 500 }
+      );
+    }
+
+    console.log(`[RoI API] Updated ${dbTable}.${dbColumn} = ${dbValue} for record ${actualRecordId}`);
+
+    return NextResponse.json({
+      success: true,
+      templateId: templateIdNormalized,
+      rowIndex,
+      columnCode,
+      value: dbValue,
+    });
+  } catch (error) {
+    console.error('[RoI Template API] PATCH Error:', error);
+    return NextResponse.json(
+      { error: { code: 'INTERNAL_ERROR', message: 'Failed to update cell' } },
       { status: 500 }
     );
   }

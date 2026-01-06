@@ -14,14 +14,14 @@ import {
   ROI_TEMPLATES,
   type RoiTemplateId,
 } from '@/lib/roi';
-import { DataTable } from './components/data-table';
+import { EditableTableWrapper } from './components/editable-table-wrapper';
 import { ValidationPanel } from './components/validation-panel';
 import { FieldMapper } from './components/field-mapper';
 import { ExportButton } from './components/export-button';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, FileSpreadsheet } from 'lucide-react';
+import { ChevronLeft, FileSpreadsheet, Edit3 } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ templateId: string }>;
@@ -165,6 +165,10 @@ async function TemplateDetailContent({ templateId }: { templateId: RoiTemplateId
           <div className="w-4 h-4 rounded bg-red-100 border border-red-200" />
           <span>Validation error</span>
         </div>
+        <div className="flex items-center gap-1.5 ml-auto">
+          <Edit3 className="h-3 w-3" />
+          <span className="font-medium">Inline editing enabled</span>
+        </div>
       </div>
 
       {/* Validation Panel */}
@@ -178,13 +182,12 @@ async function TemplateDetailContent({ templateId }: { templateId: RoiTemplateId
         {/* Data table - takes 3 columns */}
         <div className="lg:col-span-3 space-y-4">
           <h2 className="text-lg font-medium">Template Data</h2>
-          <div className="rounded-lg border overflow-hidden">
-            <DataTable
-              data={data}
-              columns={columns}
-              validationErrors={errorMap}
-            />
-          </div>
+          <EditableTableWrapper
+            templateId={templateId}
+            initialData={data}
+            columns={columns}
+            validationErrors={errorMap}
+          />
         </div>
 
         {/* Sidebar - field mapping */}
