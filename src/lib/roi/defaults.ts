@@ -71,7 +71,7 @@ export function getSmartDefaults(
     // Required DB columns: name (NOT NULL)
     // NOTE: Use DB-native values here, they get transformed to ESA format on read
     'B_05.01': {
-      c0050: 'New ICT Provider', // Name - REQUIRED in DB (maps to 'name')
+      c0050: `New ICT Provider ${Date.now().toString().slice(-4)}`, // Name - REQUIRED, with timestamp for uniqueness
       c0090: 'EUR', // Currency - DB column is VARCHAR(3), NOT 'iso4217:EUR'!
     },
 
@@ -84,7 +84,8 @@ export function getSmartDefaults(
     // Required DB columns: function_name (NOT NULL)
     // NOTE: Use DB-native values here, they get transformed to ESA format on read
     'B_06.01': {
-      c0030: 'New Critical Function', // Function name - REQUIRED in DB (maps to 'function_name')
+      c0010: `CF${Date.now().toString().slice(-6)}`, // Function code - unique identifier
+      c0030: `New Critical Function ${Date.now().toString().slice(-4)}`, // Function name - REQUIRED, with timestamp suffix for uniqueness
     },
 
     // B_07.01 - Exit Arrangements
