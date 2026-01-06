@@ -29,18 +29,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get organization LEI
-    const { data: profile } = await supabase
-      .from('profiles')
+    // Get organization LEI - query users table (not profiles)
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
       .select('organization_id')
       .eq('id', user.id)
       .single();
 
-    const { data: org } = await supabase
+    if (userError || !userRecord?.organization_id) {
+      console.error('[RoI Package API] User lookup error:', userError);
+      return NextResponse.json(
+        { error: { code: 'NO_ORG', message: 'User organization not found. Please contact support.' } },
+        { status: 400 }
+      );
+    }
+
+    const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select('lei, name')
-      .eq('id', profile?.organization_id)
+      .eq('id', userRecord.organization_id)
       .single();
+
+    if (orgError) {
+      console.error('[RoI Package API] Organization lookup error:', orgError);
+      return NextResponse.json(
+        { error: { code: 'ORG_ERROR', message: 'Failed to fetch organization data.' } },
+        { status: 500 }
+      );
+    }
 
     if (!org?.lei) {
       return NextResponse.json(
@@ -128,22 +144,30 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const { reportingDate, validateFirst = true } = body;
 
-    // Get organization LEI
-    const { data: profile } = await supabase
-      .from('profiles')
+    // Get organization LEI - query users table (not profiles)
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
       .select('organization_id')
       .eq('id', user.id)
       .single();
 
-    const { data: org } = await supabase
+    if (userError || !userRecord?.organization_id) {
+      console.error('[RoI Package API] User lookup error:', userError);
+      return NextResponse.json(
+        { error: { code: 'NO_ORG', message: 'User organization not found' } },
+        { status: 400 }
+      );
+    }
+
+    const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select('lei, name')
-      .eq('id', profile?.organization_id)
+      .eq('id', userRecord.organization_id)
       .single();
 
-    if (!org?.lei) {
+    if (orgError || !org?.lei) {
       return NextResponse.json(
-        { error: { code: 'MISSING_LEI', message: 'Organization LEI is required' } },
+        { error: { code: 'MISSING_LEI', message: 'Organization LEI is required for RoI export' } },
         { status: 400 }
       );
     }

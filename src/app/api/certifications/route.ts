@@ -21,14 +21,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get organization
-    const { data: profile } = await supabase
-      .from('profiles')
+    // Get organization from users table
+    const { data: userRecord } = await supabase
+      .from('users')
       .select('organization_id')
       .eq('id', user.id)
       .single();
 
-    if (!profile?.organization_id) {
+    if (!userRecord?.organization_id) {
       return NextResponse.json(
         { error: { code: 'NO_ORG', message: 'No organization found' } },
         { status: 400 }
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       .from('vendor_certifications')
       .insert({
         vendor_id,
-        organization_id: profile.organization_id,
+        organization_id: userRecord.organization_id,
         standard,
         standard_version,
         certificate_number,

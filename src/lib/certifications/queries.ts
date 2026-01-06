@@ -78,19 +78,19 @@ export async function createCertification(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const { data: profile } = await supabase
-      .from('profiles')
+    const { data: userRecord } = await supabase
+      .from('users')
       .select('organization_id')
       .eq('id', user.id)
       .single();
 
-    if (!profile?.organization_id) throw new Error('No organization found');
+    if (!userRecord?.organization_id) throw new Error('No organization found');
 
     const { data, error } = await supabase
       .from('vendor_certifications')
       .insert({
         ...input,
-        organization_id: profile.organization_id,
+        organization_id: userRecord.organization_id,
         created_by: user.id,
         status: input.status || 'valid',
         verified: input.verified || false,
