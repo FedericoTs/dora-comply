@@ -1,13 +1,19 @@
 /**
  * API Route: Populate RoI from SOC2 Report
  *
+ * PREREQUISITE: Document MUST be linked to an existing vendor.
+ * The vendor should be registered first, then the SOC2 document uploaded for that vendor.
+ *
+ * This endpoint:
+ * - Updates the existing vendor with SOC2 audit metadata
+ * - Creates ICT services from the system description
+ * - Creates subcontractors (fourth parties) from subservice organizations
+ *
  * POST /api/roi/populate-from-soc2
  * Body: {
  *   documentId: string,
  *   preview?: boolean,
  *   options?: {
- *     createVendor?: boolean,
- *     useExistingVendorId?: string,
  *     selectedSubcontractors?: string[], // Names of subcontractors to include
  *     createServices?: boolean
  *   }
@@ -19,18 +25,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { mapSOC2ToRoi, generatePopulationPreview } from '@/lib/roi/soc2-to-roi';
+import type { ExistingVendorInfo } from '@/lib/roi/soc2-to-roi';
 import type { ParsedSOC2Report } from '@/lib/ai/parsers/types';
 import type {
   SOC2ToRoiMappingResult,
-  ExtractedVendorData,
   ExtractedServiceData,
   ExtractedSubcontractorData,
   Soc2RoiMappingRecord,
 } from '@/lib/roi/soc2-to-roi-types';
 
 interface PopulateOptions {
-  createVendor?: boolean;
-  useExistingVendorId?: string;
   selectedSubcontractors?: string[];
   createServices?: boolean;
 }
@@ -39,7 +43,7 @@ interface PopulateResult {
   success: boolean;
   mappingId?: string;
   vendorId?: string;
-  vendorCreated?: boolean;
+  vendorUpdated?: boolean;
   serviceIds?: string[];
   subcontractorIds?: string[];
   confidence?: number;
@@ -82,6 +86,44 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User has no organization' }, { status: 400 });
     }
 
+    // Fetch the document WITH its linked vendor
+    const { data: document, error: docError } = await supabase
+      .from('documents')
+      .select('id, vendor_id')
+      .eq('id', documentId)
+      .single();
+
+    if (docError || !document) {
+      return NextResponse.json(
+        { error: 'Document not found' },
+        { status: 404 }
+      );
+    }
+
+    // CRITICAL: Document MUST have a vendor linked
+    if (!document.vendor_id) {
+      return NextResponse.json({
+        error: 'Document not linked to vendor',
+        message: 'This document must be linked to a vendor before populating RoI. Please assign a vendor to this document first.',
+        canPopulate: false,
+        needsVendor: true,
+      }, { status: 400 });
+    }
+
+    // Fetch the vendor
+    const { data: vendor, error: vendorError } = await supabase
+      .from('vendors')
+      .select('id, name, organization_id')
+      .eq('id', document.vendor_id)
+      .single();
+
+    if (vendorError || !vendor) {
+      return NextResponse.json(
+        { error: 'Linked vendor not found' },
+        { status: 404 }
+      );
+    }
+
     // Fetch the parsed SOC2 data
     const { data: parsedSoc2, error: soc2Error } = await supabase
       .from('parsed_soc2')
@@ -106,28 +148,19 @@ export async function GET(request: NextRequest) {
     // Reconstruct ParsedSOC2Report from database
     const report: ParsedSOC2Report = reconstructParsedReport(parsedSoc2);
 
-    // Generate mapping result
-    const mappingResult = mapSOC2ToRoi(report, documentId, profile.organization_id);
+    // Build existing vendor info
+    const existingVendor: ExistingVendorInfo = {
+      id: vendor.id,
+      name: vendor.name,
+      organization_id: vendor.organization_id,
+    };
+
+    // Generate mapping result with existing vendor
+    const mappingResult = mapSOC2ToRoi(report, documentId, existingVendor);
     mappingResult.parsedSoc2Id = parsedSoc2.id;
 
-    // Check for existing vendor match
-    let existingVendorId: string | undefined;
-    if (report.serviceOrgName) {
-      const { data: existingVendor } = await supabase
-        .from('vendors')
-        .select('id, name')
-        .eq('organization_id', profile.organization_id)
-        .ilike('name', `%${report.serviceOrgName}%`)
-        .limit(1)
-        .single();
-
-      if (existingVendor) {
-        existingVendorId = existingVendor.id;
-      }
-    }
-
     // Generate preview
-    const preview = generatePopulationPreview(mappingResult, existingVendorId);
+    const preview = generatePopulationPreview(mappingResult, existingVendor);
 
     return NextResponse.json({
       preview,
@@ -183,6 +216,37 @@ export async function POST(request: NextRequest) {
 
     const organizationId = profile.organization_id;
 
+    // Fetch the document WITH its linked vendor
+    const { data: document, error: docError } = await supabase
+      .from('documents')
+      .select('id, vendor_id')
+      .eq('id', documentId)
+      .single();
+
+    if (docError || !document) {
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    }
+
+    // CRITICAL: Document MUST have a vendor linked
+    if (!document.vendor_id) {
+      return NextResponse.json({
+        success: false,
+        error: 'Document not linked to vendor',
+        message: 'This document must be linked to a vendor before populating RoI.',
+      }, { status: 400 });
+    }
+
+    // Fetch the vendor
+    const { data: vendor, error: vendorError } = await supabase
+      .from('vendors')
+      .select('id, name, organization_id')
+      .eq('id', document.vendor_id)
+      .single();
+
+    if (vendorError || !vendor) {
+      return NextResponse.json({ error: 'Linked vendor not found' }, { status: 404 });
+    }
+
     // Fetch the parsed SOC2 data
     const { data: parsedSoc2, error: soc2Error } = await supabase
       .from('parsed_soc2')
@@ -200,13 +264,20 @@ export async function POST(request: NextRequest) {
     // Reconstruct ParsedSOC2Report from database
     const report: ParsedSOC2Report = reconstructParsedReport(parsedSoc2);
 
-    // Generate mapping result
-    const mappingResult = mapSOC2ToRoi(report, documentId, organizationId);
+    // Build existing vendor info
+    const existingVendor: ExistingVendorInfo = {
+      id: vendor.id,
+      name: vendor.name,
+      organization_id: vendor.organization_id,
+    };
+
+    // Generate mapping result with existing vendor
+    const mappingResult = mapSOC2ToRoi(report, documentId, existingVendor);
     mappingResult.parsedSoc2Id = parsedSoc2.id;
 
     // Preview mode
     if (preview) {
-      const previewData = generatePopulationPreview(mappingResult, options.useExistingVendorId);
+      const previewData = generatePopulationPreview(mappingResult, existingVendor);
       return NextResponse.json({ preview: previewData });
     }
 
@@ -214,7 +285,7 @@ export async function POST(request: NextRequest) {
     const result = await populateRoiData(
       supabase,
       mappingResult,
-      organizationId,
+      existingVendor,
       user.id,
       options
     );
@@ -301,77 +372,58 @@ function reconstructParsedReport(dbRecord: Record<string, unknown>): ParsedSOC2R
 async function populateRoiData(
   supabase: ReturnType<typeof createClient> extends Promise<infer T> ? T : never,
   mappingResult: SOC2ToRoiMappingResult,
-  organizationId: string,
+  existingVendor: ExistingVendorInfo,
   userId: string,
   options: PopulateOptions
 ): Promise<PopulateResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
-  let vendorId: string | undefined;
-  let vendorCreated = false;
+  const vendorId = existingVendor.id;
+  let vendorUpdated = false;
   const serviceIds: string[] = [];
   const subcontractorIds: string[] = [];
 
   try {
-    // 1. Handle Vendor
-    if (mappingResult.vendor) {
-      if (options.useExistingVendorId) {
-        vendorId = options.useExistingVendorId;
-        vendorCreated = false;
+    // 1. Update existing vendor with SOC2 audit metadata
+    if (mappingResult.vendorUpdate) {
+      const updateData: Record<string, unknown> = {
+        source_document_id: mappingResult.documentId,
+        updated_at: new Date().toISOString(),
+      };
 
-        // Update existing vendor with SOC2 data
-        const { error: updateError } = await supabase
-          .from('vendors')
-          .update({
-            last_soc2_audit_firm: mappingResult.vendor.last_soc2_audit_firm,
-            last_soc2_audit_date: mappingResult.vendor.last_soc2_audit_date,
-            soc2_report_type: mappingResult.vendor.soc2_report_type,
-            soc2_opinion: mappingResult.vendor.soc2_opinion,
-            source_document_id: mappingResult.documentId,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', vendorId);
+      if (mappingResult.vendorUpdate.last_soc2_audit_firm) {
+        updateData.last_soc2_audit_firm = mappingResult.vendorUpdate.last_soc2_audit_firm;
+      }
+      if (mappingResult.vendorUpdate.last_soc2_audit_date) {
+        updateData.last_soc2_audit_date = mappingResult.vendorUpdate.last_soc2_audit_date;
+      }
+      if (mappingResult.vendorUpdate.soc2_report_type) {
+        updateData.soc2_report_type = mappingResult.vendorUpdate.soc2_report_type;
+      }
+      if (mappingResult.vendorUpdate.soc2_opinion) {
+        updateData.soc2_opinion = mappingResult.vendorUpdate.soc2_opinion;
+      }
 
-        if (updateError) {
-          warnings.push(`Failed to update vendor: ${updateError.message}`);
-        }
-      } else if (options.createVendor !== false) {
-        // Create new vendor
-        const { data: newVendor, error: createError } = await supabase
-          .from('vendors')
-          .insert({
-            organization_id: organizationId,
-            name: mappingResult.vendor.name,
-            description: mappingResult.vendor.description,
-            source_type: 'soc2_extraction',
-            source_document_id: mappingResult.documentId,
-            last_soc2_audit_firm: mappingResult.vendor.last_soc2_audit_firm,
-            last_soc2_audit_date: mappingResult.vendor.last_soc2_audit_date,
-            soc2_report_type: mappingResult.vendor.soc2_report_type,
-            soc2_opinion: mappingResult.vendor.soc2_opinion,
-            risk_level: 'medium', // Default
-            status: 'active',
-          })
-          .select('id')
-          .single();
+      const { error: updateError } = await supabase
+        .from('vendors')
+        .update(updateData)
+        .eq('id', vendorId);
 
-        if (createError) {
-          errors.push(`Failed to create vendor: ${createError.message}`);
-        } else {
-          vendorId = newVendor.id;
-          vendorCreated = true;
-        }
+      if (updateError) {
+        warnings.push(`Failed to update vendor: ${updateError.message}`);
+      } else {
+        vendorUpdated = true;
       }
     }
 
-    // 2. Handle Services (if vendor was created/specified)
-    if (vendorId && mappingResult.services.length > 0 && options.createServices !== false) {
+    // 2. Create ICT Services
+    if (mappingResult.services.length > 0 && options.createServices !== false) {
       for (const service of mappingResult.services) {
         // We need a contract first - create a placeholder contract
         const { data: contract, error: contractError } = await supabase
           .from('contracts')
           .insert({
-            organization_id: organizationId,
+            organization_id: existingVendor.organization_id,
             vendor_id: vendorId,
             contract_ref: `SOC2-${mappingResult.documentId.substring(0, 8)}`,
             contract_type: 'service_agreement',
@@ -393,7 +445,7 @@ async function populateRoiData(
           .insert({
             contract_id: contract.id,
             vendor_id: vendorId,
-            organization_id: organizationId,
+            organization_id: existingVendor.organization_id,
             service_name: service.service_name,
             service_type: service.service_type,
             description: service.description,
@@ -416,8 +468,8 @@ async function populateRoiData(
       }
     }
 
-    // 3. Handle Subcontractors
-    if (vendorId && mappingResult.subcontractors.length > 0) {
+    // 3. Create Subcontractors (fourth parties)
+    if (mappingResult.subcontractors.length > 0) {
       // Filter by selected if specified
       const subsToCreate = options.selectedSubcontractors
         ? mappingResult.subcontractors.filter(s =>
@@ -430,7 +482,7 @@ async function populateRoiData(
           .from('subcontractors')
           .insert({
             vendor_id: vendorId,
-            organization_id: organizationId,
+            organization_id: existingVendor.organization_id,
             subcontractor_name: sub.subcontractor_name,
             service_description: sub.service_description,
             tier_level: sub.tier_level,
@@ -456,10 +508,10 @@ async function populateRoiData(
 
     // 4. Create the mapping record
     const mappingRecord: Soc2RoiMappingRecord = {
-      organization_id: organizationId,
+      organization_id: existingVendor.organization_id,
       parsed_soc2_id: mappingResult.parsedSoc2Id,
       document_id: mappingResult.documentId,
-      extracted_vendor_id: vendorId || null,
+      extracted_vendor_id: vendorId,
       extracted_service_ids: serviceIds,
       extracted_subcontractor_ids: subcontractorIds,
       extraction_status: errors.length > 0 ? 'partial' : 'completed',
@@ -484,7 +536,7 @@ async function populateRoiData(
       success: errors.length === 0,
       mappingId: insertedMapping?.id,
       vendorId,
-      vendorCreated,
+      vendorUpdated,
       serviceIds,
       subcontractorIds,
       confidence: mappingResult.confidenceScores.overall,

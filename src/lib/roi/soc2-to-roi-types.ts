@@ -21,7 +21,19 @@ import type {
 export type ExtractionStatus = 'pending' | 'extracting' | 'completed' | 'failed' | 'partial';
 
 /**
- * Result of extracting vendor data from SOC2
+ * Data to UPDATE an existing vendor from SOC2 (not create new)
+ * The vendor must already exist and be linked to the document.
+ */
+export interface VendorUpdateData {
+  last_soc2_audit_firm?: string;
+  last_soc2_audit_date?: string;
+  soc2_report_type?: SOC2ReportType;
+  soc2_opinion?: SOC2Opinion;
+  confidence: number;
+}
+
+/**
+ * @deprecated Use VendorUpdateData instead. Vendors should be registered before SOC2 parsing.
  */
 export interface ExtractedVendorData {
   name: string;
@@ -33,8 +45,6 @@ export interface ExtractedVendorData {
   last_soc2_audit_date?: string;
   soc2_report_type?: SOC2ReportType;
   soc2_opinion?: SOC2Opinion;
-
-  // Fields for matching with existing vendors
   suggested_lei?: string;
   confidence: number;
 }
@@ -128,7 +138,7 @@ export const SERVICE_TYPE_KEYWORDS: Record<IctServiceType, string[]> = {
  * Confidence scores for different extraction components
  */
 export interface ConfidenceScores {
-  vendor: number;
+  vendorUpdate: number;
   services: number;
   subcontractors: number;
   overall: number;
@@ -138,7 +148,6 @@ export interface ConfidenceScores {
  * Factors that contribute to confidence calculation
  */
 export interface ConfidenceFactors {
-  hasServiceOrgName: boolean;
   hasSystemDescription: boolean;
   hasSubserviceOrgs: boolean;
   hasAuditMetadata: boolean;
@@ -174,8 +183,13 @@ export interface SOC2ToRoiMappingResult {
   documentId: string;
   organizationId: string;
 
-  // Extracted data
-  vendor: ExtractedVendorData | null;
+  // Existing vendor (must be linked to document)
+  existingVendorId: string;
+
+  // Data to update on existing vendor
+  vendorUpdate: VendorUpdateData;
+
+  // Extracted data to CREATE
   services: ExtractedServiceData[];
   subcontractors: ExtractedSubcontractorData[];
 
@@ -197,6 +211,7 @@ export interface RoiTemplateSuggestion {
   fieldsPopulated: number;
   totalFields: number;
   coverage: number;
+  note?: string;
 }
 
 // ============================================================================

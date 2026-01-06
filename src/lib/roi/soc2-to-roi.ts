@@ -1,19 +1,24 @@
 /**
  * SOC2-to-RoI Auto-Population
  *
- * Core logic for extracting RoI-relevant data from parsed SOC2 reports
- * This is the 10X market differentiator - no competitor does this automatically
+ * Core logic for extracting RoI-relevant data from parsed SOC2 reports.
+ * This is the 10X market differentiator - no competitor does this automatically.
+ *
+ * IMPORTANT: The vendor must already exist and be linked to the document.
+ * This function extracts:
+ * - Subcontractors (fourth parties) from SOC2 subservice organizations
+ * - ICT Service details from system description
+ * - Audit metadata to update the existing vendor
  */
 
 import type { ParsedSOC2Report, ExtractedSubserviceOrg } from '@/lib/ai/parsers/types';
 import type {
   SOC2ToRoiMappingResult,
-  ExtractedVendorData,
+  VendorUpdateData,
   ExtractedServiceData,
   ExtractedSubcontractorData,
   ConfidenceScores,
   ConfidenceFactors,
-  ExtractionDetails,
   ExtractionWarning,
   RoiTemplateSuggestion,
   IctServiceType,
@@ -21,53 +26,75 @@ import type {
 import { SERVICE_TYPE_KEYWORDS } from './soc2-to-roi-types';
 
 // ============================================================================
+// Existing Vendor Info (passed from caller)
+// ============================================================================
+
+export interface ExistingVendorInfo {
+  id: string;
+  name: string;
+  organization_id: string;
+}
+
+// ============================================================================
 // Main Mapping Function
 // ============================================================================
 
 /**
- * Maps parsed SOC2 report data to RoI-compatible structures
+ * Maps parsed SOC2 report data to RoI-compatible structures.
+ *
+ * PREREQUISITE: Document must be linked to an existing vendor.
+ * This function does NOT create vendors - it updates the existing one
+ * and extracts subcontractors + services.
  *
  * @param parsedSoc2 - The parsed SOC2 report from AI extraction
  * @param documentId - ID of the source document
- * @param organizationId - ID of the organization
+ * @param existingVendor - The vendor already linked to this document
  * @returns Complete mapping result with extracted data
  */
 export function mapSOC2ToRoi(
   parsedSoc2: ParsedSOC2Report,
   documentId: string,
-  organizationId: string
+  existingVendor: ExistingVendorInfo
 ): SOC2ToRoiMappingResult {
   const startTime = Date.now();
   const warnings: ExtractionWarning[] = [];
   const fieldsExtracted: string[] = [];
   const fieldsMissing: string[] = [];
 
-  // Extract vendor data
-  const vendor = extractVendorData(parsedSoc2, documentId, fieldsExtracted, fieldsMissing, warnings);
+  // Extract vendor UPDATE data (not creating new vendor)
+  const vendorUpdate = extractVendorUpdateData(parsedSoc2, fieldsExtracted, fieldsMissing);
 
   // Extract service data
-  const services = extractServiceData(parsedSoc2, documentId, fieldsExtracted, fieldsMissing, warnings);
+  const services = extractServiceData(
+    parsedSoc2,
+    documentId,
+    existingVendor.name,
+    fieldsExtracted,
+    fieldsMissing,
+    warnings
+  );
 
   // Extract subcontractor data
   const subcontractors = extractSubcontractorData(parsedSoc2, documentId, fieldsExtracted, fieldsMissing, warnings);
 
   // Calculate confidence scores
-  const confidenceFactors = calculateConfidenceFactors(parsedSoc2, vendor, services, subcontractors);
-  const confidenceScores = calculateConfidenceScores(confidenceFactors, vendor, services, subcontractors);
+  const confidenceFactors = calculateConfidenceFactors(parsedSoc2, services, subcontractors);
+  const confidenceScores = calculateConfidenceScores(confidenceFactors, vendorUpdate, services, subcontractors);
 
   // Generate RoI template suggestions
-  const roiTemplatesSuggested = generateTemplateSuggestions(vendor, services, subcontractors);
+  const roiTemplatesSuggested = generateTemplateSuggestions(existingVendor, services, subcontractors);
 
   // Determine overall status
-  const status = determineExtractionStatus(vendor, services, subcontractors, warnings);
+  const status = determineExtractionStatus(services, subcontractors, warnings);
 
   const processingTimeMs = Date.now() - startTime;
 
   return {
     parsedSoc2Id: '', // Will be set by caller
     documentId,
-    organizationId,
-    vendor,
+    organizationId: existingVendor.organization_id,
+    existingVendorId: existingVendor.id,
+    vendorUpdate,
     services,
     subcontractors,
     status,
@@ -83,68 +110,51 @@ export function mapSOC2ToRoi(
 }
 
 // ============================================================================
-// Vendor Extraction
+// Vendor Update Data Extraction (updates existing vendor, not creates new)
 // ============================================================================
 
-function extractVendorData(
+function extractVendorUpdateData(
   parsedSoc2: ParsedSOC2Report,
-  documentId: string,
   fieldsExtracted: string[],
-  fieldsMissing: string[],
-  warnings: ExtractionWarning[]
-): ExtractedVendorData | null {
-  // Check if we have the required service org name
-  if (!parsedSoc2.serviceOrgName) {
-    warnings.push({
-      field: 'serviceOrgName',
-      message: 'Service organization name not found in SOC2 report',
-      severity: 'error',
-    });
-    fieldsMissing.push('serviceOrgName');
-    return null;
-  }
-
-  fieldsExtracted.push('serviceOrgName');
-
-  const vendor: ExtractedVendorData = {
-    name: parsedSoc2.serviceOrgName,
-    description: parsedSoc2.serviceOrgDescription || parsedSoc2.systemDescription?.substring(0, 500),
-    source_type: 'soc2_extraction',
-    source_document_id: documentId,
-    confidence: 85, // Base confidence for having a name
+  fieldsMissing: string[]
+): VendorUpdateData {
+  const update: VendorUpdateData = {
+    confidence: 50, // Base confidence
   };
 
-  // Add audit metadata if available
+  // Extract audit metadata to update the existing vendor
   if (parsedSoc2.auditFirm) {
-    vendor.last_soc2_audit_firm = parsedSoc2.auditFirm;
+    update.last_soc2_audit_firm = parsedSoc2.auditFirm;
     fieldsExtracted.push('auditFirm');
-    vendor.confidence += 5;
+    update.confidence += 15;
   } else {
     fieldsMissing.push('auditFirm');
   }
 
   if (parsedSoc2.periodEnd) {
-    vendor.last_soc2_audit_date = parsedSoc2.periodEnd.split('T')[0];
+    update.last_soc2_audit_date = parsedSoc2.periodEnd.split('T')[0];
     fieldsExtracted.push('periodEnd');
-    vendor.confidence += 5;
+    update.confidence += 15;
   } else {
     fieldsMissing.push('periodEnd');
   }
 
   if (parsedSoc2.reportType) {
-    vendor.soc2_report_type = parsedSoc2.reportType;
+    update.soc2_report_type = parsedSoc2.reportType;
     fieldsExtracted.push('reportType');
+    update.confidence += 10;
   }
 
   if (parsedSoc2.opinion) {
-    vendor.soc2_opinion = parsedSoc2.opinion;
+    update.soc2_opinion = parsedSoc2.opinion;
     fieldsExtracted.push('opinion');
+    update.confidence += 10;
   }
 
   // Cap confidence at 100
-  vendor.confidence = Math.min(vendor.confidence, 100);
+  update.confidence = Math.min(update.confidence, 100);
 
-  return vendor;
+  return update;
 }
 
 // ============================================================================
@@ -154,6 +164,7 @@ function extractVendorData(
 function extractServiceData(
   parsedSoc2: ParsedSOC2Report,
   documentId: string,
+  vendorName: string,
   fieldsExtracted: string[],
   fieldsMissing: string[],
   warnings: ExtractionWarning[]
@@ -174,7 +185,7 @@ function extractServiceData(
     const serviceType = classifyServiceType(allComponents);
 
     const service: ExtractedServiceData = {
-      service_name: `${parsedSoc2.serviceOrgName || 'Unknown'} Service`,
+      service_name: `${vendorName} Service`,
       service_type: serviceType,
       description: parsedSoc2.systemDescription.substring(0, 1000),
       system_boundaries: parsedSoc2.systemBoundaries,
@@ -307,12 +318,10 @@ export function classifyServiceType(components: string[]): IctServiceType {
 
 function calculateConfidenceFactors(
   parsedSoc2: ParsedSOC2Report,
-  vendor: ExtractedVendorData | null,
   services: ExtractedServiceData[],
   subcontractors: ExtractedSubcontractorData[]
 ): ConfidenceFactors {
   return {
-    hasServiceOrgName: !!parsedSoc2.serviceOrgName,
     hasSystemDescription: !!parsedSoc2.systemDescription,
     hasSubserviceOrgs: (parsedSoc2.subserviceOrgs?.length ?? 0) > 0,
     hasAuditMetadata: !!parsedSoc2.auditFirm && !!parsedSoc2.periodEnd,
@@ -323,22 +332,20 @@ function calculateConfidenceFactors(
 
 function calculateConfidenceScores(
   factors: ConfidenceFactors,
-  vendor: ExtractedVendorData | null,
+  vendorUpdate: VendorUpdateData,
   services: ExtractedServiceData[],
   subcontractors: ExtractedSubcontractorData[]
 ): ConfidenceScores {
-  // Factor weights
+  // Factor weights (adjusted since we no longer extract vendor)
   const weights = {
-    serviceOrgName: 25,
-    systemDescription: 15,
-    subserviceOrgs: 20,
-    auditMetadata: 15,
+    systemDescription: 25,
+    subserviceOrgs: 25,
+    auditMetadata: 20,
     infrastructureComponents: 15,
-    controlsExtracted: 10,
+    controlsExtracted: 15,
   };
 
   let overall = 0;
-  if (factors.hasServiceOrgName) overall += weights.serviceOrgName;
   if (factors.hasSystemDescription) overall += weights.systemDescription;
   if (factors.hasSubserviceOrgs) overall += weights.subserviceOrgs;
   if (factors.hasAuditMetadata) overall += weights.auditMetadata;
@@ -346,7 +353,7 @@ function calculateConfidenceScores(
   if (factors.hasControlsExtracted) overall += weights.controlsExtracted;
 
   return {
-    vendor: vendor?.confidence ?? 0,
+    vendorUpdate: vendorUpdate.confidence,
     services: services.length > 0
       ? services.reduce((sum, s) => sum + s.confidence, 0) / services.length
       : 0,
@@ -396,53 +403,43 @@ function detectDataStorage(parsedSoc2: ParsedSOC2Report): boolean {
 }
 
 function determineExtractionStatus(
-  vendor: ExtractedVendorData | null,
   services: ExtractedServiceData[],
   subcontractors: ExtractedSubcontractorData[],
   warnings: ExtractionWarning[]
 ): 'completed' | 'partial' | 'failed' {
   const hasErrors = warnings.some(w => w.severity === 'error');
 
-  if (hasErrors || (!vendor && services.length === 0)) {
+  if (hasErrors) {
     return 'failed';
   }
 
-  if (!vendor || services.length === 0) {
-    return 'partial';
+  // Success if we have at least services OR subcontractors to add
+  if (services.length > 0 || subcontractors.length > 0) {
+    return 'completed';
   }
 
-  return 'completed';
+  // Partial if we only have vendor update data (no services/subcontractors)
+  return 'partial';
 }
 
 function generateTemplateSuggestions(
-  vendor: ExtractedVendorData | null,
+  existingVendor: ExistingVendorInfo,
   services: ExtractedServiceData[],
   subcontractors: ExtractedSubcontractorData[]
 ): RoiTemplateSuggestion[] {
   const suggestions: RoiTemplateSuggestion[] = [];
 
-  // B_05.01 - ICT Providers
-  if (vendor) {
-    const vendorFields = [
-      vendor.name ? 1 : 0,
-      vendor.description ? 1 : 0,
-      vendor.headquarters_country ? 1 : 0,
-      vendor.last_soc2_audit_firm ? 1 : 0,
-      vendor.last_soc2_audit_date ? 1 : 0,
-    ];
-    const populated = vendorFields.reduce((a, b) => a + b, 0);
-    const total = 12; // Total fields in B_05.01
+  // B_05.01 - ICT Providers (vendor already exists, we're updating)
+  suggestions.push({
+    templateId: 'B_05.01',
+    templateName: 'ICT Third-Party Service Providers',
+    fieldsPopulated: 2, // name + audit metadata we'll add
+    totalFields: 12,
+    coverage: 17, // Base coverage for existing vendor
+    note: `Updating existing vendor: ${existingVendor.name}`,
+  });
 
-    suggestions.push({
-      templateId: 'B_05.01',
-      templateName: 'ICT Third-Party Service Providers',
-      fieldsPopulated: populated,
-      totalFields: total,
-      coverage: Math.round((populated / total) * 100),
-    });
-  }
-
-  // B_02.02 - Contractual Arrangements Details
+  // B_02.02 - Contractual Arrangements Details (services)
   if (services.length > 0) {
     const service = services[0];
     const serviceFields = [
@@ -453,7 +450,7 @@ function generateTemplateSuggestions(
       service.stores_data !== undefined ? 1 : 0,
     ];
     const populated = serviceFields.reduce((a, b) => a + b, 0);
-    const total = 18; // Total fields in B_02.02
+    const total = 18;
 
     suggestions.push({
       templateId: 'B_02.02',
@@ -464,7 +461,7 @@ function generateTemplateSuggestions(
     });
   }
 
-  // B_05.02 - Subcontracting Chain
+  // B_05.02 - Subcontracting Chain (fourth parties)
   if (subcontractors.length > 0) {
     const avgFields = subcontractors.reduce((sum, sub) => {
       return sum + (sub.subcontractor_name ? 1 : 0)
@@ -472,7 +469,7 @@ function generateTemplateSuggestions(
         + (sub.inclusion_method ? 1 : 0)
         + (sub.has_own_soc2 !== undefined ? 1 : 0);
     }, 0) / subcontractors.length;
-    const total = 7; // Total fields in B_05.02
+    const total = 7;
 
     suggestions.push({
       templateId: 'B_05.02',
@@ -480,6 +477,7 @@ function generateTemplateSuggestions(
       fieldsPopulated: Math.round(avgFields),
       totalFields: total,
       coverage: Math.round((avgFields / total) * 100),
+      note: `${subcontractors.length} fourth parties to add`,
     });
   }
 
@@ -494,14 +492,12 @@ function generateTemplateSuggestions(
  * Generates preview data for the UI before actual population
  */
 export interface RoiPopulationPreview {
-  vendor: {
+  existingVendor: {
+    id: string;
     name: string;
-    description?: string;
+    willUpdate: boolean;
     auditInfo?: string;
-    confidence: number;
-    isNew: boolean;
-    existingVendorId?: string;
-  } | null;
+  };
   services: {
     name: string;
     type: IctServiceType;
@@ -521,19 +517,17 @@ export interface RoiPopulationPreview {
 
 export function generatePopulationPreview(
   mappingResult: SOC2ToRoiMappingResult,
-  existingVendorId?: string
+  existingVendor: ExistingVendorInfo
 ): RoiPopulationPreview {
   return {
-    vendor: mappingResult.vendor ? {
-      name: mappingResult.vendor.name,
-      description: mappingResult.vendor.description,
-      auditInfo: mappingResult.vendor.last_soc2_audit_firm
-        ? `${mappingResult.vendor.last_soc2_audit_firm} (${mappingResult.vendor.last_soc2_audit_date || 'date unknown'})`
+    existingVendor: {
+      id: existingVendor.id,
+      name: existingVendor.name,
+      willUpdate: !!mappingResult.vendorUpdate?.last_soc2_audit_firm,
+      auditInfo: mappingResult.vendorUpdate?.last_soc2_audit_firm
+        ? `${mappingResult.vendorUpdate.last_soc2_audit_firm} (${mappingResult.vendorUpdate.last_soc2_audit_date || 'date unknown'})`
         : undefined,
-      confidence: mappingResult.vendor.confidence,
-      isNew: !existingVendorId,
-      existingVendorId,
-    } : null,
+    },
     services: mappingResult.services.map(s => ({
       name: s.service_name,
       type: s.service_type,

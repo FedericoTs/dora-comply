@@ -5,11 +5,13 @@
  *
  * One-click SOC2-to-RoI population. No competitor does this.
  *
+ * PREREQUISITE: Document must be linked to an existing vendor.
+ *
  * Features:
  * - Preview extracted data before population
- * - Select which items to include
- * - Confidence indicators
- * - Link existing vendor or create new
+ * - Updates existing vendor with SOC2 audit metadata
+ * - Creates ICT services from system description
+ * - Creates subcontractors (fourth parties) from SOC2 subservice orgs
  */
 
 import { useState, useEffect } from 'react';
@@ -23,27 +25,19 @@ import {
   AlertTriangle,
   Loader2,
   ArrowRight,
-  Plus,
   Link as LinkIcon,
   FileText,
   Sparkles,
   ChevronRight,
   XCircle,
   Info,
+  ExternalLink,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
@@ -53,14 +47,12 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 interface RoiPopulationPreview {
-  vendor: {
+  existingVendor: {
+    id: string;
     name: string;
-    description?: string;
+    willUpdate: boolean;
     auditInfo?: string;
-    confidence: number;
-    isNew: boolean;
-    existingVendorId?: string;
-  } | null;
+  };
   services: {
     name: string;
     type: string;
@@ -80,6 +72,7 @@ interface RoiPopulationPreview {
     fieldsPopulated: number;
     totalFields: number;
     coverage: number;
+    note?: string;
   }[];
   overallConfidence: number;
 }
@@ -95,12 +88,13 @@ interface PopulateResult {
   success: boolean;
   mappingId?: string;
   vendorId?: string;
-  vendorCreated?: boolean;
+  vendorUpdated?: boolean;
   serviceIds?: string[];
   subcontractorIds?: string[];
   confidence?: number;
   errors?: string[];
   warnings?: string[];
+  needsVendor?: boolean;
 }
 
 interface RoiPopulationTabProps {
@@ -109,7 +103,7 @@ interface RoiPopulationTabProps {
   vendorId?: string;
 }
 
-export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVendorId }: RoiPopulationTabProps) {
+export function RoiPopulationTab({ documentId, vendorName, vendorId }: RoiPopulationTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [populating, setPopulating] = useState(false);
@@ -117,11 +111,9 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
   const [existingMapping, setExistingMapping] = useState<ExistingMapping | null>(null);
   const [canPopulate, setCanPopulate] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsVendor, setNeedsVendor] = useState(false);
 
-  // Selection state
-  const [createVendor, setCreateVendor] = useState(true);
-  const [useExistingVendor, setUseExistingVendor] = useState(!!existingVendorId);
-  const [selectedVendorId, setSelectedVendorId] = useState(existingVendorId || '');
+  // Selection state - vendor is always existing, no creation option
   const [createServices, setCreateServices] = useState(true);
   const [selectedSubcontractors, setSelectedSubcontractors] = useState<string[]>([]);
   const [populateResult, setPopulateResult] = useState<PopulateResult | null>(null);
@@ -141,25 +133,25 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
   const fetchPreview = async () => {
     setLoading(true);
     setError(null);
+    setNeedsVendor(false);
 
     try {
       const response = await fetch(`/api/roi/populate-from-soc2?documentId=${documentId}`);
       const data = await response.json();
 
       if (!response.ok) {
+        // Check if this is the "needs vendor" error
+        if (data.needsVendor) {
+          setNeedsVendor(true);
+          setCanPopulate(false);
+          return;
+        }
         throw new Error(data.error || 'Failed to load preview');
       }
 
       setPreview(data.preview);
       setExistingMapping(data.existingMapping);
       setCanPopulate(data.canPopulate);
-
-      // If there's an existing vendor match, pre-select it
-      if (data.preview?.vendor?.existingVendorId) {
-        setUseExistingVendor(true);
-        setSelectedVendorId(data.preview.vendor.existingVendorId);
-        setCreateVendor(false);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load preview');
     } finally {
@@ -178,8 +170,6 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
         body: JSON.stringify({
           documentId,
           options: {
-            createVendor: !useExistingVendor,
-            useExistingVendorId: useExistingVendor ? selectedVendorId || existingVendorId : undefined,
             selectedSubcontractors,
             createServices,
           },
@@ -189,6 +179,12 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
       const result: PopulateResult = await response.json();
 
       if (!response.ok) {
+        // Check if vendor is now missing (shouldn't happen but handle gracefully)
+        if (result.needsVendor) {
+          setNeedsVendor(true);
+          setCanPopulate(false);
+          return;
+        }
         throw new Error(result.errors?.[0] || 'Failed to populate RoI');
       }
 
@@ -196,7 +192,7 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
 
       if (result.success) {
         toast.success('RoI populated successfully!', {
-          description: `Created: ${result.vendorCreated ? '1 vendor, ' : ''}${result.serviceIds?.length || 0} services, ${result.subcontractorIds?.length || 0} subcontractors`,
+          description: `${result.vendorUpdated ? 'Vendor updated, ' : ''}${result.serviceIds?.length || 0} services, ${result.subcontractorIds?.length || 0} subcontractors created`,
         });
 
         // Refresh to show updated state
@@ -242,6 +238,36 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
           <Button onClick={fetchPreview} variant="outline" className="mt-4">
             Try Again
           </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show error state if document not linked to vendor
+  if (needsVendor) {
+    return (
+      <Card className="border-warning/50 bg-warning/5">
+        <CardContent className="py-8 text-center">
+          <LinkIcon className="h-12 w-12 mx-auto text-warning mb-4" />
+          <p className="text-lg font-medium">Document Not Linked to Vendor</p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+            Before populating the Register of Information from this SOC2 report, you must link
+            it to a registered vendor. The vendor should be registered first, then the document
+            linked to them.
+          </p>
+          <div className="flex justify-center gap-3 mt-6">
+            <Button onClick={() => router.push(`/documents/${documentId}`)}>
+              <LinkIcon className="h-4 w-4 mr-2" />
+              Link to Vendor
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/vendors/new')}>
+              <Building2 className="h-4 w-4 mr-2" />
+              Register New Vendor
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-4">
+            After linking, return to this page to populate your RoI.
+          </p>
         </CardContent>
       </Card>
     );
@@ -296,11 +322,12 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
           </div>
 
           <div className="grid gap-4 md:grid-cols-3 mb-6">
-            {populateResult.vendorCreated && (
+            {populateResult.vendorUpdated && populateResult.vendorId && (
               <Card>
                 <CardContent className="py-4 text-center">
                   <Building2 className="h-8 w-8 mx-auto text-primary mb-2" />
-                  <p className="font-medium">Vendor Created</p>
+                  <p className="font-medium">Vendor Updated</p>
+                  <p className="text-xs text-muted-foreground">SOC2 audit info added</p>
                   <Button
                     variant="link"
                     className="mt-1"
@@ -437,8 +464,8 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
         </Card>
       )}
 
-      {/* Vendor Section */}
-      {preview.vendor && (
+      {/* Vendor Section - Shows existing vendor that will be updated */}
+      {preview.existingVendor && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -446,69 +473,41 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
                 <Building2 className="h-5 w-5" />
                 ICT Service Provider (B_05.01)
               </CardTitle>
-              <ConfidenceBadge confidence={preview.vendor.confidence} />
+              <Badge variant="outline" className="border-success text-success">
+                <LinkIcon className="h-3 w-3 mr-1" />
+                Linked
+              </Badge>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 rounded-lg border bg-muted/30">
+          <CardContent>
+            <div className="p-4 rounded-lg border bg-primary/5 border-primary/20">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="font-medium">{preview.vendor.name}</p>
-                  {preview.vendor.description && (
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                      {preview.vendor.description}
-                    </p>
-                  )}
-                  {preview.vendor.auditInfo && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Audit: {preview.vendor.auditInfo}
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{preview.existingVendor.name}</p>
+                    <Badge variant="secondary" className="text-xs">
+                      Will Update
+                    </Badge>
+                  </div>
+                  {preview.existingVendor.auditInfo && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      <span className="font-medium text-foreground">SOC2 audit info to add:</span>{' '}
+                      {preview.existingVendor.auditInfo}
                     </p>
                   )}
                 </div>
-                {preview.vendor.existingVendorId && (
-                  <Badge variant="outline" className="border-success text-success">
-                    <LinkIcon className="h-3 w-3 mr-1" />
-                    Match Found
-                  </Badge>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push(`/vendors/${preview.existingVendor.id}`)}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-
-            {/* Vendor options */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="create-vendor"
-                  checked={!useExistingVendor}
-                  onCheckedChange={(checked) => {
-                    setUseExistingVendor(!checked);
-                    setCreateVendor(!!checked);
-                  }}
-                />
-                <label htmlFor="create-vendor" className="text-sm cursor-pointer">
-                  Create new vendor in RoI
-                </label>
-              </div>
-
-              {existingVendorId && (
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="use-existing"
-                    checked={useExistingVendor}
-                    onCheckedChange={(checked) => {
-                      setUseExistingVendor(!!checked);
-                      setCreateVendor(!checked);
-                      if (checked) {
-                        setSelectedVendorId(existingVendorId);
-                      }
-                    }}
-                  />
-                  <label htmlFor="use-existing" className="text-sm cursor-pointer">
-                    Link to existing vendor: <strong>{vendorName}</strong>
-                  </label>
-                </div>
-              )}
-            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              The vendor&apos;s SOC2 audit metadata will be updated with information extracted from this report.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -656,11 +655,9 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
           <div className="grid grid-cols-3 gap-4 p-4 rounded-lg bg-muted/30">
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">
-                {createVendor || useExistingVendor ? 1 : 0}
+                {preview.existingVendor?.willUpdate ? 1 : 0}
               </div>
-              <div className="text-xs text-muted-foreground">
-                {useExistingVendor ? 'Vendor Linked' : 'Vendor Created'}
-              </div>
+              <div className="text-xs text-muted-foreground">Vendor Updated</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-info">
@@ -689,13 +686,13 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
             <Button
               size="lg"
               onClick={handlePopulate}
-              disabled={populating || (!createVendor && !useExistingVendor && !createServices && selectedSubcontractors.length === 0)}
+              disabled={populating || (!createServices && selectedSubcontractors.length === 0)}
               className="min-w-[200px]"
             >
               {populating ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating Records...
+                  Populating RoI...
                 </>
               ) : (
                 <>
@@ -708,11 +705,11 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId: existingVen
           </div>
 
           {/* Disabled state explanation */}
-          {(!createVendor && !useExistingVendor && !createServices && selectedSubcontractors.length === 0) && (
+          {(!createServices && selectedSubcontractors.length === 0) && (
             <div className="p-3 rounded-lg bg-muted/50 border">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Info className="h-4 w-4" />
-                <p className="text-sm">Select at least one item above to enable population</p>
+                <p className="text-sm">Enable services or select subcontractors to populate RoI</p>
               </div>
             </div>
           )}
