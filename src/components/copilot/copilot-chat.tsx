@@ -8,10 +8,9 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Send, X, Sparkles, ChevronDown, Loader2, MessageSquare } from 'lucide-react';
+import { Bot, Send, X, Sparkles, Loader2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -189,7 +188,7 @@ export function CopilotChat() {
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
           {messages.length === 0 ? (
             <div className="space-y-4">
               <div className="text-center py-6">
@@ -304,7 +303,7 @@ export function CopilotChat() {
               {error}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
         {/* Input */}
         <div className="p-3 border-t bg-muted/30">
