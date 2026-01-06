@@ -38,9 +38,13 @@ export function getSmartDefaults(
       c0100: 'iso4217:EUR', // Currency
     },
 
-    // B_01.03 - Branches
+    // B_01.03 - Branches (organization_branches table)
+    // Required DB columns: branch_id, branch_name, country_code (all NOT NULL)
+    // c0020 (LEI) is computed from the organization join, not a DB column
     'B_01.03': {
-      c0020: context.organizationLei || '', // Head office LEI
+      c0010: `BR${Date.now().toString().slice(-6)}`, // Auto-generated branch ID
+      c0030: 'New Branch', // Branch name - REQUIRED
+      c0040: 'DE', // Country code - REQUIRED (DB stores ISO code, not EBA format)
     },
 
     // B_02.01 - Contractual Arrangements Overview
