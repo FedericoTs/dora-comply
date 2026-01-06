@@ -1,115 +1,122 @@
 /**
  * Settings Page
  *
- * Application and organization settings
+ * Hub page for all settings sections
  */
 
-import { Building2, Bell, Shield, Users, Palette } from 'lucide-react';
+import Link from 'next/link';
+import { Building2, Bell, Shield, Users, Palette, Key, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 export const metadata = {
   title: 'Settings | DORA Comply',
   description: 'Application and organization settings',
 };
 
+const settingsSections = [
+  {
+    title: 'Organization',
+    description: 'Company details, LEI, and jurisdiction settings',
+    href: '/settings/organization',
+    icon: Building2,
+    status: 'active' as const,
+  },
+  {
+    title: 'Team Members',
+    description: 'Manage users, roles, and permissions',
+    href: '/settings/team',
+    icon: Users,
+    status: 'active' as const,
+  },
+  {
+    title: 'Notifications',
+    description: 'Email preferences and alert settings',
+    href: '/settings/notifications',
+    icon: Bell,
+    status: 'coming_soon' as const,
+  },
+  {
+    title: 'Security',
+    description: 'MFA, sessions, and audit log',
+    href: '/settings/security',
+    icon: Shield,
+    status: 'coming_soon' as const,
+  },
+  {
+    title: 'API & Integrations',
+    description: 'API keys, webhooks, and third-party integrations',
+    href: '/settings/integrations',
+    icon: Key,
+    status: 'coming_soon' as const,
+  },
+  {
+    title: 'Appearance',
+    description: 'Theme, locale, and display preferences',
+    href: '/settings/appearance',
+    icon: Palette,
+    status: 'coming_soon' as const,
+  },
+];
+
 export default function SettingsPage() {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your organization and application preferences
-        </p>
-      </div>
+    <div className="grid gap-4 md:grid-cols-2">
+      {settingsSections.map((section) => {
+        const Icon = section.icon;
+        const isComingSoon = section.status === 'coming_soon';
 
-      {/* Settings Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-dashed opacity-60">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                <Building2 className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Organization</CardTitle>
-                <CardDescription>Company details and LEI</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Coming soon</p>
-          </CardContent>
-        </Card>
+        const CardWrapper = isComingSoon ? 'div' : Link;
+        const cardProps = isComingSoon ? {} : { href: section.href };
 
-        <Card className="border-dashed opacity-60">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                <Users className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Team Members</CardTitle>
-                <CardDescription>Manage users and roles</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Coming soon</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-dashed opacity-60">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                <Bell className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Notifications</CardTitle>
-                <CardDescription>Email and alert preferences</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Coming soon</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-dashed opacity-60">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                <Shield className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Security</CardTitle>
-                <CardDescription>MFA and session settings</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Coming soon</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-dashed opacity-60">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                <Palette className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Appearance</CardTitle>
-                <CardDescription>Theme and display options</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Coming soon</p>
-          </CardContent>
-        </Card>
-      </div>
+        return (
+          <CardWrapper
+            key={section.href}
+            {...cardProps}
+            className={cn(
+              'block group',
+              isComingSoon && 'cursor-not-allowed'
+            )}
+          >
+            <Card className={cn(
+              'transition-all h-full',
+              isComingSoon
+                ? 'border-dashed opacity-60'
+                : 'hover:border-primary/50 hover:shadow-md'
+            )}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'flex h-10 w-10 items-center justify-center rounded-lg',
+                      isComingSoon ? 'bg-muted' : 'bg-primary/10'
+                    )}>
+                      <Icon className={cn(
+                        'h-5 w-5',
+                        isComingSoon ? 'text-muted-foreground' : 'text-primary'
+                      )} />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">{section.title}</CardTitle>
+                      <CardDescription>{section.description}</CardDescription>
+                    </div>
+                  </div>
+                  {!isComingSoon && (
+                    <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  )}
+                </div>
+              </CardHeader>
+              {isComingSoon && (
+                <CardContent className="pt-0">
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                    Coming soon
+                  </span>
+                </CardContent>
+              )}
+            </Card>
+          </CardWrapper>
+        );
+      })}
     </div>
   );
 }

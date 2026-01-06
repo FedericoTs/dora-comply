@@ -39,6 +39,7 @@ import {
 } from '@/lib/incidents/types';
 import { DeadlineBadgeStatic } from '@/components/incidents/deadline-badge';
 import { DeleteIncidentButton } from '@/components/incidents/delete-incident-button';
+import { IncidentExportButton } from '@/components/incidents/incident-export-button';
 
 interface IncidentDetailPageProps {
   params: Promise<{ id: string }>;
@@ -159,6 +160,11 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
           </div>
         </div>
         <div className="flex gap-2">
+          <IncidentExportButton
+            incidentId={incident.id}
+            incidentRef={incident.incident_ref}
+            classification={incident.classification}
+          />
           <Button variant="outline" asChild>
             <Link href={`/incidents/${id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />

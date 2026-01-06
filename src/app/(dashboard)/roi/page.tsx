@@ -18,7 +18,7 @@ import { RoiProgressCard } from './components/roi-progress-card';
 import { ExportControls } from './components/export-controls';
 import { DeadlineCountdown } from './components/deadline-countdown';
 import { NextActionsPanel } from './components/next-actions-panel';
-import { AiPopulationPanel } from './components/ai-population-panel';
+import { AiPopulationWrapper } from './components/ai-population-wrapper';
 import { TemplateStatusTabs } from './components/template-status-tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
@@ -125,7 +125,7 @@ async function RoiDashboardContent() {
       </div>
 
       {/* AI Population Panel - Prominent Position */}
-      <AiPopulationPanel documents={populatableDocs} />
+      <AiPopulationWrapper initialDocuments={populatableDocs} />
 
       {/* Two Column Layout: Actions + Stats */}
       <div className="grid gap-6 lg:grid-cols-5">
