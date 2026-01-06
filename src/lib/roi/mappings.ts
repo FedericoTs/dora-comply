@@ -489,7 +489,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0040: {
     esaCode: 'c0040',
-    dbColumn: 'vendor_lei_type',
+    dbColumn: '_computed', // Always LEI for providers with LEI
     dbTable: 'vendors',
     description: 'Provider code type',
     required: true,
@@ -499,7 +499,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0050: {
     esaCode: 'c0050',
-    dbColumn: 'function_id',
+    dbColumn: 'id', // The ict_service ID is the function identifier
     dbTable: 'ict_services',
     description: 'Function identifier',
     required: false,
@@ -534,7 +534,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0090: {
     esaCode: 'c0090',
-    dbColumn: 'termination_reason',
+    dbColumn: '_computed', // Not stored in current schema
     dbTable: 'contracts',
     description: 'Reason for termination',
     required: false,
@@ -550,7 +550,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0110: {
     esaCode: 'c0110',
-    dbColumn: 'provider_notice_days',
+    dbColumn: '_computed', // Provider notice not in current schema
     dbTable: 'contracts',
     description: 'Provider notice period (days)',
     required: false,
@@ -558,7 +558,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0120: {
     esaCode: 'c0120',
-    dbColumn: 'governing_law_country',
+    dbColumn: '_computed', // Governing law derived from vendor country
     dbTable: 'contracts',
     description: 'Governing law country',
     required: true,
@@ -567,7 +567,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0130: {
     esaCode: 'c0130',
-    dbColumn: 'service_country',
+    dbColumn: '_computed', // Derived from vendor headquarters
     dbTable: 'ict_services',
     description: 'Service provision country',
     required: true,
@@ -576,7 +576,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0140: {
     esaCode: 'c0140',
-    dbColumn: 'stores_data',
+    dbColumn: 'processes_personal_data', // Fixed: actual column name
     dbTable: 'ict_services',
     description: 'Storage of data',
     required: true,
@@ -584,7 +584,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0150: {
     esaCode: 'c0150',
-    dbColumn: 'data_storage_country',
+    dbColumn: '_computed', // Requires service_data_locations join
     dbTable: 'service_data_locations',
     description: 'Data storage location',
     required: false,
@@ -593,7 +593,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0160: {
     esaCode: 'c0160',
-    dbColumn: 'data_processing_country',
+    dbColumn: '_computed', // Requires service_data_locations join
     dbTable: 'service_data_locations',
     description: 'Data processing location',
     required: false,
@@ -602,7 +602,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0170: {
     esaCode: 'c0170',
-    dbColumn: 'data_sensitivity',
+    dbColumn: '_computed', // Computed from criticality_level
     dbTable: 'ict_services',
     description: 'Data sensitiveness',
     required: true,

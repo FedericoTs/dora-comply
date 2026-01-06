@@ -295,36 +295,91 @@ export async function PATCH(
     // Get record ID if not provided (need to fetch data first)
     let actualRecordId = recordId;
     if (!actualRecordId) {
-      // Build query based on table type
-      let query = supabase.from(dbTable).select('id').order('created_at');
+      // B_02.02 is special: data is indexed by ict_services, but some columns are in related tables
+      // We need to find the related record through the ict_services foreign key
+      if (templateIdNormalized === 'B_02.02') {
+        // Get ict_services records to find the related contract/vendor
+        const { data: services, error: servicesError } = await supabase
+          .from('ict_services')
+          .select('id, contract_id, vendor_id')
+          .eq('organization_id', organizationId)
+          .order('created_at');
 
-      // Apply organization filter for tables that have it
-      if (dbTable === 'organizations') {
-        // Organizations table - the record IS the organization
-        query = supabase.from(dbTable).select('id').eq('id', organizationId);
-      } else if (dbTable === 'vendors' || dbTable === 'contracts') {
-        // Tables with organization_id column
-        query = supabase.from(dbTable).select('id').eq('organization_id', organizationId).order('created_at');
+        if (servicesError) {
+          console.error('[RoI API] Fetch ict_services error:', servicesError);
+          return NextResponse.json(
+            { error: { code: 'FETCH_ERROR', message: servicesError.message } },
+            { status: 500 }
+          );
+        }
+
+        if (!services || !services[rowIndex]) {
+          console.error('[RoI API] Service not found at index:', rowIndex, 'Total:', services?.length);
+          return NextResponse.json(
+            { error: { code: 'RECORD_NOT_FOUND', message: `Service at index ${rowIndex} not found` } },
+            { status: 404 }
+          );
+        }
+
+        const service = services[rowIndex];
+        console.log(`[RoI API] B_02.02 service at index ${rowIndex}:`, service);
+
+        // Determine which related record to update based on dbTable
+        if (dbTable === 'contracts') {
+          actualRecordId = service.contract_id;
+        } else if (dbTable === 'vendors') {
+          actualRecordId = service.vendor_id;
+        } else if (dbTable === 'ict_services') {
+          actualRecordId = service.id;
+        } else {
+          // For other tables (like service_data_locations), we need more complex handling
+          console.error('[RoI API] Unsupported table for B_02.02:', dbTable);
+          return NextResponse.json(
+            { error: { code: 'UNSUPPORTED_TABLE', message: `Table ${dbTable} not supported for inline editing in B_02.02` } },
+            { status: 400 }
+          );
+        }
+
+        if (!actualRecordId) {
+          console.error('[RoI API] Related record ID not found for table:', dbTable);
+          return NextResponse.json(
+            { error: { code: 'RECORD_NOT_FOUND', message: `No related ${dbTable} record found` } },
+            { status: 404 }
+          );
+        }
+      } else {
+        // Standard handling for other templates
+        // Build query based on table type
+        let query = supabase.from(dbTable).select('id').order('created_at');
+
+        // Apply organization filter for tables that have it
+        if (dbTable === 'organizations') {
+          // Organizations table - the record IS the organization
+          query = supabase.from(dbTable).select('id').eq('id', organizationId);
+        } else if (dbTable === 'vendors' || dbTable === 'contracts' || dbTable === 'ict_services') {
+          // Tables with organization_id column
+          query = supabase.from(dbTable).select('id').eq('organization_id', organizationId).order('created_at');
+        }
+
+        const { data: records, error: fetchError } = await query;
+
+        if (fetchError) {
+          console.error('[RoI API] Fetch error:', fetchError);
+          return NextResponse.json(
+            { error: { code: 'FETCH_ERROR', message: fetchError.message } },
+            { status: 500 }
+          );
+        }
+
+        if (!records || !records[rowIndex]) {
+          console.error('[RoI API] Record not found at index:', rowIndex, 'Total records:', records?.length);
+          return NextResponse.json(
+            { error: { code: 'RECORD_NOT_FOUND', message: `Record at index ${rowIndex} not found` } },
+            { status: 404 }
+          );
+        }
+        actualRecordId = records[rowIndex].id;
       }
-
-      const { data: records, error: fetchError } = await query;
-
-      if (fetchError) {
-        console.error('[RoI API] Fetch error:', fetchError);
-        return NextResponse.json(
-          { error: { code: 'FETCH_ERROR', message: fetchError.message } },
-          { status: 500 }
-        );
-      }
-
-      if (!records || !records[rowIndex]) {
-        console.error('[RoI API] Record not found at index:', rowIndex, 'Total records:', records?.length);
-        return NextResponse.json(
-          { error: { code: 'RECORD_NOT_FOUND', message: `Record at index ${rowIndex} not found` } },
-          { status: 404 }
-        );
-      }
-      actualRecordId = records[rowIndex].id;
     }
 
     console.log(`[RoI API] Target record ID: ${actualRecordId}`);
