@@ -164,9 +164,9 @@ export async function fetchB_01_02(): Promise<QueryResult<Record<string, unknown
     c0060: org.parent_entity_lei || '',
     c0070: formatDate(org.updated_at),
     c0080: formatDate(org.created_at),
-    c0090: null, // No deletion tracking yet
-    c0100: mapToEbaCurrency('EUR'),
-    c0110: null, // Total assets not tracked yet
+    c0090: formatDate(org.deleted_at), // Soft delete tracking
+    c0100: mapToEbaCurrency(org.reporting_currency || 'EUR'),
+    c0110: org.total_assets || null,
   }));
 
   return { data: rows, count: rows.length, error: null };
@@ -211,7 +211,14 @@ export async function fetchB_02_01(): Promise<QueryResult<Record<string, unknown
 
   const { data: contracts, error } = await supabase
     .from('contracts')
-    .select('contract_ref, contract_type, annual_value, currency')
+    .select(`
+      contract_ref,
+      contract_type,
+      annual_value,
+      currency,
+      parent_contract_id,
+      parent_contract:contracts!parent_contract_id(contract_ref)
+    `)
     .order('created_at');
 
   if (error) {
@@ -221,7 +228,7 @@ export async function fetchB_02_01(): Promise<QueryResult<Record<string, unknown
   const rows = (contracts || []).map(c => ({
     c0010: c.contract_ref || '',
     c0020: mapContractType(c.contract_type),
-    c0030: null, // Parent contract ref not implemented yet
+    c0030: (c.parent_contract as { contract_ref?: string })?.contract_ref || null,
     c0040: mapToEbaCurrency(c.currency),
     c0050: c.annual_value,
   }));
@@ -245,6 +252,8 @@ export async function fetchB_02_02(): Promise<QueryResult<Record<string, unknown
         effective_date,
         expiry_date,
         termination_notice_days,
+        provider_notice_days,
+        governing_law_country,
         dora_provisions
       ),
       vendor:vendors(lei, headquarters_country),
@@ -262,6 +271,8 @@ export async function fetchB_02_02(): Promise<QueryResult<Record<string, unknown
       effective_date?: string;
       expiry_date?: string;
       termination_notice_days?: number;
+      provider_notice_days?: number;
+      governing_law_country?: string;
       dora_provisions?: Record<string, unknown>;
     };
     const vendor = s.vendor as { lei?: string; headquarters_country?: string };
@@ -282,13 +293,13 @@ export async function fetchB_02_02(): Promise<QueryResult<Record<string, unknown
       c0080: formatDate(contract?.expiry_date),
       c0090: null, // Termination reason
       c0100: contract?.termination_notice_days,
-      c0110: null, // Provider notice period
-      c0120: mapToEbaCountry(vendor?.headquarters_country),
-      c0130: mapToEbaCountry(vendor?.headquarters_country),
+      c0110: contract?.provider_notice_days, // Provider notice period from DB
+      c0120: mapToEbaCountry(contract?.governing_law_country || vendor?.headquarters_country),
+      c0130: mapToEbaCountry(s.service_provision_country || vendor?.headquarters_country),
       c0140: s.processes_personal_data || false,
       c0150: storageLocation ? mapToEbaCountry(storageLocation.country_code) : null,
       c0160: processingLocation ? mapToEbaCountry(processingLocation.country_code) : null,
-      c0170: mapToEbaSensitiveness(s.criticality_level),
+      c0170: mapToEbaSensitiveness(s.data_sensitivity || s.criticality_level),
       c0180: s.criticality_level,
     };
   });
@@ -515,6 +526,10 @@ export async function fetchB_06_01(): Promise<QueryResult<Record<string, unknown
     const mappings = f.mappings as Array<{ service?: { rto_hours?: number; rpo_hours?: number } }>;
     const firstService = mappings?.[0]?.service;
 
+    // Use function-level RTO/RPO if available, fallback to service-level
+    const rtoHours = f.function_rto_hours ?? firstService?.rto_hours ?? null;
+    const rpoHours = f.function_rpo_hours ?? firstService?.rpo_hours ?? null;
+
     return {
       c0010: f.function_code || f.id,
       c0020: f.function_category || '',
@@ -523,9 +538,9 @@ export async function fetchB_06_01(): Promise<QueryResult<Record<string, unknown
       c0050: mapToEbaCriticality(f.is_critical),
       c0060: f.criticality_rationale || null,
       c0070: formatDate(f.updated_at),
-      c0080: firstService?.rto_hours || null,
-      c0090: firstService?.rpo_hours || null,
-      c0100: mapToEbaImpact('medium'), // Default to medium
+      c0080: rtoHours,
+      c0090: rpoHours,
+      c0100: mapToEbaImpact(f.impact_level || 'medium'),
     };
   });
 
@@ -543,9 +558,17 @@ export async function fetchB_07_01(): Promise<QueryResult<Record<string, unknown
     .from('ict_services')
     .select(`
       *,
-      contract:contracts(contract_ref, dora_provisions),
+      contract:contracts(
+        contract_ref,
+        has_exit_plan,
+        reintegration_possibility,
+        has_alternative,
+        alternative_provider_id,
+        alternative_provider:vendors!alternative_provider_id(lei),
+        dora_provisions
+      ),
       vendor:vendors(lei, last_assessment_date),
-      mappings:function_service_mapping(substitutability)
+      mappings:function_service_mapping(substitutability, substitutability_reason)
     `);
 
   if (error) {
@@ -553,10 +576,21 @@ export async function fetchB_07_01(): Promise<QueryResult<Record<string, unknown
   }
 
   const rows = (services || []).map(s => {
-    const contract = s.contract as { contract_ref?: string; dora_provisions?: Record<string, unknown> };
+    const contract = s.contract as {
+      contract_ref?: string;
+      has_exit_plan?: boolean;
+      reintegration_possibility?: string;
+      has_alternative?: boolean;
+      alternative_provider_id?: string;
+      alternative_provider?: { lei?: string };
+      dora_provisions?: Record<string, unknown>;
+    };
     const vendor = s.vendor as { lei?: string; last_assessment_date?: string };
-    const mappings = s.mappings as Array<{ substitutability?: string }>;
+    const mappings = s.mappings as Array<{ substitutability?: string; substitutability_reason?: string }>;
     const provisions = contract?.dora_provisions || {};
+
+    // Determine exit plan status: use explicit field or fallback to dora_provisions
+    const hasExitPlan = contract?.has_exit_plan ?? Boolean(provisions.exit_strategy);
 
     return {
       c0010: contract?.contract_ref || '',
@@ -564,13 +598,13 @@ export async function fetchB_07_01(): Promise<QueryResult<Record<string, unknown
       c0030: 'eba_qCO:qx2000', // LEI code type
       c0040: mapToEbaServiceType(s.service_type),
       c0050: mapToEbaSubstitutability(mappings?.[0]?.substitutability || 'easily_substitutable'),
-      c0060: null, // Reason if not substitutable
+      c0060: mappings?.[0]?.substitutability_reason || null, // Reason if not substitutable from DB
       c0070: formatDate(vendor?.last_assessment_date),
-      c0080: Boolean(provisions.exit_strategy),
-      c0090: mapToEbaReintegration('easy'),
-      c0100: mapToEbaImpact(s.criticality_level || 'low'),
-      c0110: false, // Alternatives identified
-      c0120: null, // Alternative provider
+      c0080: hasExitPlan,
+      c0090: mapToEbaReintegration(contract?.reintegration_possibility || 'easy'),
+      c0100: mapToEbaImpact(s.discontinuing_impact || s.criticality_level || 'low'),
+      c0110: contract?.has_alternative || false, // Alternatives identified from DB
+      c0120: contract?.alternative_provider?.lei || null, // Alternative provider LEI from DB
     };
   });
 

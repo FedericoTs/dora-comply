@@ -418,8 +418,26 @@ async function populateRoiData(
 
     // 2. Create ICT Services
     if (mappingResult.services.length > 0 && options.createServices !== false) {
+      // First, get vendor details for country info
+      const { data: vendorDetails } = await supabase
+        .from('vendors')
+        .select('headquarters_country')
+        .eq('id', vendorId)
+        .single();
+
+      const vendorCountry = vendorDetails?.headquarters_country || null;
+
+      // Determine data sensitivity from data categories
+      const getDataSensitivity = (svc: ExtractedServiceData): string => {
+        const sensitiveCategories = ['pii', 'personal', 'financial', 'health', 'phi', 'pci'];
+        const categories = (svc.data_categories || []).join(' ').toLowerCase();
+        if (sensitiveCategories.some(cat => categories.includes(cat))) return 'high';
+        if (svc.stores_data) return 'medium';
+        return 'low';
+      };
+
       for (const service of mappingResult.services) {
-        // We need a contract first - create a placeholder contract
+        // We need a contract first - create a placeholder contract with new columns
         const { data: contract, error: contractError } = await supabase
           .from('contracts')
           .insert({
@@ -430,6 +448,13 @@ async function populateRoiData(
             effective_date: new Date().toISOString().split('T')[0],
             status: 'draft',
             notes: 'Auto-created from SOC2 extraction',
+            // New ESA RoI columns
+            governing_law_country: vendorCountry,
+            provider_notice_days: 30, // Default 30 days notice
+            has_exit_plan: false, // Needs manual review
+            reintegration_possibility: 'unknown', // Needs assessment
+            has_alternative: false, // Needs manual identification
+            alternative_provider_id: null,
           })
           .select('id')
           .single();
@@ -439,7 +464,7 @@ async function populateRoiData(
           continue;
         }
 
-        // Create ICT service
+        // Create ICT service with new columns
         const { data: ictService, error: serviceError } = await supabase
           .from('ict_services')
           .insert({
@@ -456,6 +481,10 @@ async function populateRoiData(
             personal_data_categories: service.data_categories,
             source_type: 'soc2_extraction',
             source_document_id: mappingResult.documentId,
+            // New ESA RoI columns
+            data_sensitivity: getDataSensitivity(service),
+            service_provision_country: vendorCountry,
+            discontinuing_impact: service.stores_data ? 'high' : 'medium', // Data-storing services have higher impact
           })
           .select('id')
           .single();

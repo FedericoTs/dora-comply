@@ -342,7 +342,7 @@ export const B_01_02_MAPPING: TemplateMapping = {
   },
   c0090: {
     esaCode: 'c0090',
-    dbColumn: '_computed', // Not in current schema - organizations don't have deleted_at
+    dbColumn: 'deleted_at',
     dbTable: 'organizations',
     description: 'Date of deletion',
     required: false,
@@ -351,7 +351,7 @@ export const B_01_02_MAPPING: TemplateMapping = {
   },
   c0100: {
     esaCode: 'c0100',
-    dbColumn: '_computed', // Not in current schema - stored in roi_metadata
+    dbColumn: 'reporting_currency',
     dbTable: 'organizations',
     description: 'Currency',
     required: true,
@@ -360,7 +360,7 @@ export const B_01_02_MAPPING: TemplateMapping = {
   },
   c0110: {
     esaCode: 'c0110',
-    dbColumn: '_computed', // Not in current schema - stored in roi_metadata
+    dbColumn: 'total_assets',
     dbTable: 'organizations',
     description: 'Total assets value',
     required: false,
@@ -433,7 +433,7 @@ export const B_02_01_MAPPING: TemplateMapping = {
   },
   c0030: {
     esaCode: 'c0030',
-    dbColumn: '_computed', // Parent contract reference not in current schema
+    dbColumn: 'parent_contract_id', // References parent contract for hierarchical arrangements
     dbTable: 'contracts',
     description: 'Overarching arrangement reference',
     required: false,
@@ -550,7 +550,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0110: {
     esaCode: 'c0110',
-    dbColumn: '_computed', // Provider notice not in current schema
+    dbColumn: 'provider_notice_days',
     dbTable: 'contracts',
     description: 'Provider notice period (days)',
     required: false,
@@ -558,7 +558,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0120: {
     esaCode: 'c0120',
-    dbColumn: '_computed', // Governing law derived from vendor country
+    dbColumn: 'governing_law_country',
     dbTable: 'contracts',
     description: 'Governing law country',
     required: true,
@@ -567,7 +567,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0130: {
     esaCode: 'c0130',
-    dbColumn: '_computed', // Derived from vendor headquarters
+    dbColumn: 'service_provision_country',
     dbTable: 'ict_services',
     description: 'Service provision country',
     required: true,
@@ -602,7 +602,7 @@ export const B_02_02_MAPPING: TemplateMapping = {
   },
   c0170: {
     esaCode: 'c0170',
-    dbColumn: '_computed', // Computed from criticality_level
+    dbColumn: 'data_sensitivity',
     dbTable: 'ict_services',
     description: 'Data sensitiveness',
     required: true,
@@ -839,23 +839,23 @@ export const B_06_01_MAPPING: TemplateMapping = {
   },
   c0080: {
     esaCode: 'c0080',
-    dbColumn: '_computed', // Cross-table: in ict_services via function_service_mapping
-    dbTable: 'ict_services',
+    dbColumn: 'function_rto_hours',
+    dbTable: 'critical_functions',
     description: 'Recovery time objective (hours)',
     required: false,
     dataType: 'number',
   },
   c0090: {
     esaCode: 'c0090',
-    dbColumn: '_computed', // Cross-table: in ict_services via function_service_mapping
-    dbTable: 'ict_services',
+    dbColumn: 'function_rpo_hours',
+    dbTable: 'critical_functions',
     description: 'Recovery point objective (hours)',
     required: false,
     dataType: 'number',
   },
   c0100: {
     esaCode: 'c0100',
-    dbColumn: '_computed', // Not in critical_functions table
+    dbColumn: 'impact_level',
     dbTable: 'critical_functions',
     description: 'Impact of discontinuing',
     required: true,
@@ -915,7 +915,7 @@ export const B_07_01_MAPPING: TemplateMapping = {
   },
   c0060: {
     esaCode: 'c0060',
-    dbColumn: '_computed', // Not in function_service_mapping schema
+    dbColumn: 'substitutability_reason',
     dbTable: 'function_service_mapping',
     description: 'Reason if not substitutable',
     required: false,
@@ -932,7 +932,7 @@ export const B_07_01_MAPPING: TemplateMapping = {
   },
   c0080: {
     esaCode: 'c0080',
-    dbColumn: '_computed', // Not in contracts schema
+    dbColumn: 'has_exit_plan',
     dbTable: 'contracts',
     description: 'Exit plan exists',
     required: true,
@@ -940,7 +940,7 @@ export const B_07_01_MAPPING: TemplateMapping = {
   },
   c0090: {
     esaCode: 'c0090',
-    dbColumn: '_computed', // Not in contracts schema
+    dbColumn: 'reintegration_possibility',
     dbTable: 'contracts',
     description: 'Possibility of reintegration',
     required: true,
@@ -949,7 +949,7 @@ export const B_07_01_MAPPING: TemplateMapping = {
   },
   c0100: {
     esaCode: 'c0100',
-    dbColumn: '_computed', // Not in ict_services schema
+    dbColumn: 'discontinuing_impact',
     dbTable: 'ict_services',
     description: 'Impact of discontinuing',
     required: true,
@@ -958,7 +958,7 @@ export const B_07_01_MAPPING: TemplateMapping = {
   },
   c0110: {
     esaCode: 'c0110',
-    dbColumn: '_computed', // Not in contracts schema
+    dbColumn: 'has_alternative',
     dbTable: 'contracts',
     description: 'Alternatives identified',
     required: true,
@@ -966,7 +966,7 @@ export const B_07_01_MAPPING: TemplateMapping = {
   },
   c0120: {
     esaCode: 'c0120',
-    dbColumn: '_computed', // Not in contracts schema
+    dbColumn: 'alternative_provider_id',
     dbTable: 'contracts',
     description: 'Alternative provider ID',
     required: false,
