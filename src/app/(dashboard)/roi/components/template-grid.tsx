@@ -11,7 +11,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { RoiStats, RoiTemplateId } from '@/lib/roi';
+import type { RoiTemplateId } from '@/lib/roi/types';
+import type { RoiStats } from '@/lib/roi/queries';
 
 interface TemplateGridProps {
   templates: RoiStats[];

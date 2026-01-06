@@ -453,3 +453,52 @@ export interface RoiDashboardData {
   deadline: string; // April 30, 2025
   daysUntilDeadline: number;
 }
+
+// ============================================================================
+// Action-Oriented Dashboard Types
+// ============================================================================
+
+export type NextActionType =
+  | 'validation_error'
+  | 'missing_data'
+  | 'review_needed'
+  | 'quick_win'
+  | 'ai_populate';
+
+export type ActionPriority = 'high' | 'medium' | 'low';
+
+export interface NextAction {
+  id: string;
+  type: NextActionType;
+  priority: ActionPriority;
+  title: string;
+  description: string;
+  templateId?: RoiTemplateId;
+  fieldPath?: string;
+  estimatedMinutes: number;
+  actionUrl: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface PopulatableDocument {
+  documentId: string;
+  fileName: string;
+  vendorName: string;
+  vendorId: string;
+  parsedAt: Date;
+  fieldsAvailable: number;
+  templateBreakdown: {
+    templateId: RoiTemplateId;
+    fieldCount: number;
+    fieldNames: string[];
+  }[];
+  isPopulated: boolean;
+  populatedAt?: Date;
+}
+
+export type TemplateFilterStatus = 'all' | 'needs_attention' | 'in_progress' | 'complete';
+
+export interface TemplateWithStatus extends RoiTemplateStatus {
+  status: TemplateFilterStatus;
+  group: 'entity' | 'contracts' | 'links' | 'providers' | 'functions' | 'exit';
+}

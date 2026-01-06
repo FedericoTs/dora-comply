@@ -46,6 +46,11 @@ export {
   fetchB_05_02,
   fetchB_06_01,
   fetchB_07_01,
+  // Action-oriented dashboard queries
+  getNextActions,
+  getPopulatableDocuments,
+  getTemplatesWithStatus,
+  TEMPLATE_NAMES,
   type RoiStats,
 } from './queries';
 
@@ -83,3 +88,72 @@ export {
   type PackageFile,
   type StreamingExportOptions,
 } from './export';
+
+// Onboarding Types (client-safe)
+export {
+  WIZARD_STEPS,
+  type WizardStepId,
+  type OnboardingProgress,
+  type OnboardingStepData,
+} from './onboarding-types';
+
+// Onboarding Actions (server-only)
+export {
+  getOnboardingProgress,
+  updateOnboardingStep,
+  navigateToStep,
+  getStepValidation,
+  completeOnboarding,
+  resetOnboarding,
+} from './onboarding-actions';
+
+// Pace Calculator
+export {
+  DEFAULT_MILESTONES,
+  calculatePace,
+  determineTrend,
+  projectCompletion,
+  analyzePace,
+  getMilestonesWithStatus,
+  formatDaysRemaining,
+  type Milestone,
+  type PaceAnalysis,
+  type ProgressSnapshot,
+} from './pace-calculator';
+
+// Template Relationships
+export {
+  TEMPLATE_NODES,
+  TEMPLATE_RELATIONSHIPS,
+  GROUP_COLORS,
+  calculateNodePositions,
+  getPrerequisites,
+  getDependents,
+  getCompletionOrder,
+  getRelationshipLabel,
+  type TemplateNode,
+  type TemplateRelationship,
+} from './template-relationships';
+
+// Submissions Types (client-safe)
+export {
+  SUBMISSION_CHECKLIST_TEMPLATE,
+  getSubmissionStatusConfig,
+  formatRelativeTime,
+  type SubmissionStatus,
+  type Submission,
+  type SubmissionComment,
+  type SubmissionChecklist,
+  type ChecklistItem,
+} from './submissions-types';
+
+// Submissions Actions (server-only)
+export {
+  fetchSubmissions,
+  fetchSubmission,
+  createSubmissionDraft,
+  updateSubmissionStatus,
+  fetchSubmissionComments,
+  addSubmissionComment,
+  generateSubmissionChecklist,
+} from './submissions';

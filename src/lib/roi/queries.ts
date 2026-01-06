@@ -5,7 +5,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import type { RoiTemplateId } from './types';
+import type { RoiTemplateId, NextAction, PopulatableDocument, TemplateWithStatus } from './types';
 import {
   TEMPLATE_MAPPINGS,
   EBA_COUNTRY_CODES,
@@ -622,6 +622,42 @@ export interface RoiStats {
   hasData: boolean;
 }
 
+export const TEMPLATE_NAMES: Record<RoiTemplateId, string> = {
+  'B_01.01': 'Entity Maintaining Register',
+  'B_01.02': 'Entities in Scope',
+  'B_01.03': 'Branches',
+  'B_02.01': 'Contracts Overview',
+  'B_02.02': 'Contract Details',
+  'B_02.03': 'Linked Arrangements',
+  'B_03.01': 'Entity-Contract Links',
+  'B_03.02': 'Provider-Contract Links',
+  'B_03.03': 'Intra-Group Links',
+  'B_04.01': 'Service Recipients',
+  'B_05.01': 'ICT Providers',
+  'B_05.02': 'Subcontracting',
+  'B_06.01': 'Critical Functions',
+  'B_07.01': 'Exit Arrangements',
+  'B_99.01': 'Lookup Values',
+};
+
+const TEMPLATE_GROUPS: Record<RoiTemplateId, TemplateWithStatus['group']> = {
+  'B_01.01': 'entity',
+  'B_01.02': 'entity',
+  'B_01.03': 'entity',
+  'B_02.01': 'contracts',
+  'B_02.02': 'contracts',
+  'B_02.03': 'contracts',
+  'B_03.01': 'links',
+  'B_03.02': 'links',
+  'B_03.03': 'links',
+  'B_04.01': 'links',
+  'B_05.01': 'providers',
+  'B_05.02': 'providers',
+  'B_06.01': 'functions',
+  'B_07.01': 'exit',
+  'B_99.01': 'entity',
+};
+
 export async function fetchAllTemplateStats(): Promise<RoiStats[]> {
   const templates: RoiTemplateId[] = [
     'B_01.01', 'B_01.02', 'B_01.03',
@@ -630,24 +666,6 @@ export async function fetchAllTemplateStats(): Promise<RoiStats[]> {
     'B_04.01', 'B_05.01', 'B_05.02',
     'B_06.01', 'B_07.01',
   ];
-
-  const templateNames: Record<RoiTemplateId, string> = {
-    'B_01.01': 'Entity Maintaining Register',
-    'B_01.02': 'Entities in Scope',
-    'B_01.03': 'Branches',
-    'B_02.01': 'Contracts Overview',
-    'B_02.02': 'Contract Details',
-    'B_02.03': 'Linked Arrangements',
-    'B_03.01': 'Entity-Contract Links',
-    'B_03.02': 'Provider-Contract Links',
-    'B_03.03': 'Intra-Group Links',
-    'B_04.01': 'Service Recipients',
-    'B_05.01': 'ICT Providers',
-    'B_05.02': 'Subcontracting',
-    'B_06.01': 'Critical Functions',
-    'B_07.01': 'Exit Arrangements',
-    'B_99.01': 'Lookup Values',
-  };
 
   const stats: RoiStats[] = [];
 
@@ -683,7 +701,7 @@ export async function fetchAllTemplateStats(): Promise<RoiStats[]> {
 
     stats.push({
       templateId,
-      name: templateNames[templateId],
+      name: TEMPLATE_NAMES[templateId],
       rowCount: result.count,
       completeness,
       hasData: result.count > 0,
@@ -691,4 +709,209 @@ export async function fetchAllTemplateStats(): Promise<RoiStats[]> {
   }
 
   return stats;
+}
+
+// ============================================================================
+// Action-Oriented Dashboard Queries
+// ============================================================================
+
+export async function getNextActions(): Promise<NextAction[]> {
+  const supabase = await createClient();
+  const actions: NextAction[] = [];
+
+  // 1. Check for validation errors across templates
+  const stats = await fetchAllTemplateStats();
+
+  for (const stat of stats) {
+    // Flag templates with low completeness as high priority
+    if (stat.hasData && stat.completeness < 50) {
+      actions.push({
+        id: `validation-${stat.templateId}`,
+        type: 'validation_error',
+        priority: 'high',
+        title: `Complete ${stat.name}`,
+        description: `Only ${stat.completeness}% complete - ${stat.rowCount} records need attention`,
+        templateId: stat.templateId,
+        estimatedMinutes: Math.ceil((100 - stat.completeness) / 10),
+        actionUrl: `/roi/templates/${stat.templateId}`,
+      });
+    }
+
+    // Empty required templates
+    if (!stat.hasData && ['B_01.01', 'B_05.01', 'B_02.01'].includes(stat.templateId)) {
+      actions.push({
+        id: `missing-${stat.templateId}`,
+        type: 'missing_data',
+        priority: 'high',
+        title: `Add data to ${stat.name}`,
+        description: 'This required template has no data yet',
+        templateId: stat.templateId,
+        estimatedMinutes: 15,
+        actionUrl: `/roi/templates/${stat.templateId}`,
+      });
+    }
+  }
+
+  // 2. Check for vendors without contracts
+  const { data: vendorsWithoutContracts } = await supabase
+    .from('vendors')
+    .select('id, name')
+    .is('contract_id', null)
+    .limit(5);
+
+  if (vendorsWithoutContracts && vendorsWithoutContracts.length > 0) {
+    actions.push({
+      id: 'vendors-no-contract',
+      type: 'missing_data',
+      priority: 'medium',
+      title: `Link ${vendorsWithoutContracts.length} vendors to contracts`,
+      description: `Vendors missing contract links: ${vendorsWithoutContracts.map(v => v.name).slice(0, 3).join(', ')}${vendorsWithoutContracts.length > 3 ? '...' : ''}`,
+      templateId: 'B_02.01',
+      estimatedMinutes: vendorsWithoutContracts.length * 3,
+      actionUrl: '/vendors',
+    });
+  }
+
+  // 3. Check for parsed SOC2 documents that can populate RoI
+  const { data: populatableDoc } = await supabase
+    .from('parsed_soc2')
+    .select(`
+      id,
+      document_id,
+      documents!inner(file_name, vendor_id),
+      vendors!inner(name)
+    `)
+    .limit(1);
+
+  if (populatableDoc && populatableDoc.length > 0) {
+    actions.push({
+      id: 'ai-populate-available',
+      type: 'ai_populate',
+      priority: 'high',
+      title: 'Auto-populate from SOC2 reports',
+      description: 'AI can extract vendor and subcontractor data from your uploaded SOC2 reports',
+      estimatedMinutes: 2,
+      actionUrl: '/roi',
+      metadata: { documentCount: populatableDoc.length },
+    });
+  }
+
+  // 4. Quick wins - templates almost complete
+  for (const stat of stats) {
+    if (stat.hasData && stat.completeness >= 80 && stat.completeness < 100) {
+      actions.push({
+        id: `quick-win-${stat.templateId}`,
+        type: 'quick_win',
+        priority: 'low',
+        title: `Finish ${stat.name}`,
+        description: `${stat.completeness}% complete - just a few fields remaining`,
+        templateId: stat.templateId,
+        estimatedMinutes: Math.ceil((100 - stat.completeness) / 20),
+        actionUrl: `/roi/templates/${stat.templateId}`,
+      });
+    }
+  }
+
+  // Sort by priority
+  const priorityOrder = { high: 0, medium: 1, low: 2 };
+  return actions.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+}
+
+export async function getPopulatableDocuments(): Promise<PopulatableDocument[]> {
+  const supabase = await createClient();
+
+  const { data: parsedDocs, error } = await supabase
+    .from('parsed_soc2')
+    .select(`
+      id,
+      document_id,
+      created_at,
+      service_org_name,
+      subservice_orgs,
+      documents!inner(
+        id,
+        file_name,
+        vendor_id,
+        vendors(id, name)
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error || !parsedDocs) {
+    console.error('Error fetching populatable documents:', error);
+    return [];
+  }
+
+  return parsedDocs.map(doc => {
+    const document = doc.documents as unknown as {
+      id: string;
+      file_name: string;
+      vendor_id: string;
+      vendors: { id: string; name: string } | null;
+    };
+    const subserviceOrgs = (doc.subservice_orgs as unknown[]) || [];
+
+    // Calculate fields available
+    const templateBreakdown: PopulatableDocument['templateBreakdown'] = [
+      {
+        templateId: 'B_05.01',
+        fieldCount: 12,
+        fieldNames: ['Provider name', 'LEI', 'Country', 'Annual expense'],
+      },
+      {
+        templateId: 'B_02.02',
+        fieldCount: 8,
+        fieldNames: ['Service type', 'Start date', 'Data location'],
+      },
+    ];
+
+    if (subserviceOrgs.length > 0) {
+      templateBreakdown.push({
+        templateId: 'B_05.02',
+        fieldCount: subserviceOrgs.length * 7,
+        fieldNames: subserviceOrgs.slice(0, 3).map((s: unknown) =>
+          (s as { name?: string }).name || 'Subcontractor'
+        ),
+      });
+    }
+
+    const totalFields = templateBreakdown.reduce((sum, t) => sum + t.fieldCount, 0);
+
+    return {
+      documentId: doc.document_id,
+      fileName: document.file_name,
+      vendorName: document.vendors?.name || doc.service_org_name || 'Unknown Vendor',
+      vendorId: document.vendor_id || '',
+      parsedAt: new Date(doc.created_at),
+      fieldsAvailable: totalFields,
+      templateBreakdown,
+      isPopulated: false, // TODO: Track in soc2_roi_mappings table
+      populatedAt: undefined,
+    };
+  });
+}
+
+export async function getTemplatesWithStatus(): Promise<TemplateWithStatus[]> {
+  const stats = await fetchAllTemplateStats();
+
+  return stats.map(stat => {
+    let status: TemplateWithStatus['status'] = 'in_progress';
+
+    if (!stat.hasData) {
+      status = 'needs_attention';
+    } else if (stat.completeness === 100) {
+      status = 'complete';
+    } else if (stat.completeness < 50) {
+      status = 'needs_attention';
+    }
+
+    return {
+      ...stat,
+      errorCount: stat.completeness < 100 ? Math.ceil((100 - stat.completeness) / 10) : 0,
+      warningCount: 0,
+      lastUpdated: null,
+      status,
+      group: TEMPLATE_GROUPS[stat.templateId],
+    };
+  });
 }

@@ -1,16 +1,29 @@
 /**
  * RoI Dashboard Page
  *
- * Main dashboard for Register of Information management
+ * Action-oriented dashboard for Register of Information management
  */
 
 import { Suspense } from 'react';
-import { fetchAllTemplateStats } from '@/lib/roi';
+import Link from 'next/link';
+import { Wand2, Send, GitBranch } from 'lucide-react';
+import {
+  fetchAllTemplateStats,
+  getNextActions,
+  getPopulatableDocuments,
+  getTemplatesWithStatus,
+  getOnboardingProgress,
+} from '@/lib/roi';
 import { RoiProgressCard } from './components/roi-progress-card';
-import { TemplateGrid } from './components/template-grid';
 import { ExportControls } from './components/export-controls';
 import { DeadlineCountdown } from './components/deadline-countdown';
+import { NextActionsPanel } from './components/next-actions-panel';
+import { AiPopulationPanel } from './components/ai-population-panel';
+import { TemplateStatusTabs } from './components/template-status-tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 export const metadata = {
   title: 'Register of Information | DORA Comply',
@@ -18,7 +31,16 @@ export const metadata = {
 };
 
 async function RoiDashboardContent() {
-  const stats = await fetchAllTemplateStats();
+  // Fetch all data in parallel
+  const [stats, nextActions, populatableDocs, templatesWithStatus, onboardingProgress] = await Promise.all([
+    fetchAllTemplateStats(),
+    getNextActions(),
+    getPopulatableDocuments(),
+    getTemplatesWithStatus(),
+    getOnboardingProgress(),
+  ]);
+
+  const showWizardPrompt = !onboardingProgress?.isComplete;
 
   // Calculate summary metrics
   const totalRows = stats.reduce((sum, s) => sum + s.rowCount, 0);
@@ -26,6 +48,10 @@ async function RoiDashboardContent() {
   const avgCompleteness = stats.length > 0
     ? Math.round(stats.reduce((sum, s) => sum + s.completeness, 0) / stats.length)
     : 0;
+
+  // Calculate total fields (approximate)
+  const totalFields = stats.reduce((sum, s) => sum + (s.rowCount * 10), 0); // ~10 fields per row average
+  const completedFields = Math.round(totalFields * (avgCompleteness / 100));
 
   // Days until deadline (annual ESA RoI submission)
   const deadline = new Date('2026-04-30');
@@ -39,44 +65,102 @@ async function RoiDashboardContent() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Register of Information</h1>
           <p className="text-muted-foreground">
-            ESA DORA RoI with 15 templates ready for submission
+            Track your DORA RoI submission progress
           </p>
         </div>
-        <ExportControls />
+        <div className="flex gap-2">
+          {showWizardPrompt && (
+            <Button variant="outline" asChild>
+              <Link href="/roi/onboarding">
+                <Wand2 className="mr-2 h-4 w-4" />
+                Setup Wizard
+              </Link>
+            </Button>
+          )}
+          <Button variant="outline" asChild>
+            <Link href="/roi/relationships">
+              <GitBranch className="mr-2 h-4 w-4" />
+              Relationships
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/roi/submissions">
+              <Send className="mr-2 h-4 w-4" />
+              Submissions
+            </Link>
+          </Button>
+          <ExportControls />
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <RoiProgressCard
-          title="Overall Completeness"
-          value={avgCompleteness}
-          suffix="%"
-          description="Average across all templates"
-          variant="progress"
-        />
-        <RoiProgressCard
-          title="Templates Ready"
-          value={templatesWithData}
-          suffix={`/ ${stats.length}`}
-          description="Templates with data"
-          variant="default"
-        />
-        <RoiProgressCard
-          title="Total Records"
-          value={totalRows}
-          description="Across all templates"
-          variant="default"
-        />
+      {/* Overall Progress + Deadline Row */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-medium">Overall Progress</h3>
+              <span className="text-2xl font-bold">{avgCompleteness}%</span>
+            </div>
+            <Progress value={avgCompleteness} className="h-3 mb-4" />
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Templates</p>
+                <p className="font-medium">{templatesWithData} of {stats.length} ready</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Records</p>
+                <p className="font-medium">{totalRows} total</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Fields</p>
+                <p className="font-medium">~{completedFields} completed</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         <DeadlineCountdown
           deadline={deadline}
           daysRemaining={daysUntilDeadline}
         />
       </div>
 
-      {/* Template Grid */}
+      {/* AI Population Panel - Prominent Position */}
+      <AiPopulationPanel documents={populatableDocs} />
+
+      {/* Two Column Layout: Actions + Stats */}
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Next Actions - 2 columns */}
+        <div className="lg:col-span-2">
+          <NextActionsPanel actions={nextActions} />
+        </div>
+
+        {/* Stats Cards - 3 columns */}
+        <div className="lg:col-span-3 grid gap-4 sm:grid-cols-3">
+          <RoiProgressCard
+            title="High Priority"
+            value={nextActions.filter(a => a.priority === 'high').length}
+            description="Actions need attention"
+            variant={nextActions.filter(a => a.priority === 'high').length > 0 ? 'warning' : 'default'}
+          />
+          <RoiProgressCard
+            title="Quick Wins"
+            value={nextActions.filter(a => a.type === 'quick_win').length}
+            description="Templates almost complete"
+            variant="default"
+          />
+          <RoiProgressCard
+            title="AI Available"
+            value={populatableDocs.filter(d => !d.isPopulated).length}
+            description="Docs ready to populate"
+            variant={populatableDocs.filter(d => !d.isPopulated).length > 0 ? 'highlight' : 'default'}
+          />
+        </div>
+      </div>
+
+      {/* Template Grid with Status Tabs */}
       <div className="space-y-4">
-        <h2 className="text-lg font-medium">Templates</h2>
-        <TemplateGrid templates={stats} />
+        <h2 className="text-lg font-medium">Templates by Status</h2>
+        <TemplateStatusTabs templates={templatesWithStatus} />
       </div>
     </div>
   );
@@ -93,17 +177,28 @@ function DashboardSkeleton() {
         <Skeleton className="h-10 w-40" />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Skeleton key={i} className="h-32" />
-        ))}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Skeleton className="h-36 lg:col-span-2" />
+        <Skeleton className="h-36" />
+      </div>
+
+      <Skeleton className="h-48" />
+
+      <div className="grid gap-6 lg:grid-cols-5">
+        <Skeleton className="h-64 lg:col-span-2" />
+        <div className="lg:col-span-3 grid gap-4 sm:grid-cols-3">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
       </div>
 
       <div className="space-y-4">
         <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-12 w-full" />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-40" />
+            <Skeleton key={i} className="h-32" />
           ))}
         </div>
       </div>
