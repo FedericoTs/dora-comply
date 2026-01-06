@@ -3,13 +3,16 @@
 /**
  * Data Entry Sheet
  *
- * Slide-out panel for editing RoI template data without navigation
+ * Slide-out panel for editing RoI template records
+ * - Loads real data from API
+ * - Supports all 14 templates via TEMPLATE_MAPPINGS
+ * - Has record navigation (prev/next)
+ * - LEI search for LEI fields
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  X,
   Save,
   Loader2,
   ChevronLeft,
@@ -18,14 +21,17 @@ import {
   AlertTriangle,
   Sparkles,
   ExternalLink,
+  Search,
+  Plus,
+  FileText,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import {
   Sheet,
   SheetContent,
@@ -41,7 +47,27 @@ import {
 } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import type { RoiTemplateId, TemplateWithStatus } from '@/lib/roi/types';
+import {
+  TEMPLATE_MAPPINGS,
+  getColumnOrder,
+  EBA_COUNTRY_CODES,
+  EBA_ENTITY_TYPES,
+  EBA_CONTRACT_TYPES,
+  EBA_SERVICE_TYPES,
+  EBA_SENSITIVENESS,
+  EBA_IMPACT_LEVELS,
+  EBA_CRITICALITY,
+  EBA_SUBSTITUTABILITY,
+  EBA_REINTEGRATION,
+  EBA_CODE_TYPES,
+  EBA_ENTITY_NATURE,
+  EBA_PERSON_TYPES,
+  ISO_CURRENCY_CODES,
+  type ColumnMapping,
+} from '@/lib/roi/mappings';
+import { ROI_TEMPLATES, type RoiTemplateId, type TemplateWithStatus } from '@/lib/roi/types';
+import { searchEntities, validateLEI, getCountryFlag } from '@/lib/external/gleif';
+import type { GLEIFEntity } from '@/lib/vendors/types';
 
 interface DataEntrySheetProps {
   open: boolean;
@@ -50,81 +76,31 @@ interface DataEntrySheetProps {
   onSave?: () => void;
 }
 
-interface FieldDefinition {
-  id: string;
-  name: string;
-  type: 'text' | 'select' | 'date' | 'number' | 'textarea' | 'lei';
-  required: boolean;
-  options?: { value: string; label: string }[];
-  description?: string;
-  group?: string;
-  aiPopulated?: boolean;
-  validation?: {
-    pattern?: RegExp;
-    minLength?: number;
-    maxLength?: number;
-  };
-}
-
 interface FieldValue {
-  id: string;
   value: string;
   isValid: boolean;
   error?: string;
   isAiPopulated?: boolean;
 }
 
-// Mock field definitions for different templates
-const TEMPLATE_FIELDS: Record<string, FieldDefinition[]> = {
-  B_01_01: [
-    { id: 'legal_name', name: 'Legal Name', type: 'text', required: true, group: 'Identity' },
-    { id: 'lei_code', name: 'LEI Code', type: 'lei', required: true, group: 'Identity', validation: { pattern: /^[A-Z0-9]{20}$/ } },
-    { id: 'country', name: 'Country', type: 'select', required: true, group: 'Identity', options: [
-      { value: 'DE', label: 'Germany' },
-      { value: 'FR', label: 'France' },
-      { value: 'ES', label: 'Spain' },
-      { value: 'IT', label: 'Italy' },
-      { value: 'NL', label: 'Netherlands' },
-    ]},
-    { id: 'entity_type', name: 'Entity Type', type: 'select', required: true, group: 'Classification', options: [
-      { value: 'CRD', label: 'Credit Institution' },
-      { value: 'INV', label: 'Investment Firm' },
-      { value: 'INS', label: 'Insurance Company' },
-    ]},
-    { id: 'competent_authority', name: 'Competent Authority', type: 'text', required: false, group: 'Classification' },
-  ],
-  B_02_01: [
-    { id: 'provider_name', name: 'Provider Name', type: 'text', required: true, group: 'Provider Details' },
-    { id: 'provider_lei', name: 'Provider LEI', type: 'lei', required: true, group: 'Provider Details', validation: { pattern: /^[A-Z0-9]{20}$/ } },
-    { id: 'provider_country', name: 'Provider Country', type: 'select', required: true, group: 'Provider Details', options: [
-      { value: 'US', label: 'United States' },
-      { value: 'DE', label: 'Germany' },
-      { value: 'IE', label: 'Ireland' },
-      { value: 'NL', label: 'Netherlands' },
-    ]},
-    { id: 'provider_type', name: 'Provider Type', type: 'select', required: true, group: 'Classification', options: [
-      { value: 'CSP', label: 'Cloud Service Provider' },
-      { value: 'SaaS', label: 'SaaS Provider' },
-      { value: 'MSP', label: 'Managed Service Provider' },
-    ]},
-    { id: 'headquarters_country', name: 'HQ Country', type: 'select', required: false, group: 'Classification', options: [
-      { value: 'US', label: 'United States' },
-      { value: 'DE', label: 'Germany' },
-      { value: 'IE', label: 'Ireland' },
-    ]},
-  ],
-  B_03_01: [
-    { id: 'contract_ref', name: 'Contract Reference', type: 'text', required: true, group: 'Contract' },
-    { id: 'contract_type', name: 'Contract Type', type: 'select', required: true, group: 'Contract', options: [
-      { value: 'MSA', label: 'Master Service Agreement' },
-      { value: 'SLA', label: 'Service Level Agreement' },
-      { value: 'DPA', label: 'Data Processing Agreement' },
-    ]},
-    { id: 'start_date', name: 'Start Date', type: 'date', required: true, group: 'Dates' },
-    { id: 'end_date', name: 'End Date', type: 'date', required: false, group: 'Dates' },
-    { id: 'annual_value', name: 'Annual Value (EUR)', type: 'number', required: false, group: 'Financial' },
-  ],
-};
+// Get human-readable label for enum values
+function getEnumLabel(enumeration: Record<string, string> | undefined, value: string): string {
+  if (!enumeration) return value;
+  const entry = Object.entries(enumeration).find(([, v]) => v === value);
+  return entry ? formatEnumKey(entry[0]) : value;
+}
+
+function formatEnumKey(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
+// Get country flag + code for display
+function formatCountryOption(code: string): string {
+  const flag = getCountryFlag(code);
+  return `${flag} ${code}`;
+}
 
 export function DataEntrySheet({
   open,
@@ -133,93 +109,237 @@ export function DataEntrySheet({
   onSave,
 }: DataEntrySheetProps) {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [fields, setFields] = useState<FieldDefinition[]>([]);
+  const [records, setRecords] = useState<Record<string, unknown>[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [values, setValues] = useState<Record<string, FieldValue>>({});
-  const [activeGroup, setActiveGroup] = useState<string>('all');
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Load fields when template changes
-  useEffect(() => {
-    if (template) {
-      const templateKey = template.templateId.replace('.', '_');
-      const templateFields = TEMPLATE_FIELDS[templateKey] || [];
-      setFields(templateFields);
+  // LEI search state
+  const [leiSearchField, setLeiSearchField] = useState<string | null>(null);
+  const [leiSearchQuery, setLeiSearchQuery] = useState('');
+  const [leiSearching, setLeiSearching] = useState(false);
+  const [leiSuggestions, setLeiSuggestions] = useState<GLEIFEntity[]>([]);
 
-      // Initialize values (would fetch from API in real implementation)
-      const initialValues: Record<string, FieldValue> = {};
-      templateFields.forEach((field) => {
-        initialValues[field.id] = {
-          id: field.id,
-          value: '',
-          isValid: !field.required,
-          isAiPopulated: false,
-        };
-      });
-      setValues(initialValues);
-      setHasChanges(false);
-    }
+  // Get field definitions from mappings
+  const fields = useMemo(() => {
+    if (!template) return [];
+    const templateKey = template.templateId as RoiTemplateId;
+    const mapping = TEMPLATE_MAPPINGS[templateKey];
+    if (!mapping) return [];
+
+    const columnOrder = getColumnOrder(templateKey);
+    return columnOrder
+      .map((code) => mapping[code])
+      .filter((f): f is ColumnMapping => f !== undefined);
   }, [template]);
 
-  const handleValueChange = useCallback((fieldId: string, newValue: string) => {
-    setValues((prev) => {
-      const field = fields.find((f) => f.id === fieldId);
-      const isValid = validateField(field!, newValue);
+  // Load data when template changes
+  useEffect(() => {
+    if (!template || !open) return;
 
-      return {
-        ...prev,
-        [fieldId]: {
-          ...prev[fieldId],
-          value: newValue,
-          isValid,
-          error: isValid ? undefined : getFieldError(field!, newValue),
-        },
+    const currentTemplate = template; // Capture for closure
+
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        // Convert B_01.01 to b_01_01 for URL
+        const urlId = currentTemplate.templateId.toLowerCase().replace('.', '_');
+        const response = await fetch(`/api/roi/${urlId}`);
+        if (response.ok) {
+          const result = await response.json();
+          // API returns { success: true, data: { rows: [...], ... } }
+          const data = result.data?.rows || [];
+          setRecords(data);
+          setCurrentIndex(0);
+
+          // Initialize values from first record
+          if (data.length > 0) {
+            initializeValues(data[0]);
+          } else {
+            // Empty template - initialize with empty values
+            initializeEmptyValues();
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load template data:', error);
+        initializeEmptyValues();
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, [template, open]);
+
+  const initializeValues = useCallback(
+    (record: Record<string, unknown>) => {
+      const newValues: Record<string, FieldValue> = {};
+      fields.forEach((field) => {
+        const value = record[field.esaCode];
+        const strValue = value?.toString() || '';
+        newValues[field.esaCode] = {
+          value: strValue,
+          isValid: !field.required || strValue.length > 0,
+        };
+      });
+      setValues(newValues);
+      setHasChanges(false);
+    },
+    [fields]
+  );
+
+  const initializeEmptyValues = useCallback(() => {
+    const newValues: Record<string, FieldValue> = {};
+    fields.forEach((field) => {
+      newValues[field.esaCode] = {
+        value: '',
+        isValid: !field.required,
       };
     });
-    setHasChanges(true);
+    setValues(newValues);
+    setHasChanges(false);
   }, [fields]);
 
-  const validateField = (field: FieldDefinition, value: string): boolean => {
-    if (field.required && !value) return false;
-    if (field.validation?.pattern && value && !field.validation.pattern.test(value)) return false;
-    if (field.validation?.minLength && value.length < field.validation.minLength) return false;
-    if (field.validation?.maxLength && value.length > field.validation.maxLength) return false;
-    return true;
+  // Navigate between records
+  const handlePrevRecord = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      initializeValues(records[currentIndex - 1]);
+    }
   };
 
-  const getFieldError = (field: FieldDefinition, value: string): string => {
-    if (field.required && !value) return 'This field is required';
-    if (field.validation?.pattern && value && !field.validation.pattern.test(value)) {
-      if (field.type === 'lei') return 'Invalid LEI format (20 alphanumeric characters)';
-      return 'Invalid format';
+  const handleNextRecord = () => {
+    if (currentIndex < records.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      initializeValues(records[currentIndex + 1]);
     }
-    return '';
   };
+
+  const handleValueChange = useCallback(
+    (fieldCode: string, newValue: string) => {
+      const field = fields.find((f) => f.esaCode === fieldCode);
+      if (!field) return;
+
+      const isValid = !field.required || newValue.length > 0;
+      const error = !isValid ? 'This field is required' : undefined;
+
+      setValues((prev) => ({
+        ...prev,
+        [fieldCode]: { value: newValue, isValid, error },
+      }));
+      setHasChanges(true);
+    },
+    [fields]
+  );
+
+  // LEI search
+  const handleLeiSearch = useCallback(async (fieldCode: string, query: string) => {
+    if (query.length < 3) return;
+
+    setLeiSearchField(fieldCode);
+    setLeiSearchQuery(query);
+    setLeiSearching(true);
+    setLeiSuggestions([]);
+
+    try {
+      // Check if it's a 20-char LEI
+      if (query.length === 20 && /^[A-Z0-9]+$/.test(query)) {
+        const result = await validateLEI(query);
+        if (result.valid && result.entity) {
+          setLeiSuggestions([result.entity]);
+        }
+      } else {
+        // Search by name
+        const result = await searchEntities(query, 5);
+        setLeiSuggestions(result.results);
+      }
+    } catch (error) {
+      console.error('LEI search error:', error);
+    } finally {
+      setLeiSearching(false);
+    }
+  }, []);
+
+  const handleSelectLei = useCallback(
+    (entity: GLEIFEntity) => {
+      if (!leiSearchField) return;
+
+      // Set the LEI value
+      handleValueChange(leiSearchField, entity.lei);
+
+      // Try to auto-fill related fields
+      const nameFields = ['c0020', 'c0050']; // Common name field codes
+      const countryFields = ['c0030', 'c0080']; // Common country field codes
+
+      nameFields.forEach((code) => {
+        if (values[code] !== undefined && !values[code].value) {
+          handleValueChange(code, entity.legalName);
+        }
+      });
+
+      countryFields.forEach((code) => {
+        if (values[code] !== undefined && !values[code].value) {
+          handleValueChange(code, entity.legalAddress.country);
+        }
+      });
+
+      // Clear search
+      setLeiSearchField(null);
+      setLeiSuggestions([]);
+    },
+    [leiSearchField, values, handleValueChange]
+  );
 
   const handleSave = async () => {
+    if (!template) return;
+
     setIsSaving(true);
     try {
-      // Would save to API in real implementation
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setHasChanges(false);
-      onSave?.();
+      // Build record from values
+      const record: Record<string, unknown> = {};
+      Object.entries(values).forEach(([code, fieldValue]) => {
+        record[code] = fieldValue.value;
+      });
+
+      // Convert B_01.01 to b_01_01 for URL
+      const urlId = template.templateId.toLowerCase().replace('.', '_');
+      const response = await fetch(`/api/roi/${urlId}`, {
+        method: records.length > 0 ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ record, index: currentIndex }),
+      });
+
+      if (response.ok) {
+        setHasChanges(false);
+        onSave?.();
+      }
+    } catch (error) {
+      console.error('Failed to save:', error);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const groups = ['all', ...new Set(fields.map((f) => f.group).filter(Boolean))] as string[];
-  const filteredFields = activeGroup === 'all'
-    ? fields
-    : fields.filter((f) => f.group === activeGroup);
-
-  const validFieldCount = Object.values(values).filter((v) => v.isValid && v.value).length;
-  const totalRequiredFields = fields.filter((f) => f.required).length;
-  const completionPercent = totalRequiredFields > 0
-    ? Math.round((validFieldCount / totalRequiredFields) * 100)
-    : 0;
+  // Calculate completion
+  const completionStats = useMemo(() => {
+    const requiredFields = fields.filter((f) => f.required);
+    const filledRequired = requiredFields.filter((f) => {
+      const v = values[f.esaCode];
+      return v && v.value && v.value.length > 0;
+    }).length;
+    const percent =
+      requiredFields.length > 0
+        ? Math.round((filledRequired / requiredFields.length) * 100)
+        : 100;
+    return { filledRequired, totalRequired: requiredFields.length, percent };
+  }, [fields, values]);
 
   if (!template) return null;
+
+  const templateInfo = ROI_TEMPLATES[template.templateId as RoiTemplateId];
+  const hasRecords = records.length > 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -227,69 +347,144 @@ export function DataEntrySheet({
         {/* Header */}
         <SheetHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center justify-between">
-            <div>
-              <SheetTitle className="text-lg">{template.name}</SheetTitle>
+            <div className="flex-1 min-w-0">
+              <SheetTitle className="text-lg truncate">{template.name}</SheetTitle>
               <SheetDescription className="text-sm">
-                Template {template.templateId} • {template.rowCount} record{template.rowCount !== 1 ? 's' : ''}
+                {template.templateId} • {templateInfo?.esaReference}
               </SheetDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={completionPercent === 100 ? 'default' : 'secondary'}>
-                {completionPercent}% complete
-              </Badge>
-            </div>
+            <Badge
+              variant={completionStats.percent === 100 ? 'default' : 'secondary'}
+              className="shrink-0 ml-2"
+            >
+              {completionStats.percent}%
+            </Badge>
           </div>
 
-          {/* Group Tabs */}
-          {groups.length > 2 && (
-            <div className="pt-3">
-              <Tabs value={activeGroup} onValueChange={setActiveGroup}>
-                <TabsList className="w-full justify-start">
-                  {groups.map((group) => (
-                    <TabsTrigger key={group} value={group} className="capitalize">
-                      {group}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
+          {/* Record Navigation */}
+          {hasRecords && (
+            <div className="flex items-center justify-between pt-3">
+              <div className="text-sm text-muted-foreground">
+                Record {currentIndex + 1} of {records.length}
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handlePrevRecord}
+                  disabled={currentIndex === 0}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleNextRecord}
+                  disabled={currentIndex >= records.length - 1}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </SheetHeader>
 
-        {/* Fields */}
-        <ScrollArea className="flex-1 px-6">
-          <div className="py-4 space-y-4">
-            {filteredFields.map((field) => (
-              <FieldInput
-                key={field.id}
-                field={field}
-                value={values[field.id]}
-                onChange={(value) => handleValueChange(field.id, value)}
-              />
-            ))}
-
-            {filteredFields.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No fields in this group
+        {/* Content */}
+        <ScrollArea className="flex-1">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : fields.length === 0 ? (
+            <div className="p-6 text-center">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="text-muted-foreground">
+                This template is auto-generated from relationships
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => router.push(`/roi/${template.templateId}`)}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                View in Full Editor
+              </Button>
+            </div>
+          ) : !hasRecords ? (
+            <div className="p-6">
+              <div className="rounded-lg border-2 border-dashed p-8 text-center">
+                <Plus className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+                <h4 className="font-medium mb-1">No records yet</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Add your first record to get started
+                </p>
+                <div className="space-y-4">
+                  {fields.slice(0, 5).map((field) => (
+                    <FieldInput
+                      key={field.esaCode}
+                      field={field}
+                      value={values[field.esaCode]}
+                      onChange={(v) => handleValueChange(field.esaCode, v)}
+                      onLeiSearch={(q) => handleLeiSearch(field.esaCode, q)}
+                      showLeiSuggestions={
+                        leiSearchField === field.esaCode && leiSuggestions.length > 0
+                      }
+                      leiSuggestions={leiSuggestions}
+                      leiSearching={leiSearching && leiSearchField === field.esaCode}
+                      onSelectLei={handleSelectLei}
+                    />
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="p-6 space-y-4">
+              {/* Group fields by category for better UX */}
+              {fields.map((field) => (
+                <FieldInput
+                  key={field.esaCode}
+                  field={field}
+                  value={values[field.esaCode]}
+                  onChange={(v) => handleValueChange(field.esaCode, v)}
+                  onLeiSearch={(q) => handleLeiSearch(field.esaCode, q)}
+                  showLeiSuggestions={
+                    leiSearchField === field.esaCode && leiSuggestions.length > 0
+                  }
+                  leiSuggestions={leiSuggestions}
+                  leiSearching={leiSearching && leiSearchField === field.esaCode}
+                  onSelectLei={handleSelectLei}
+                />
+              ))}
+            </div>
+          )}
         </ScrollArea>
 
         {/* Footer */}
         <div className="px-6 py-4 border-t shrink-0 bg-background">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" asChild>
-              <a href={`/roi/${template.templateId}`} target="_blank" rel="noopener">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Full Editor
-              </a>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push(`/roi/${template.templateId}`)}
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Full Editor
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenChange(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleSave} disabled={isSaving || !hasChanges}>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving || !hasChanges}
+              >
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -298,7 +493,7 @@ export function DataEntrySheet({
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Save Changes
+                    Save
                   </>
                 )}
               </Button>
@@ -310,26 +505,66 @@ export function DataEntrySheet({
   );
 }
 
+// ============================================================================
+// Field Input Component
+// ============================================================================
+
 interface FieldInputProps {
-  field: FieldDefinition;
+  field: ColumnMapping;
   value?: FieldValue;
   onChange: (value: string) => void;
+  onLeiSearch?: (query: string) => void;
+  showLeiSuggestions?: boolean;
+  leiSuggestions?: GLEIFEntity[];
+  leiSearching?: boolean;
+  onSelectLei?: (entity: GLEIFEntity) => void;
 }
 
-function FieldInput({ field, value, onChange }: FieldInputProps) {
+function FieldInput({
+  field,
+  value,
+  onChange,
+  onLeiSearch,
+  showLeiSuggestions,
+  leiSuggestions = [],
+  leiSearching,
+  onSelectLei,
+}: FieldInputProps) {
   const hasError = value && !value.isValid && value.value;
+  const isLeiField = field.esaCode === 'c0010' || field.description.toLowerCase().includes('lei');
+
+  // Get enumeration options
+  const getEnumOptions = (): { value: string; label: string }[] => {
+    if (!field.enumeration) return [];
+
+    // Special handling for country codes
+    if (field.enumeration === EBA_COUNTRY_CODES) {
+      return Object.entries(field.enumeration).map(([code, ebaValue]) => ({
+        value: ebaValue,
+        label: formatCountryOption(code),
+      }));
+    }
+
+    return Object.entries(field.enumeration).map(([key, ebaValue]) => ({
+      value: ebaValue,
+      label: formatEnumKey(key),
+    }));
+  };
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <Label
-          htmlFor={field.id}
+          htmlFor={field.esaCode}
           className={cn(
-            'flex items-center gap-1.5',
+            'flex items-center gap-1.5 text-sm',
             hasError && 'text-destructive'
           )}
         >
-          {field.name}
+          <span className="font-mono text-xs text-muted-foreground">
+            {field.esaCode}
+          </span>
+          <span>{field.description}</span>
           {field.required && <span className="text-destructive">*</span>}
           {value?.isAiPopulated && (
             <TooltipProvider>
@@ -337,7 +572,7 @@ function FieldInput({ field, value, onChange }: FieldInputProps) {
                 <TooltipTrigger>
                   <Sparkles className="h-3 w-3 text-primary" />
                 </TooltipTrigger>
-                <TooltipContent>Auto-populated by AI</TooltipContent>
+                <TooltipContent>Auto-populated from document</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
@@ -357,37 +592,114 @@ function FieldInput({ field, value, onChange }: FieldInputProps) {
         )}
       </div>
 
-      {field.type === 'select' && field.options ? (
+      {/* Enum field (select) */}
+      {field.dataType === 'enum' && field.enumeration ? (
         <Select value={value?.value || ''} onValueChange={onChange}>
           <SelectTrigger
-            id={field.id}
+            id={field.esaCode}
             className={cn(hasError && 'border-destructive')}
           >
-            <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+            <SelectValue placeholder={`Select ${field.description.toLowerCase()}`} />
           </SelectTrigger>
           <SelectContent>
-            {field.options.map((opt) => (
+            {getEnumOptions().map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      ) : field.type === 'textarea' ? (
-        <Textarea
-          id={field.id}
-          value={value?.value || ''}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={field.description || `Enter ${field.name.toLowerCase()}`}
-          className={cn(hasError && 'border-destructive')}
-        />
+      ) : field.dataType === 'boolean' ? (
+        <Select
+          value={value?.value === 'true' ? 'true' : value?.value === 'false' ? 'false' : ''}
+          onValueChange={onChange}
+        >
+          <SelectTrigger
+            id={field.esaCode}
+            className={cn(hasError && 'border-destructive')}
+          >
+            <SelectValue placeholder="Select..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="true">Yes</SelectItem>
+            <SelectItem value="false">No</SelectItem>
+          </SelectContent>
+        </Select>
+      ) : isLeiField ? (
+        <div className="relative">
+          <div className="flex gap-2">
+            <Input
+              id={field.esaCode}
+              type="text"
+              value={value?.value || ''}
+              onChange={(e) => onChange(e.target.value.toUpperCase())}
+              placeholder="20-character LEI or search by name"
+              maxLength={20}
+              className={cn(
+                'flex-1 font-mono uppercase',
+                hasError && 'border-destructive',
+                value?.isAiPopulated && 'bg-primary/5 border-primary/20'
+              )}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => onLeiSearch?.(value?.value || '')}
+              disabled={leiSearching || !value?.value || value.value.length < 3}
+            >
+              {leiSearching ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+
+          {/* LEI Suggestions */}
+          {showLeiSuggestions && leiSuggestions.length > 0 && (
+            <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-lg border bg-popover shadow-lg">
+              <div className="p-1">
+                {leiSuggestions.map((entity) => (
+                  <button
+                    key={entity.lei}
+                    type="button"
+                    className="w-full text-left p-2 rounded-md hover:bg-muted transition-colors"
+                    onClick={() => onSelectLei?.(entity)}
+                  >
+                    <p className="font-medium text-sm">{entity.legalName}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-2">
+                      <span>
+                        {getCountryFlag(entity.legalAddress.country)}{' '}
+                        {entity.legalAddress.country}
+                      </span>
+                      <span>•</span>
+                      <span className="font-mono">{entity.lei}</span>
+                      {entity.registrationStatus === 'ISSUED' && (
+                        <>
+                          <span>•</span>
+                          <Badge
+                            variant="outline"
+                            className="text-green-600 border-green-200 h-4 text-[10px]"
+                          >
+                            Active
+                          </Badge>
+                        </>
+                      )}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
         <Input
-          id={field.id}
-          type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+          id={field.esaCode}
+          type={field.dataType === 'date' ? 'date' : field.dataType === 'number' ? 'number' : 'text'}
           value={value?.value || ''}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={field.description || `Enter ${field.name.toLowerCase()}`}
+          placeholder={`Enter ${field.description.toLowerCase()}`}
           className={cn(
             hasError && 'border-destructive',
             value?.isAiPopulated && 'bg-primary/5 border-primary/20'
@@ -395,9 +707,6 @@ function FieldInput({ field, value, onChange }: FieldInputProps) {
         />
       )}
 
-      {field.description && !hasError && (
-        <p className="text-xs text-muted-foreground">{field.description}</p>
-      )}
       {hasError && value?.error && (
         <p className="text-xs text-destructive">{value.error}</p>
       )}
