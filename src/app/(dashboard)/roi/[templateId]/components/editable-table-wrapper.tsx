@@ -13,8 +13,17 @@ import { toast } from 'sonner';
 import { EditableDataTable } from './editable-data-table';
 import { templateIdToUrl, type RoiTemplateId } from '@/lib/roi/types';
 
-// Templates that represent single-record-per-organization tables (no add/delete)
-const SINGLE_RECORD_TEMPLATES: RoiTemplateId[] = ['B_01.01', 'B_01.02'];
+// Templates that don't support simple row add/delete
+// - Single record templates: B_01.01, B_01.02 (one org record per tenant)
+// - FK-dependent templates: B_02.01, B_02.02, B_07.01 (require vendor selection first)
+const NO_SIMPLE_ADD_TEMPLATES: RoiTemplateId[] = [
+  'B_01.01', // Organization (single record)
+  'B_01.02', // Entity scope (single record)
+  'B_02.01', // Contracts (requires vendor_id FK)
+  'B_02.02', // ICT Services (requires contract_id + vendor_id FKs)
+  'B_04.01', // Service recipients (derived from relationships)
+  'B_07.01', // Exit arrangements (requires contract FK)
+];
 
 interface SerializableColumn {
   esaCode: string;
@@ -243,8 +252,8 @@ export function EditableTableWrapper({
     });
   }, [data, templateUrlId, router]);
 
-  // Determine if this template allows add/delete operations
-  const allowsRowOperations = !SINGLE_RECORD_TEMPLATES.includes(templateId);
+  // Determine if this template allows simple add/delete operations
+  const allowsRowOperations = !NO_SIMPLE_ADD_TEMPLATES.includes(templateId);
 
   return (
     <EditableDataTable

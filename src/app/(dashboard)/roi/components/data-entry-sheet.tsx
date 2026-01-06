@@ -405,7 +405,7 @@ export function DataEntrySheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col" ref={sheetRef}>
+      <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col h-full overflow-hidden" ref={sheetRef}>
         {/* Header */}
         <SheetHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center justify-between">
@@ -540,8 +540,8 @@ export function DataEntrySheet({
           )}
         </SheetHeader>
 
-        {/* Content */}
-        <ScrollArea className="flex-1">
+        {/* Content - scrollable area */}
+        <ScrollArea className="flex-1 overflow-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

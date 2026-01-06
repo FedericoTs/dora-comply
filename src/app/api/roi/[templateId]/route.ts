@@ -439,6 +439,9 @@ export async function DELETE(
 /**
  * Build database record from ESA column values
  */
+// Tables that have a created_by column
+const TABLES_WITH_CREATED_BY = ['incidents', 'roi_submissions', 'vendor_certifications'];
+
 async function buildDbRecord(
   templateId: RoiTemplateId,
   primaryTable: string,
@@ -447,15 +450,16 @@ async function buildDbRecord(
   userId: string
 ): Promise<Record<string, unknown>> {
   const mapping = TEMPLATE_MAPPINGS[templateId];
-  const dbRecord: Record<string, unknown> = {
-    organization_id: organizationId,
-    created_by: userId,
-  };
+  const dbRecord: Record<string, unknown> = {};
 
-  // For organizations table, we don't set organization_id or created_by
-  if (primaryTable === 'organizations') {
-    delete dbRecord.organization_id;
-    delete dbRecord.created_by;
+  // Only add organization_id for tables that have it (not organizations itself)
+  if (primaryTable !== 'organizations') {
+    dbRecord.organization_id = organizationId;
+  }
+
+  // Only add created_by for tables that have this column
+  if (TABLES_WITH_CREATED_BY.includes(primaryTable)) {
+    dbRecord.created_by = userId;
   }
 
   if (!mapping) {

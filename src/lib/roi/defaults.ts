@@ -63,9 +63,12 @@ export function getSmartDefaults(
       c0030: 'eba_BT:x21', // Financial entity nature
     },
 
-    // B_05.01 - ICT Providers
+    // B_05.01 - ICT Providers (vendors table)
+    // Required DB columns: name (NOT NULL)
     'B_05.01': {
+      c0010: '', // LEI (can be empty initially)
       c0020: 'eba_qCO:qx2000', // LEI code type
+      c0050: 'New ICT Provider', // Name - REQUIRED in DB
       c0070: 'eba_CT:x212', // Legal person
       c0090: 'iso4217:EUR', // Currency
     },
@@ -75,8 +78,10 @@ export function getSmartDefaults(
       c0040: 'eba_qCO:qx2000', // LEI code type
     },
 
-    // B_06.01 - Critical Functions
+    // B_06.01 - Critical Functions (critical_functions table)
+    // Required DB columns: function_name (NOT NULL)
     'B_06.01': {
+      c0030: 'New Critical Function', // Function name - REQUIRED in DB
       c0040: context.organizationLei || '', // Entity LEI
       c0050: 'eba_ZZ:x795', // Important (not critical - safer default)
       c0070: today, // Assessment date

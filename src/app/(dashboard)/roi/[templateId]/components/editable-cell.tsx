@@ -259,7 +259,7 @@ export function EditableCell({
             <SelectTrigger className="h-8 text-sm">
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[300px] overflow-y-auto">
               {enumeration && Object.entries(enumeration).map(([key, label]) => (
                 <SelectItem key={key} value={key}>
                   {label}
