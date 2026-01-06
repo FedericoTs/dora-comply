@@ -200,6 +200,14 @@ export async function POST(
       );
     }
 
+    // Block INSERT for organizations table (single record per tenant)
+    if (primaryTable === 'organizations') {
+      return NextResponse.json(
+        { error: { code: 'NOT_ALLOWED', message: 'Cannot add rows to organization templates. Edit existing organization data instead.' } },
+        { status: 400 }
+      );
+    }
+
     // Get user's organization
     const { data: userOrg, error: orgError } = await supabase
       .from('users')
@@ -316,6 +324,14 @@ export async function DELETE(
     if (!primaryTable) {
       return NextResponse.json(
         { error: { code: 'NO_TABLE', message: `Template ${templateIdNormalized} does not support record deletion` } },
+        { status: 400 }
+      );
+    }
+
+    // Block DELETE for organizations table (single record per tenant, cannot be deleted)
+    if (primaryTable === 'organizations') {
+      return NextResponse.json(
+        { error: { code: 'NOT_ALLOWED', message: 'Cannot delete rows from organization templates. This is your organization\'s core record.' } },
         { status: 400 }
       );
     }

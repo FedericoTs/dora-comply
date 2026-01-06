@@ -13,6 +13,9 @@ import { toast } from 'sonner';
 import { EditableDataTable } from './editable-data-table';
 import { templateIdToUrl, type RoiTemplateId } from '@/lib/roi/types';
 
+// Templates that represent single-record-per-organization tables (no add/delete)
+const SINGLE_RECORD_TEMPLATES: RoiTemplateId[] = ['B_01.01', 'B_01.02'];
+
 interface SerializableColumn {
   esaCode: string;
   dbColumn: string;
@@ -240,6 +243,9 @@ export function EditableTableWrapper({
     });
   }, [data, templateUrlId, router]);
 
+  // Determine if this template allows add/delete operations
+  const allowsRowOperations = !SINGLE_RECORD_TEMPLATES.includes(templateId);
+
   return (
     <EditableDataTable
       templateId={templateId}
@@ -247,8 +253,8 @@ export function EditableTableWrapper({
       columns={columns}
       validationErrors={validationErrors}
       onCellUpdate={handleCellUpdate}
-      onRowAdd={handleRowAdd}
-      onRowDelete={handleRowDelete}
+      onRowAdd={allowsRowOperations ? handleRowAdd : undefined}
+      onRowDelete={allowsRowOperations ? handleRowDelete : undefined}
       newRowIndex={newRowIndex}
       isLoading={isLoading}
     />
