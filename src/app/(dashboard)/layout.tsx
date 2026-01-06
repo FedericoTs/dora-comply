@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggleSimple } from '@/components/ui/theme-toggle';
 import { NavigationProviders } from '@/components/navigation';
+import { CopilotChat } from '@/components/copilot';
 import { checkAuthStatus, logout } from '@/lib/auth';
 
 const navigation = [
@@ -145,6 +146,9 @@ export default async function DashboardLayout({
             </NavigationProviders>
           </div>
         </main>
+
+        {/* AI Compliance Copilot */}
+        <CopilotChat />
       </div>
     </div>
   );
