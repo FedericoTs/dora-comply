@@ -25,11 +25,11 @@ export async function GET() {
       );
     }
 
-    // Get user's organization membership
+    // Get user's organization membership from users table
     const { data: member, error: memberError } = await supabase
-      .from('organization_members')
+      .from('users')
       .select('organization_id, role')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     if (memberError || !member) {
@@ -92,11 +92,11 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // Get user's organization membership
+    // Get user's organization membership from users table
     const { data: member, error: memberError } = await supabase
-      .from('organization_members')
+      .from('users')
       .select('organization_id, role')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     if (memberError || !member) {

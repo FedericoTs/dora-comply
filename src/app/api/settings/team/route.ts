@@ -24,36 +24,25 @@ export async function GET() {
       );
     }
 
-    // Get user's organization membership
-    const { data: currentMember, error: memberError } = await supabase
-      .from('organization_members')
+    // Get current user's organization from users table
+    const { data: currentUser, error: currentUserError } = await supabase
+      .from('users')
       .select('organization_id, role')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
-    if (memberError || !currentMember) {
+    if (currentUserError || !currentUser) {
       return NextResponse.json(
         { error: { message: 'No organization found' } },
         { status: 404 }
       );
     }
 
-    // Get all members of the organization
+    // Get all members of the organization from users table
     const { data: members, error: membersError } = await supabase
-      .from('organization_members')
-      .select(`
-        user_id,
-        role,
-        created_at,
-        profiles!inner (
-          id,
-          email,
-          full_name,
-          avatar_url,
-          updated_at
-        )
-      `)
-      .eq('organization_id', currentMember.organization_id)
+      .from('users')
+      .select('id, email, full_name, avatar_url, role, created_at, updated_at')
+      .eq('organization_id', currentUser.organization_id)
       .order('created_at', { ascending: true });
 
     if (membersError) {
@@ -65,24 +54,16 @@ export async function GET() {
     }
 
     // Transform data
-    type ProfileType = { id: string; email: string; full_name: string | null; avatar_url: string | null; updated_at: string };
-    const teamMembers = (members || []).map((m) => {
-      // Handle Supabase's array/object ambiguity for relations
-      const profilesRaw = m.profiles;
-      const profile: ProfileType | null = profilesRaw
-        ? (Array.isArray(profilesRaw) ? profilesRaw[0] as ProfileType : profilesRaw as ProfileType)
-        : null;
-      return {
-        id: m.user_id,
-        email: profile?.email || '',
-        fullName: profile?.full_name,
-        avatarUrl: profile?.avatar_url,
-        role: m.role,
-        joinedAt: m.created_at,
-        lastActiveAt: profile?.updated_at,
-        isCurrent: m.user_id === user.id,
-      };
-    });
+    const teamMembers = (members || []).map((m) => ({
+      id: m.id,
+      email: m.email || '',
+      fullName: m.full_name,
+      avatarUrl: m.avatar_url,
+      role: m.role,
+      joinedAt: m.created_at,
+      lastActiveAt: m.updated_at,
+      isCurrent: m.id === user.id,
+    }));
 
     return NextResponse.json({ data: teamMembers });
   } catch (error) {

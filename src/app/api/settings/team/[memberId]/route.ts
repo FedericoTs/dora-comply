@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 // Valid roles aligned with DORA compliance responsibilities
-const VALID_ROLES = ['admin', 'analyst', 'viewer'] as const;
+const VALID_ROLES = ['admin', 'member', 'viewer'] as const;
 
 export async function PATCH(
   request: NextRequest,
@@ -32,14 +32,14 @@ export async function PATCH(
       );
     }
 
-    // Get current user's organization membership
-    const { data: currentMember, error: memberError } = await supabase
-      .from('organization_members')
+    // Get current user's organization from users table
+    const { data: currentUser, error: currentUserError } = await supabase
+      .from('users')
       .select('organization_id, role')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
-    if (memberError || !currentMember) {
+    if (currentUserError || !currentUser) {
       return NextResponse.json(
         { error: { message: 'No organization found' } },
         { status: 404 }
@@ -47,22 +47,22 @@ export async function PATCH(
     }
 
     // Check if current user has permission to update roles
-    if (!['owner', 'admin'].includes(currentMember.role)) {
+    if (!['owner', 'admin'].includes(currentUser.role)) {
       return NextResponse.json(
         { error: { message: 'Insufficient permissions' } },
         { status: 403 }
       );
     }
 
-    // Get target member
-    const { data: targetMember, error: targetError } = await supabase
-      .from('organization_members')
-      .select('user_id, role, organization_id')
-      .eq('user_id', memberId)
-      .eq('organization_id', currentMember.organization_id)
+    // Get target member from users table
+    const { data: targetUser, error: targetError } = await supabase
+      .from('users')
+      .select('id, role, organization_id')
+      .eq('id', memberId)
+      .eq('organization_id', currentUser.organization_id)
       .single();
 
-    if (targetError || !targetMember) {
+    if (targetError || !targetUser) {
       return NextResponse.json(
         { error: { message: 'Member not found' } },
         { status: 404 }
@@ -70,7 +70,7 @@ export async function PATCH(
     }
 
     // Cannot modify owner role
-    if (targetMember.role === 'owner') {
+    if (targetUser.role === 'owner') {
       return NextResponse.json(
         { error: { message: 'Cannot modify owner role' } },
         { status: 403 }
@@ -78,7 +78,7 @@ export async function PATCH(
     }
 
     // Cannot modify your own role
-    if (targetMember.user_id === user.id) {
+    if (targetUser.id === user.id) {
       return NextResponse.json(
         { error: { message: 'Cannot modify your own role' } },
         { status: 403 }
@@ -91,17 +91,17 @@ export async function PATCH(
 
     if (!role || !VALID_ROLES.includes(role)) {
       return NextResponse.json(
-        { error: { message: 'Invalid role. Must be admin, analyst, or viewer' } },
+        { error: { message: 'Invalid role. Must be admin, member, or viewer' } },
         { status: 400 }
       );
     }
 
-    // Update member role
+    // Update member role in users table
     const { error: updateError } = await supabase
-      .from('organization_members')
+      .from('users')
       .update({ role, updated_at: new Date().toISOString() })
-      .eq('user_id', memberId)
-      .eq('organization_id', currentMember.organization_id);
+      .eq('id', memberId)
+      .eq('organization_id', currentUser.organization_id);
 
     if (updateError) {
       console.error('Role update error:', updateError);
@@ -145,14 +145,14 @@ export async function DELETE(
       );
     }
 
-    // Get current user's organization membership
-    const { data: currentMember, error: memberError } = await supabase
-      .from('organization_members')
+    // Get current user's organization from users table
+    const { data: currentUser, error: currentUserError } = await supabase
+      .from('users')
       .select('organization_id, role')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
-    if (memberError || !currentMember) {
+    if (currentUserError || !currentUser) {
       return NextResponse.json(
         { error: { message: 'No organization found' } },
         { status: 404 }
@@ -160,22 +160,22 @@ export async function DELETE(
     }
 
     // Check if current user has permission to remove members
-    if (!['owner', 'admin'].includes(currentMember.role)) {
+    if (!['owner', 'admin'].includes(currentUser.role)) {
       return NextResponse.json(
         { error: { message: 'Insufficient permissions' } },
         { status: 403 }
       );
     }
 
-    // Get target member
-    const { data: targetMember, error: targetError } = await supabase
-      .from('organization_members')
-      .select('user_id, role, organization_id')
-      .eq('user_id', memberId)
-      .eq('organization_id', currentMember.organization_id)
+    // Get target member from users table
+    const { data: targetUser, error: targetError } = await supabase
+      .from('users')
+      .select('id, role, organization_id')
+      .eq('id', memberId)
+      .eq('organization_id', currentUser.organization_id)
       .single();
 
-    if (targetError || !targetMember) {
+    if (targetError || !targetUser) {
       return NextResponse.json(
         { error: { message: 'Member not found' } },
         { status: 404 }
@@ -183,7 +183,7 @@ export async function DELETE(
     }
 
     // Cannot remove owner
-    if (targetMember.role === 'owner') {
+    if (targetUser.role === 'owner') {
       return NextResponse.json(
         { error: { message: 'Cannot remove organization owner' } },
         { status: 403 }
@@ -191,27 +191,28 @@ export async function DELETE(
     }
 
     // Cannot remove yourself
-    if (targetMember.user_id === user.id) {
+    if (targetUser.id === user.id) {
       return NextResponse.json(
         { error: { message: 'Cannot remove yourself' } },
         { status: 403 }
       );
     }
 
-    // Admins can only remove analysts and viewers, not other admins
-    if (currentMember.role === 'admin' && targetMember.role === 'admin') {
+    // Admins can only remove members and viewers, not other admins
+    if (currentUser.role === 'admin' && targetUser.role === 'admin') {
       return NextResponse.json(
         { error: { message: 'Admins cannot remove other admins' } },
         { status: 403 }
       );
     }
 
-    // Delete member from organization
+    // Delete member from users table (this removes them from the organization)
+    // Note: In production, you might want to soft delete or move to a different organization
     const { error: deleteError } = await supabase
-      .from('organization_members')
+      .from('users')
       .delete()
-      .eq('user_id', memberId)
-      .eq('organization_id', currentMember.organization_id);
+      .eq('id', memberId)
+      .eq('organization_id', currentUser.organization_id);
 
     if (deleteError) {
       console.error('Member delete error:', deleteError);

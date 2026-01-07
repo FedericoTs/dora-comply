@@ -65,16 +65,16 @@ export async function GET(request: NextRequest, { params }: ExportParams) {
     const reports = reportsResult.data;
     const events = eventsResult.data;
 
-    // Get organization details
-    const { data: member } = await supabase
-      .from('organization_members')
+    // Get organization details from users table
+    const { data: userRecord } = await supabase
+      .from('users')
       .select('organization:organizations(id, name, lei)')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     // Handle the nested relation - Supabase may return array or object for relations
     type OrgType = { id: string; name: string; lei: string | null };
-    const orgRaw = member?.organization;
+    const orgRaw = userRecord?.organization;
     const organization: OrgType | null = orgRaw
       ? (Array.isArray(orgRaw) ? orgRaw[0] as OrgType : orgRaw as OrgType)
       : null;
