@@ -22,6 +22,7 @@ import {
   formatRelativeTime,
   mapActivityType,
 } from '@/lib/activity/queries';
+import { BoardReportExport } from '@/components/reports/board-report-export';
 
 export const metadata: Metadata = {
   title: 'Dashboard | DORA Comply',
@@ -65,6 +66,7 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <BoardReportExport />
           <button className="btn-secondary">
             <Filter className="h-4 w-4" />
             Filter
