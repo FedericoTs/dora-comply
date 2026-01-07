@@ -1,7 +1,5 @@
 import { Suspense } from 'react';
 import { Metadata } from 'next';
-import { Network, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConcentrationDashboard } from './concentration-dashboard';
 
@@ -13,6 +11,21 @@ export const metadata: Metadata = {
 function LoadingSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
+      {/* Header Skeleton */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-12 w-12 rounded-xl" />
+          <div>
+            <Skeleton className="h-7 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-32" />
+          <Skeleton className="h-9 w-32" />
+        </div>
+      </div>
+
       {/* Alert Banner Skeleton */}
       <Skeleton className="h-24 w-full rounded-xl" />
 
@@ -45,35 +58,7 @@ function LoadingSkeleton() {
 
 export default function ConcentrationPage() {
   return (
-    <div className="flex-1 space-y-6 p-6 md:p-8">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
-            <Network className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Concentration Risk
-            </h1>
-            <p className="text-muted-foreground">
-              DORA Article 28-29 ICT third-party concentration monitoring
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh Data
-          </Button>
-          <Button size="sm">
-            Export Report
-          </Button>
-        </div>
-      </div>
-
-      {/* Main Content */}
+    <div className="flex-1 p-6 md:p-8">
       <Suspense fallback={<LoadingSkeleton />}>
         <ConcentrationDashboard />
       </Suspense>
