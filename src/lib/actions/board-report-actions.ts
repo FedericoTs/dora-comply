@@ -37,17 +37,18 @@ export async function getBoardReportData(
   } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { data: membership } = await supabase
-    .from('organization_members')
+  // Get user's organization from the users table
+  const { data: userData } = await supabase
+    .from('users')
     .select('organization_id, organizations(name)')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single();
 
-  if (!membership) throw new Error('No organization found');
+  if (!userData?.organization_id) throw new Error('No organization found');
 
-  const organizationId = membership.organization_id;
+  const organizationId = userData.organization_id;
   // Extract organization name from the join result
-  const orgData = membership.organizations as { name: string } | { name: string }[] | null;
+  const orgData = userData.organizations as { name: string } | { name: string }[] | null;
   const organizationName = Array.isArray(orgData)
     ? orgData[0]?.name || 'Organization'
     : orgData?.name || 'Organization';
