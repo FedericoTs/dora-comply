@@ -65,8 +65,13 @@ export async function GET() {
     }
 
     // Transform data
+    type ProfileType = { id: string; email: string; full_name: string | null; avatar_url: string | null; updated_at: string };
     const teamMembers = (members || []).map((m) => {
-      const profile = m.profiles as { id: string; email: string; full_name: string | null; avatar_url: string | null; updated_at: string } | null;
+      // Handle Supabase's array/object ambiguity for relations
+      const profilesRaw = m.profiles;
+      const profile: ProfileType | null = profilesRaw
+        ? (Array.isArray(profilesRaw) ? profilesRaw[0] as ProfileType : profilesRaw as ProfileType)
+        : null;
       return {
         id: m.user_id,
         email: profile?.email || '',

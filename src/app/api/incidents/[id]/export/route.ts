@@ -72,7 +72,12 @@ export async function GET(request: NextRequest, { params }: ExportParams) {
       .eq('user_id', user.id)
       .single();
 
-    const organization = (member?.organization as { id: string; name: string; lei: string | null }) || null;
+    // Handle the nested relation - Supabase may return array or object for relations
+    type OrgType = { id: string; name: string; lei: string | null };
+    const orgRaw = member?.organization;
+    const organization: OrgType | null = orgRaw
+      ? (Array.isArray(orgRaw) ? orgRaw[0] as OrgType : orgRaw as OrgType)
+      : null;
 
     // Format data for export
     const exportData = buildExportData(incident, reports, events, organization, reportType);
@@ -88,7 +93,8 @@ export async function GET(request: NextRequest, { params }: ExportParams) {
     // Return PDF
     const fileName = `${incident.incident_ref}_${reportType || 'summary'}_${new Date().toISOString().split('T')[0]}.pdf`;
 
-    return new NextResponse(pdfBuffer, {
+    // Convert Buffer to Uint8Array for NextResponse compatibility
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${fileName}"`,

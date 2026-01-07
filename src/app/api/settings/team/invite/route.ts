@@ -9,10 +9,11 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 // Validation schema
+const roleValues = ['admin', 'analyst', 'viewer'] as const;
 const inviteSchema = z.object({
   email: z.string().email('Invalid email address'),
-  role: z.enum(['admin', 'analyst', 'viewer'], {
-    errorMap: () => ({ message: 'Invalid role. Must be admin, analyst, or viewer' }),
+  role: z.enum(roleValues, {
+    message: 'Invalid role. Must be admin, analyst, or viewer',
   }),
 });
 
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: { message: validation.error.errors[0].message } },
+        { error: { message: validation.error.issues[0].message } },
         { status: 400 }
       );
     }
@@ -249,8 +250,13 @@ export async function GET() {
     }
 
     // Transform data
+    type InviterType = { full_name: string | null; email: string };
     const transformedInvitations = (invitations || []).map((inv) => {
-      const inviter = inv.profiles as { full_name: string | null; email: string } | null;
+      // Handle Supabase's array/object ambiguity for relations
+      const profilesRaw = inv.profiles;
+      const inviter: InviterType | null = profilesRaw
+        ? (Array.isArray(profilesRaw) ? profilesRaw[0] as InviterType : profilesRaw as InviterType)
+        : null;
       return {
         id: inv.id,
         email: inv.email,
