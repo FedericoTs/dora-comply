@@ -11,6 +11,7 @@ import {
   LogOut,
   Search,
   Bell,
+  Network,
 } from 'lucide-react';
 import { ThemeToggleSimple } from '@/components/ui/theme-toggle';
 import { NavigationProviders } from '@/components/navigation';
@@ -20,6 +21,7 @@ import { checkAuthStatus, logout } from '@/lib/auth';
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Vendors', href: '/vendors', icon: Building2 },
+  { name: 'Concentration Risk', href: '/concentration', icon: Network },
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Register of Information', href: '/roi', icon: BookOpen },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
