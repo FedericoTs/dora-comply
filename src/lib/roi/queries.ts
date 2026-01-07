@@ -315,9 +315,30 @@ export async function fetchB_02_02(): Promise<QueryResult<Record<string, unknown
 // ============================================================================
 
 export async function fetchB_02_03(): Promise<QueryResult<Record<string, unknown>>> {
-  // This template links related contracts - currently not implemented
-  // Would need a contract_links table or similar
-  return { data: [], count: 0, error: null };
+  const supabase = await createClient();
+
+  // Fetch contracts that have a parent_contract_id (linked to another contract)
+  const { data: contracts, error } = await supabase
+    .from('contracts')
+    .select(`
+      contract_ref,
+      parent_contract_id,
+      parent:contracts!parent_contract_id(contract_ref)
+    `)
+    .not('parent_contract_id', 'is', null);
+
+  if (error) {
+    return { data: [], count: 0, error: error.message };
+  }
+
+  // Map to ESA format: c0010 = child contract, c0020 = parent contract, c0030 = link type
+  const rows = (contracts || []).map(c => ({
+    c0010: c.contract_ref || '',
+    c0020: (c.parent as { contract_ref?: string })?.contract_ref || '',
+    c0030: 'eba_LT:x1', // Type: subsequent/dependent arrangement
+  }));
+
+  return { data: rows, count: rows.length, error: null };
 }
 
 // ============================================================================

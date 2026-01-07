@@ -978,6 +978,75 @@ export const B_07_01_MAPPING: TemplateMapping = {
 // All Template Mappings
 // ============================================================================
 
+/**
+ * B_05.02 - Subcontracting Chain
+ * Source: subcontractors table
+ * Note: Data is generated from subcontractors table with vendor and service relationships
+ */
+export const B_05_02_MAPPING: TemplateMapping = {
+  c0010: {
+    esaCode: 'c0010',
+    dbColumn: 'contract_ref',
+    dbTable: 'contracts',
+    description: 'Contract reference number',
+    required: true,
+    dataType: 'string',
+  },
+  c0020: {
+    esaCode: 'c0020',
+    dbColumn: 'service_type',
+    dbTable: 'subcontractors',
+    description: 'Type of ICT services',
+    required: true,
+    dataType: 'enum',
+    enumeration: EBA_SERVICE_TYPES,
+  },
+  c0030: {
+    esaCode: 'c0030',
+    dbColumn: '_computed', // Derived from vendor join
+    dbTable: 'vendors',
+    description: 'Provider identification code',
+    required: true,
+    dataType: 'string',
+  },
+  c0040: {
+    esaCode: 'c0040',
+    dbColumn: '_computed', // Computed from LEI presence
+    dbTable: 'vendors',
+    description: 'Provider code type',
+    required: true,
+    dataType: 'enum',
+    enumeration: EBA_CODE_TYPES,
+    transform: () => 'eba_qCO:qx2000', // Default to LEI
+  },
+  c0050: {
+    esaCode: 'c0050',
+    dbColumn: 'tier_level',
+    dbTable: 'subcontractors',
+    description: 'Rank in subcontracting chain',
+    required: true,
+    dataType: 'number',
+  },
+  c0060: {
+    esaCode: 'c0060',
+    dbColumn: 'subcontractor_lei',
+    dbTable: 'subcontractors',
+    description: 'Subcontractor identification code',
+    required: true,
+    dataType: 'string',
+  },
+  c0070: {
+    esaCode: 'c0070',
+    dbColumn: '_computed', // Computed from LEI presence
+    dbTable: 'subcontractors',
+    description: 'Subcontractor code type',
+    required: true,
+    dataType: 'enum',
+    enumeration: EBA_CODE_TYPES,
+    transform: (val) => val ? 'eba_qCO:qx2000' : 'eba_qCO:qx2099', // LEI or Other
+  },
+};
+
 export const TEMPLATE_MAPPINGS: Record<RoiTemplateId, TemplateMapping | null> = {
   'B_01.01': B_01_01_MAPPING,
   'B_01.02': B_01_02_MAPPING,
@@ -990,7 +1059,7 @@ export const TEMPLATE_MAPPINGS: Record<RoiTemplateId, TemplateMapping | null> = 
   'B_03.03': null, // Link table, generated from relationships
   'B_04.01': B_04_01_MAPPING,
   'B_05.01': B_05_01_MAPPING,
-  'B_05.02': null, // Subcontracting, generated from subcontractors table
+  'B_05.02': B_05_02_MAPPING,
   'B_06.01': B_06_01_MAPPING,
   'B_07.01': B_07_01_MAPPING,
   'B_99.01': null, // Lookup table, not exported

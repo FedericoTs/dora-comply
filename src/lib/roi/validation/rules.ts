@@ -521,6 +521,163 @@ export const B_02_02_RULES: TemplateRules = {
 };
 
 // ============================================================================
+// B_02.03 Rules - Linked Contractual Arrangements
+// ============================================================================
+
+export const B_02_03_RULES: TemplateRules = {
+  c0010: {
+    columnCode: 'c0010',
+    description: 'Contract reference number',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Contract reference'),
+      maxLengthRule(100, 'Contract reference'),
+    ],
+  },
+  c0020: {
+    columnCode: 'c0020',
+    description: 'Linked contract reference number',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Linked contract reference'),
+      maxLengthRule(100, 'Linked contract reference'),
+    ],
+  },
+  c0030: {
+    columnCode: 'c0030',
+    description: 'Type of link',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Link type'),
+      ebaEnumRule('eba_LT:', 'Link type'),
+    ],
+  },
+};
+
+// ============================================================================
+// B_03.01 Rules - Entity-Arrangement Links
+// ============================================================================
+
+export const B_03_01_RULES: TemplateRules = {
+  c0010: {
+    columnCode: 'c0010',
+    description: 'Contract reference number',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Contract reference'),
+      maxLengthRule(100, 'Contract reference'),
+    ],
+  },
+  c0020: {
+    columnCode: 'c0020',
+    description: 'LEI of entity using arrangement',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Entity LEI'),
+      leiRule('Entity LEI'),
+    ],
+  },
+  c0030: {
+    columnCode: 'c0030',
+    description: 'Entity uses arrangement flag',
+    dataType: 'boolean',
+    required: true,
+    rules: [
+      requiredRule('Uses arrangement flag'),
+      {
+        type: 'custom',
+        severity: 'error',
+        message: 'Uses arrangement must be true or false',
+        validate: validators.boolean,
+      },
+    ],
+  },
+};
+
+// ============================================================================
+// B_03.02 Rules - Provider-Arrangement Links
+// ============================================================================
+
+export const B_03_02_RULES: TemplateRules = {
+  c0010: {
+    columnCode: 'c0010',
+    description: 'Contract reference number',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Contract reference'),
+      maxLengthRule(100, 'Contract reference'),
+    ],
+  },
+  c0020: {
+    columnCode: 'c0020',
+    description: 'Provider identification code',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Provider ID'),
+    ],
+  },
+  c0030: {
+    columnCode: 'c0030',
+    description: 'Provider code type',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Provider code type'),
+      ebaEnumRule('eba_qCO:', 'Provider code type'),
+    ],
+  },
+};
+
+// ============================================================================
+// B_03.03 Rules - Intra-Group Provider Links
+// ============================================================================
+
+export const B_03_03_RULES: TemplateRules = {
+  c0010: {
+    columnCode: 'c0010',
+    description: 'Contract reference number',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Contract reference'),
+      maxLengthRule(100, 'Contract reference'),
+    ],
+  },
+  c0020: {
+    columnCode: 'c0020',
+    description: 'LEI of intra-group provider',
+    dataType: 'string',
+    required: true,
+    rules: [
+      requiredRule('Group entity LEI'),
+      leiRule('Group entity LEI'),
+    ],
+  },
+  c0031: {
+    columnCode: 'c0031',
+    description: 'Intra-group arrangement flag',
+    dataType: 'boolean',
+    required: true,
+    rules: [
+      requiredRule('Intra-group flag'),
+      {
+        type: 'custom',
+        severity: 'error',
+        message: 'Intra-group flag must be true or false',
+        validate: validators.boolean,
+      },
+    ],
+  },
+};
+
+// ============================================================================
 // B_04.01 Rules - Service Recipients
 // ============================================================================
 
@@ -883,6 +1040,10 @@ export const TEMPLATE_RULES: Partial<Record<RoiTemplateId, TemplateRules>> = {
   'B_01.03': B_01_03_RULES,
   'B_02.01': B_02_01_RULES,
   'B_02.02': B_02_02_RULES,
+  'B_02.03': B_02_03_RULES,
+  'B_03.01': B_03_01_RULES,
+  'B_03.02': B_03_02_RULES,
+  'B_03.03': B_03_03_RULES,
   'B_04.01': B_04_01_RULES,
   'B_05.01': B_05_01_RULES,
   'B_05.02': B_05_02_RULES,
