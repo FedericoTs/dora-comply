@@ -1,9 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { Network, Filter, Download, Maximize2 } from 'lucide-react';
+import {
+  Network,
+  Filter,
+  Download,
+  Maximize2,
+  Building2,
+  Link2,
+  AlertTriangle,
+  Shield,
+  ExternalLink,
+  Layers,
+  Activity,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -14,10 +29,13 @@ import {
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { SupplyChainGraph } from '@/components/visualization/supply-chain-graph';
+import { cn } from '@/lib/utils';
 import type { DependencyGraph, DependencyNode } from '@/lib/concentration/types';
 import type { AggregateChainMetrics } from '@/lib/concentration/chain-utils';
 
@@ -136,53 +154,192 @@ export function SupplyChainVisualization({
 
       {/* Node Detail Sheet */}
       <Sheet open={!!selectedNode} onOpenChange={() => setSelectedNode(null)}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>{selectedNode?.name}</SheetTitle>
-          </SheetHeader>
-          {selectedNode && (
-            <div className="mt-6 space-y-4">
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">Type</dt>
-                <dd className="mt-1 text-sm capitalize">
-                  {selectedNode.type.replace('_', ' ')}
-                </dd>
+        <SheetContent className="w-full sm:max-w-md">
+          <SheetHeader className="pb-4">
+            <div className="flex items-start gap-3">
+              <div className={cn(
+                'rounded-lg p-2.5',
+                selectedNode?.type === 'entity' && 'bg-primary/10',
+                selectedNode?.type === 'third_party' && 'bg-orange-500/10',
+                selectedNode?.type === 'fourth_party' && 'bg-blue-500/10'
+              )}>
+                {selectedNode?.type === 'entity' ? (
+                  <Building2 className="h-5 w-5 text-primary" />
+                ) : selectedNode?.type === 'fourth_party' ? (
+                  <Link2 className="h-5 w-5 text-blue-500" />
+                ) : (
+                  <Shield className="h-5 w-5 text-orange-500" />
+                )}
               </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">Tier</dt>
-                <dd className="mt-1 text-sm capitalize">{selectedNode.tier}</dd>
+              <div className="flex-1 min-w-0">
+                <SheetTitle className="text-lg">{selectedNode?.name}</SheetTitle>
+                <SheetDescription className="mt-1">
+                  {selectedNode?.type === 'entity'
+                    ? 'Your organization'
+                    : selectedNode?.type === 'fourth_party'
+                    ? 'Fourth-party subcontractor'
+                    : 'Third-party vendor'}
+                </SheetDescription>
               </div>
-              {selectedNode.risk_score !== null && (
-                <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Risk Score</dt>
-                  <dd className="mt-1 text-sm">{selectedNode.risk_score}</dd>
-                </div>
-              )}
-              {selectedNode.services.length > 0 && (
-                <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Services</dt>
-                  <dd className="mt-1">
-                    <div className="flex flex-wrap gap-1">
-                      {selectedNode.services.map((service) => (
-                        <span
-                          key={service}
-                          className="px-2 py-0.5 bg-muted rounded text-xs"
-                        >
-                          {service}
-                        </span>
-                      ))}
-                    </div>
-                  </dd>
-                </div>
-              )}
-              {selectedNode.type !== 'entity' && (
-                <div className="pt-4 border-t">
-                  <Button variant="outline" size="sm" className="w-full" asChild>
-                    <a href={`/vendors/${selectedNode.id}`}>View Vendor Details</a>
-                  </Button>
-                </div>
-              )}
             </div>
+          </SheetHeader>
+
+          {selectedNode && (
+            <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
+              <div className="space-y-4">
+                {/* Classification Card */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-muted-foreground" />
+                      Classification
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Type</span>
+                      <Badge
+                        variant={selectedNode.type === 'fourth_party' ? 'secondary' : 'default'}
+                        className={cn(
+                          selectedNode.type === 'entity' && 'bg-primary',
+                          selectedNode.type === 'third_party' && 'bg-orange-500 hover:bg-orange-500/90',
+                          selectedNode.type === 'fourth_party' && 'bg-blue-100 text-blue-700 hover:bg-blue-100'
+                        )}
+                      >
+                        {selectedNode.type === 'entity'
+                          ? 'Your Organization'
+                          : selectedNode.type === 'fourth_party'
+                          ? '4th Party'
+                          : '3rd Party'}
+                      </Badge>
+                    </div>
+
+                    <Separator />
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Tier</span>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          selectedNode.tier === 'critical' && 'border-red-200 bg-red-50 text-red-700',
+                          selectedNode.tier === 'important' && 'border-orange-200 bg-orange-50 text-orange-700',
+                          selectedNode.tier === 'standard' && 'border-green-200 bg-green-50 text-green-700'
+                        )}
+                      >
+                        {selectedNode.tier === 'critical' && (
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                        )}
+                        <span className="capitalize">{selectedNode.tier}</span>
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Risk Score Card */}
+                {selectedNode.risk_score !== null && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-muted-foreground" />
+                        Risk Assessment
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Risk Score</span>
+                        <span className={cn(
+                          'text-2xl font-bold',
+                          selectedNode.risk_score >= 70 && 'text-red-600',
+                          selectedNode.risk_score >= 40 && selectedNode.risk_score < 70 && 'text-orange-500',
+                          selectedNode.risk_score < 40 && 'text-green-600'
+                        )}>
+                          {selectedNode.risk_score}
+                        </span>
+                      </div>
+                      <Progress
+                        value={selectedNode.risk_score}
+                        className={cn(
+                          'h-2',
+                          selectedNode.risk_score >= 70 && '[&>div]:bg-red-500',
+                          selectedNode.risk_score >= 40 && selectedNode.risk_score < 70 && '[&>div]:bg-orange-500',
+                          selectedNode.risk_score < 40 && '[&>div]:bg-green-500'
+                        )}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {selectedNode.risk_score >= 70
+                          ? 'High risk - requires immediate attention'
+                          : selectedNode.risk_score >= 40
+                          ? 'Moderate risk - monitor closely'
+                          : 'Low risk - within acceptable thresholds'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Services Card */}
+                {selectedNode.services.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Network className="h-4 w-4 text-muted-foreground" />
+                        Services Provided
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedNode.services.map((service) => (
+                          <Badge
+                            key={service}
+                            variant="secondary"
+                            className="font-normal"
+                          >
+                            {service}
+                          </Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Fourth Party Info */}
+                {selectedNode.type === 'fourth_party' && (
+                  <Card className="border-blue-100 bg-blue-50/30">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2 text-blue-700">
+                        <Link2 className="h-4 w-4" />
+                        Fourth-Party Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm text-blue-700/80">
+                      <p>
+                        This is a subcontractor of one of your third-party vendors.
+                        Per DORA Article 28(8), you should maintain visibility of
+                        all subcontractors supporting critical or important functions.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Action Buttons */}
+                {selectedNode.type !== 'entity' && (
+                  <div className="pt-2 space-y-2">
+                    <Button className="w-full" asChild>
+                      <a href={`/vendors/${selectedNode.id}`}>
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        View Full Profile
+                      </a>
+                    </Button>
+                    {selectedNode.type === 'fourth_party' && (
+                      <Button variant="outline" className="w-full" asChild>
+                        <a href={`/vendors?subcontractor=${selectedNode.id}`}>
+                          View Parent Vendor
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
           )}
         </SheetContent>
       </Sheet>
