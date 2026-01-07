@@ -186,7 +186,8 @@ export async function fetchB_01_03(): Promise<QueryResult<Record<string, unknown
       branch_name,
       country_code,
       organization:organizations(lei)
-    `);
+    `)
+    .is('deleted_at', null);
 
   if (error) {
     return { data: [], count: 0, error: error.message };
@@ -219,6 +220,7 @@ export async function fetchB_02_01(): Promise<QueryResult<Record<string, unknown
       parent_contract_id,
       parent_contract:contracts!parent_contract_id(contract_ref)
     `)
+    .is('deleted_at', null)
     .order('created_at');
 
   if (error) {
@@ -259,7 +261,8 @@ export async function fetchB_02_02(): Promise<QueryResult<Record<string, unknown
       vendor:vendors(lei, headquarters_country),
       organization:organizations(lei),
       data_locations:service_data_locations(country_code, location_type)
-    `);
+    `)
+    .is('deleted_at', null);
 
   if (error) {
     return { data: [], count: 0, error: error.message };
@@ -410,7 +413,8 @@ export async function fetchB_04_01(): Promise<QueryResult<Record<string, unknown
     .select(`
       contract:contracts(contract_ref),
       organization:organizations(lei)
-    `);
+    `)
+    .is('deleted_at', null);
 
   if (error) {
     return { data: [], count: 0, error: error.message };
@@ -436,6 +440,7 @@ export async function fetchB_05_01(): Promise<QueryResult<Record<string, unknown
   const { data: vendors, error } = await supabase
     .from('vendors')
     .select('*')
+    .is('deleted_at', null)
     .order('created_at');
 
   if (error) {
@@ -476,7 +481,8 @@ export async function fetchB_05_02(): Promise<QueryResult<Record<string, unknown
         service_type,
         contract:contracts(contract_ref)
       )
-    `);
+    `)
+    .is('deleted_at', null);
 
   if (error) {
     return { data: [], count: 0, error: error.message };
@@ -515,7 +521,8 @@ export async function fetchB_06_01(): Promise<QueryResult<Record<string, unknown
       mappings:function_service_mapping(
         service:ict_services(rto_hours, rpo_hours)
       )
-    `);
+    `)
+    .is('deleted_at', null);
 
   if (error) {
     return { data: [], count: 0, error: error.message };
@@ -569,7 +576,8 @@ export async function fetchB_07_01(): Promise<QueryResult<Record<string, unknown
       ),
       vendor:vendors(lei, last_assessment_date),
       mappings:function_service_mapping(substitutability, substitutability_reason)
-    `);
+    `)
+    .is('deleted_at', null);
 
   if (error) {
     return { data: [], count: 0, error: error.message };
