@@ -107,6 +107,17 @@ export interface Vendor {
   risk_score?: number | null;
   last_assessment_date?: string | null;
 
+  // External Monitoring (from Migration 015)
+  external_risk_score?: number | null;
+  external_risk_grade?: 'A' | 'B' | 'C' | 'D' | 'F' | null;
+  external_score_provider?: string | null;
+  external_score_updated_at?: string | null;
+  external_score_factors?: unknown[] | null;
+  monitoring_enabled?: boolean;
+  monitoring_domain?: string | null;
+  last_monitoring_sync?: string | null;
+  monitoring_alert_threshold?: number | null;
+
   // Contact
   primary_contact: VendorContact;
 

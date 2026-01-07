@@ -10,7 +10,7 @@
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { useCallback, type ReactNode } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { FileText, Users, ScrollText, Sparkles, Target } from 'lucide-react';
+import { FileText, Users, ScrollText, Sparkles, Target, Radio } from 'lucide-react';
 
 interface VendorTabsProps {
   overview: ReactNode;
@@ -19,6 +19,7 @@ interface VendorTabsProps {
   contracts: ReactNode;
   enrichment: ReactNode;
   dora: ReactNode;
+  monitoring: ReactNode;
 }
 
 export function VendorTabs({
@@ -28,6 +29,7 @@ export function VendorTabs({
   contracts,
   enrichment,
   dora,
+  monitoring,
 }: VendorTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -67,6 +69,10 @@ export function VendorTabs({
           <Target className="h-4 w-4 mr-1.5" />
           DORA
         </TabsTrigger>
+        <TabsTrigger value="monitoring">
+          <Radio className="h-4 w-4 mr-1.5" />
+          Monitoring
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
@@ -91,6 +97,10 @@ export function VendorTabs({
 
       <TabsContent value="dora">
         {dora}
+      </TabsContent>
+
+      <TabsContent value="monitoring">
+        {monitoring}
       </TabsContent>
     </Tabs>
   );

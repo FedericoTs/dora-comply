@@ -27,6 +27,7 @@ import {
   VendorESAFields,
   VendorEnrichmentTab,
 } from '@/components/vendors/detail';
+import { VendorMonitoringTab } from '@/components/vendors/monitoring';
 import { SimpleBreadcrumb } from '@/components/navigation';
 import { VendorDocuments } from './vendor-documents';
 import { VendorContacts } from '@/components/vendors/vendor-contacts';
@@ -353,6 +354,20 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
         }
         enrichment={<VendorEnrichmentTab vendor={vendor} />}
         dora={<VendorDORACompliance vendorId={vendor.id} vendorName={vendor.name} />}
+        monitoring={
+          <VendorMonitoringTab
+            vendorId={vendor.id}
+            vendorName={vendor.name}
+            score={vendor.external_risk_score}
+            grade={vendor.external_risk_grade as 'A' | 'B' | 'C' | 'D' | 'F' | null}
+            provider={vendor.external_score_provider}
+            lastUpdated={vendor.external_score_updated_at}
+            domain={vendor.monitoring_domain}
+            monitoringEnabled={vendor.monitoring_enabled}
+            alertThreshold={vendor.monitoring_alert_threshold}
+            factors={vendor.external_score_factors as Array<{ name: string; score: number; grade: string; issueCount: number }> | null}
+          />
+        }
       />
     </div>
   );
