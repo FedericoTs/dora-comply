@@ -12,6 +12,7 @@ import {
   Search,
   Bell,
   Network,
+  FlaskConical,
 } from 'lucide-react';
 import { ThemeToggleSimple } from '@/components/ui/theme-toggle';
 import { NavigationProviders } from '@/components/navigation';
@@ -25,6 +26,7 @@ const navigation = [
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Register of Information', href: '/roi', icon: BookOpen },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
+  { name: 'Resilience Testing', href: '/testing', icon: FlaskConical },
 ];
 
 const secondaryNavigation = [
