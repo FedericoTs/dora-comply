@@ -20,6 +20,7 @@ import {
   getHHILevel,
   SERVICE_TYPE_LABELS,
 } from './types';
+import type { AggregateChainMetrics } from './chain-utils';
 
 /**
  * Calculate Herfindahl-Hirschman Index (HHI) for service concentration
@@ -476,7 +477,10 @@ export function generateConcentrationAlerts(
 /**
  * Calculate complete concentration metrics
  */
-export function calculateConcentrationMetrics(vendors: Vendor[]): ConcentrationMetrics {
+export function calculateConcentrationMetrics(
+  vendors: Vendor[],
+  chainMetrics?: AggregateChainMetrics
+): ConcentrationMetrics {
   const serviceHHI = calculateServiceHHI(vendors);
   const geoData = calculateGeographicSpread(vendors);
 
@@ -523,11 +527,74 @@ export function calculateConcentrationMetrics(vendors: Vendor[]): ConcentrationM
       : 0,
     not_substitutable_count: notSubstitutableCount,
 
-    // Fourth-party tracking (placeholder for future)
-    avg_chain_length: 1,
-    max_chain_depth: 1,
+    // Fourth-party tracking (from chain metrics if available)
+    avg_chain_length: chainMetrics?.avgChainLength ?? 0,
+    max_chain_depth: chainMetrics?.maxChainDepth ?? 0,
 
     spof_count: spofs.length,
     total_critical_functions: allCriticalFunctions.size,
   };
+}
+
+/**
+ * Generate fourth-party risk alerts based on chain metrics
+ */
+export function generateFourthPartyAlerts(
+  chainMetrics: AggregateChainMetrics
+): ConcentrationAlert[] {
+  const alerts: ConcentrationAlert[] = [];
+
+  // Deep chain warning (> 3 levels)
+  if (chainMetrics.maxChainDepth > CONCENTRATION_THRESHOLDS.max_chain_depth_warning) {
+    const severity: RiskLevel = chainMetrics.maxChainDepth > CONCENTRATION_THRESHOLDS.max_chain_depth_critical
+      ? 'critical'
+      : 'high';
+
+    alerts.push({
+      id: 'deep-chain',
+      type: 'threshold_breach',
+      severity,
+      title: 'Extended Supply Chain Detected',
+      description: `Your vendor ecosystem has a supply chain depth of ${chainMetrics.maxChainDepth} levels${
+        chainMetrics.deepestVendorName ? ` (via ${chainMetrics.deepestVendorName})` : ''
+      }. DORA Article 28(8) requires enhanced visibility and oversight of subcontracting chains.`,
+      affected_vendors: chainMetrics.deepestVendorId ? [chainMetrics.deepestVendorId] : [],
+      created_at: new Date().toISOString(),
+      action_required: true,
+    });
+  }
+
+  // Unmonitored fourth parties
+  if (chainMetrics.unmonitoredCount > 0) {
+    alerts.push({
+      id: 'unmonitored-fourth-parties',
+      type: 'threshold_breach',
+      severity: chainMetrics.unmonitoredCount > 5 ? 'high' : 'medium',
+      title: 'Unmonitored Fourth Parties',
+      description: `${chainMetrics.unmonitoredCount} subcontractor${
+        chainMetrics.unmonitoredCount > 1 ? 's are' : ' is'
+      } not actively monitored. Consider implementing oversight per DORA requirements.`,
+      affected_vendors: [],
+      created_at: new Date().toISOString(),
+      action_required: true,
+    });
+  }
+
+  // Critical functions at deep levels
+  if (chainMetrics.criticalAtDepth > 0) {
+    alerts.push({
+      id: 'critical-deep-chain',
+      type: 'spof_detected',
+      severity: 'critical',
+      title: 'Critical Functions at Deep Chain Levels',
+      description: `${chainMetrics.criticalAtDepth} vendor${
+        chainMetrics.criticalAtDepth > 1 ? 's have' : ' has'
+      } critical functions supported by subcontractors at tier 3 or deeper. This creates resilience risk.`,
+      affected_vendors: [],
+      created_at: new Date().toISOString(),
+      action_required: true,
+    });
+  }
+
+  return alerts;
 }

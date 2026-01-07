@@ -15,7 +15,9 @@ import {
   generateRiskLevelSummaries,
   generateConcentrationAlerts,
   calculateConcentrationMetrics,
+  generateFourthPartyAlerts,
 } from '@/lib/concentration/calculations';
+import { buildFullSupplyChainGraph, type AggregateChainMetrics } from '@/lib/concentration/chain-utils';
 import type {
   ConcentrationOverviewResponse,
   HeatMapResponse,
@@ -90,12 +92,18 @@ async function getCurrentUserOrganization(
   return userData?.organization_id || null;
 }
 
+import type { DependencyGraph } from '@/lib/concentration/types';
+
 interface ConcentrationResponse {
   overview: ConcentrationOverviewResponse;
   heatMap: HeatMapResponse;
   metrics: ConcentrationMetrics;
   spofs: SinglePointOfFailure[];
   alerts: ConcentrationAlert[];
+  supplyChain: {
+    graph: DependencyGraph;
+    chainMetrics: AggregateChainMetrics;
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -122,6 +130,29 @@ export async function GET(request: NextRequest) {
 
     const vendors = (vendorData || []).map(mapVendorFromDatabase);
 
+    // Build supply chain graph and get chain metrics
+    let supplyChainData: { graph: DependencyGraph; metrics: AggregateChainMetrics };
+    try {
+      supplyChainData = await buildFullSupplyChainGraph();
+    } catch (chainError) {
+      console.warn('Supply chain graph error (non-fatal):', chainError);
+      // Fallback with empty data
+      supplyChainData = {
+        graph: { nodes: [], edges: [] },
+        metrics: {
+          avgChainLength: 0,
+          maxChainDepth: 0,
+          deepestVendorId: null,
+          deepestVendorName: null,
+          totalFourthParties: 0,
+          totalSubcontractors: 0,
+          unmonitoredCount: 0,
+          criticalAtDepth: 0,
+          vendorsWithChains: 0,
+        },
+      };
+    }
+
     // Calculate all concentration metrics
     const serviceHHI = calculateServiceHHI(vendors);
     const spofs = detectSinglePointsOfFailure(vendors);
@@ -129,12 +160,26 @@ export async function GET(request: NextRequest) {
     const heatMapData = generateHeatMapData(vendors);
     const riskLevels = generateRiskLevelSummaries(vendors, spofs, geoData.alerts);
     const alerts = generateConcentrationAlerts(vendors, spofs, serviceHHI, geoData);
-    const metrics = calculateConcentrationMetrics(vendors);
+
+    // Add fourth-party alerts if we have chain data
+    const fourthPartyAlerts = generateFourthPartyAlerts(supplyChainData.metrics);
+    const allAlerts = [...alerts, ...fourthPartyAlerts].sort((a, b) => {
+      const severityOrder: Record<string, number> = {
+        critical: 0,
+        high: 1,
+        medium: 2,
+        low: 3,
+      };
+      return (severityOrder[a.severity] ?? 4) - (severityOrder[b.severity] ?? 4);
+    });
+
+    // Calculate metrics with chain data
+    const metrics = calculateConcentrationMetrics(vendors, supplyChainData.metrics);
 
     const response: ConcentrationResponse = {
       overview: {
         risk_levels: riskLevels,
-        alerts: alerts.slice(0, 5), // Top 5 alerts for overview
+        alerts: allAlerts.slice(0, 5), // Top 5 alerts for overview
         spof_count: spofs.length,
         last_updated: new Date().toISOString(),
       },
@@ -148,7 +193,11 @@ export async function GET(request: NextRequest) {
       },
       metrics,
       spofs,
-      alerts,
+      alerts: allAlerts,
+      supplyChain: {
+        graph: supplyChainData.graph,
+        chainMetrics: supplyChainData.metrics,
+      },
     };
 
     return NextResponse.json(response);

@@ -8,13 +8,17 @@ import { ConcentrationHeatMap } from './components/concentration-heat-map';
 import { SpofDetector } from './components/spof-detector';
 import { ConcentrationAlertBanner, ConcentrationAlerts } from './components/concentration-alerts';
 import { MetricsGrid } from './components/metrics-grid';
+import { FourthPartyCards } from './components/fourth-party-cards';
+import { SupplyChainVisualization } from './components/supply-chain-visualization';
 import type {
   ConcentrationMetrics,
   ConcentrationOverviewResponse,
   HeatMapResponse,
   SinglePointOfFailure,
   ConcentrationAlert,
+  DependencyGraph,
 } from '@/lib/concentration/types';
+import type { AggregateChainMetrics } from '@/lib/concentration/chain-utils';
 
 interface ConcentrationData {
   overview: ConcentrationOverviewResponse;
@@ -22,6 +26,10 @@ interface ConcentrationData {
   metrics: ConcentrationMetrics;
   spofs: SinglePointOfFailure[];
   alerts: ConcentrationAlert[];
+  supplyChain: {
+    graph: DependencyGraph;
+    chainMetrics: AggregateChainMetrics;
+  };
 }
 
 export function ConcentrationDashboard() {
@@ -77,7 +85,7 @@ export function ConcentrationDashboard() {
     return null;
   }
 
-  const { overview, heatMap, metrics, spofs, alerts } = data;
+  const { overview, heatMap, metrics, spofs, alerts, supplyChain } = data;
 
   return (
     <div className="space-y-6">
@@ -92,6 +100,14 @@ export function ConcentrationDashboard() {
         <ConcentrationOverview riskLevels={overview.risk_levels} />
       </div>
 
+      {/* Fourth-Party Risk Summary */}
+      {supplyChain.chainMetrics.totalFourthParties > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Fourth-Party Risk</h2>
+          <FourthPartyCards metrics={supplyChain.chainMetrics} />
+        </div>
+      )}
+
       {/* Main Content: Heat Map + SPOF Detector */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -104,6 +120,17 @@ export function ConcentrationDashboard() {
           />
         </div>
       </div>
+
+      {/* Supply Chain Graph */}
+      {supplyChain.graph.nodes.length > 1 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Supply Chain Visualization</h2>
+          <SupplyChainVisualization
+            graph={supplyChain.graph}
+            metrics={supplyChain.chainMetrics}
+          />
+        </div>
+      )}
 
       {/* Metrics Grid */}
       <div>
