@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { autoLinkSubserviceOrgs } from '@/lib/ai/parsers/subservice-linker';
 
 interface RouteParams {
   params: Promise<{
@@ -262,6 +263,16 @@ export async function POST(
             })
             .select('id')
             .single();
+
+          // Auto-link subservice organizations to subcontractors table
+          // This populates the fourth-party supply chain for DORA Article 28(8) compliance
+          try {
+            const linkResult = await autoLinkSubserviceOrgs(documentId);
+            console.log(`[parse-soc2] Auto-linked ${linkResult.created} subcontractors, updated ${linkResult.updated}, skipped ${linkResult.skipped}`);
+          } catch (linkErr) {
+            console.error('[parse-soc2] Auto-link failed (non-fatal):', linkErr);
+            // Don't fail the job if auto-linking fails - it's a secondary operation
+          }
 
           // Complete job
           await serviceClient
