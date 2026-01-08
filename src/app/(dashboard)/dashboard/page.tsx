@@ -12,6 +12,8 @@ import {
   Plus,
   Filter,
   MoreHorizontal,
+  AlertTriangle,
+  Clock,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { getVendorStats } from '@/lib/vendors/queries';
@@ -22,6 +24,7 @@ import {
   formatRelativeTime,
   mapActivityType,
 } from '@/lib/activity/queries';
+import { getIncidentStats, getPendingDeadlines } from '@/lib/incidents/queries';
 import { BoardReportExport } from '@/components/reports/board-report-export';
 
 export const metadata: Metadata = {
@@ -34,11 +37,16 @@ export default async function DashboardPage() {
   const firstName = user?.fullName?.split(' ')[0] || '';
 
   // Fetch real data
-  const [vendorStats, roiStats, recentActivity] = await Promise.all([
+  const [vendorStats, roiStats, recentActivity, incidentStatsResult, pendingDeadlinesResult] = await Promise.all([
     getVendorStats(),
     fetchAllTemplateStats(),
     getRecentActivity(5),
+    getIncidentStats(),
+    getPendingDeadlines(5),
   ]);
+
+  const incidentStats = incidentStatsResult.data;
+  const pendingDeadlines = pendingDeadlinesResult.data;
 
   // Calculate RoI readiness (average completeness across templates with data)
   const templatesWithData = roiStats.filter(s => s.rowCount > 0);
@@ -55,8 +63,39 @@ export default async function DashboardPage() {
   const totalVendors = vendorStats.total;
   const criticalRisks = vendorStats.by_risk.critical;
 
+  // Check for overdue reports
+  const overdueReports = incidentStats?.overdue_reports ?? 0;
+
   return (
     <>
+      {/* Overdue Reports Alert Banner */}
+      {overdueReports > 0 && (
+        <div className="mb-6 p-4 rounded-lg border border-destructive/50 bg-destructive/10 animate-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/20">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <p className="font-semibold text-destructive">
+                  {overdueReports} incident report{overdueReports === 1 ? '' : 's'} overdue
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  DORA requires timely submission to avoid regulatory penalties
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/incidents?filter=overdue"
+              className="btn-primary bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              Review Overdue
+              <ArrowUpRight className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex items-start justify-between mb-8 animate-in">
         <div>
@@ -79,7 +118,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-6 mb-8 stagger">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8 stagger">
         <StatCard
           label="Total Vendors"
           value={totalVendors.toString()}
@@ -100,6 +139,11 @@ export default async function DashboardPage() {
           change={criticalRisks === 0 ? 'None' : `${criticalRisks} vendors`}
           trend="down"
           period=""
+        />
+        <IncidentStatCard
+          major={incidentStats?.by_classification.major ?? 0}
+          significant={incidentStats?.by_classification.significant ?? 0}
+          pending={incidentStats?.pending_reports ?? 0}
         />
         <StatCard
           label="Days to Deadline"
@@ -204,6 +248,43 @@ export default async function DashboardPage() {
             <RiskRow label="Medium" count={vendorStats.by_risk.medium} total={totalVendors} color="bg-chart-5" />
             <RiskRow label="Low" count={vendorStats.by_risk.low} total={totalVendors} color="bg-success" />
           </div>
+        </div>
+
+        {/* Pending Report Deadlines */}
+        <div className="card-premium p-6 animate-slide-up">
+          <div className="flex items-center gap-2 text-muted-foreground mb-4">
+            <Clock className="h-4 w-4" />
+            <span className="text-sm font-medium">Report Deadlines</span>
+          </div>
+          {pendingDeadlines.length > 0 ? (
+            <div className="space-y-3">
+              {pendingDeadlines.slice(0, 3).map((deadline) => (
+                <DeadlineItem
+                  key={`${deadline.incident_id}-${deadline.report_type}`}
+                  incidentId={deadline.incident_id}
+                  incidentRef={deadline.incident_ref}
+                  title={deadline.incident_title}
+                  reportType={deadline.report_type}
+                  hoursRemaining={deadline.hours_remaining}
+                  isOverdue={deadline.is_overdue}
+                />
+              ))}
+              {pendingDeadlines.length > 3 && (
+                <Link
+                  href="/incidents"
+                  className="block text-center text-sm text-primary font-medium hover:underline pt-2"
+                >
+                  View all {pendingDeadlines.length} deadlines
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="py-6 text-center">
+              <CheckCircle2 className="h-8 w-8 mx-auto text-success mb-2" />
+              <p className="text-sm font-medium text-success">All caught up!</p>
+              <p className="text-xs text-muted-foreground">No pending report deadlines</p>
+            </div>
+          )}
         </div>
 
         {/* Getting Started */}
@@ -383,6 +464,106 @@ function StepItem({
       </div>
       <span className="flex-1 text-sm font-medium">{title}</span>
       <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+    </Link>
+  );
+}
+
+function IncidentStatCard({
+  major,
+  significant,
+  pending,
+}: {
+  major: number;
+  significant: number;
+  pending: number;
+}) {
+  const total = major + significant;
+  const hasCritical = major > 0;
+
+  return (
+    <Link href="/incidents" className="stat-card group hover:border-primary/50 transition-colors">
+      <p className="stat-label mb-2">Active Incidents</p>
+      <div className="flex items-baseline gap-2">
+        <p className={`stat-value ${hasCritical ? 'text-destructive' : ''}`}>{total}</p>
+        {hasCritical && (
+          <span className="text-xs font-medium text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
+            {major} major
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 mt-2">
+        {pending > 0 ? (
+          <>
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <span className="text-sm text-warning font-medium">{pending} pending</span>
+          </>
+        ) : (
+          <>
+            <CheckCircle2 className="h-4 w-4 text-success" />
+            <span className="text-sm text-success font-medium">All reported</span>
+          </>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function DeadlineItem({
+  incidentId,
+  incidentRef,
+  title,
+  reportType,
+  hoursRemaining,
+  isOverdue,
+}: {
+  incidentId: string;
+  incidentRef: string;
+  title: string;
+  reportType: string;
+  hoursRemaining: number;
+  isOverdue: boolean;
+}) {
+  const reportTypeLabel = {
+    initial: 'Initial (4h)',
+    intermediate: 'Intermediate (72h)',
+    final: 'Final (30d)',
+  }[reportType] || reportType;
+
+  const getUrgencyStyles = () => {
+    if (isOverdue) return 'bg-destructive/10 border-destructive/30 text-destructive';
+    if (hoursRemaining <= 4) return 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400';
+    if (hoursRemaining <= 24) return 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400';
+    return 'bg-card border-border';
+  };
+
+  const formatTimeRemaining = () => {
+    if (isOverdue) {
+      const overdueDays = Math.abs(Math.floor(hoursRemaining / 24));
+      const overdueHours = Math.abs(hoursRemaining % 24);
+      if (overdueDays > 0) return `${overdueDays}d ${overdueHours}h overdue`;
+      return `${Math.abs(hoursRemaining)}h overdue`;
+    }
+    if (hoursRemaining >= 24) {
+      const days = Math.floor(hoursRemaining / 24);
+      const hours = hoursRemaining % 24;
+      return `${days}d ${hours}h remaining`;
+    }
+    return `${hoursRemaining}h remaining`;
+  };
+
+  return (
+    <Link href={`/incidents/${incidentId}`}>
+      <div className={`p-3 rounded-lg border transition-colors hover:bg-accent/50 ${getUrgencyStyles()}`}>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-mono text-muted-foreground">{incidentRef}</span>
+          <span className="text-xs font-medium">{reportTypeLabel}</span>
+        </div>
+        <p className="text-sm font-medium truncate mb-1">{title}</p>
+        <div className="flex items-center gap-1.5">
+          <Clock className="h-3.5 w-3.5" />
+          <span className="text-xs font-medium">{formatTimeRemaining()}</span>
+        </div>
+      </div>
     </Link>
   );
 }
