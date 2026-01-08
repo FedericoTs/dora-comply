@@ -33,6 +33,7 @@ import { VendorDocuments } from './vendor-documents';
 import { VendorContacts } from '@/components/vendors/vendor-contacts';
 import { VendorContracts } from '@/components/vendors/vendor-contracts';
 import { VendorDORACompliance } from '@/components/vendors/vendor-dora-compliance';
+import { VendorFrameworksTab } from '@/components/vendors/frameworks';
 import { VendorTabs } from './vendor-tabs';
 
 interface VendorDetailPageProps {
@@ -368,6 +369,7 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
             factors={vendor.external_score_factors as Array<{ name: string; score: number; grade: string; issueCount: number }> | null}
           />
         }
+        frameworks={<VendorFrameworksTab vendorId={vendor.id} vendorName={vendor.name} />}
       />
     </div>
   );
