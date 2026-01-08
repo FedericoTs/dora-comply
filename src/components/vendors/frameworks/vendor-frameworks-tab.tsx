@@ -29,6 +29,7 @@ import { FrameworkSelector } from './framework-selector';
 import { FrameworkComplianceCard } from './framework-compliance-card';
 import { FrameworkCategoryBreakdown } from './framework-category-breakdown';
 import { FrameworkGapsList } from './framework-gaps-list';
+import { FrameworkComparisonChart } from './framework-comparison-chart';
 
 interface VendorFrameworksTabProps {
   vendorId: string;
@@ -355,6 +356,11 @@ export function VendorFrameworksTab({ vendorId, vendorName }: VendorFrameworksTa
             />
           )}
         </>
+      )}
+
+      {/* Framework Comparison Chart */}
+      {Object.keys(complianceResults).length > 0 && (
+        <FrameworkComparisonChart results={complianceResults} />
       )}
 
       {/* Quick Actions */}

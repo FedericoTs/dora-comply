@@ -9,3 +9,4 @@ export { FrameworkSelector, FRAMEWORK_CONFIG, STATUS_STYLES } from './framework-
 export { FrameworkComplianceCard } from './framework-compliance-card';
 export { FrameworkCategoryBreakdown } from './framework-category-breakdown';
 export { FrameworkGapsList } from './framework-gaps-list';
+export { FrameworkComparisonChart } from './framework-comparison-chart';
