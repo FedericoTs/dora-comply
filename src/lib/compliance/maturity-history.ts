@@ -58,20 +58,20 @@ export async function createMaturitySnapshot(
     }
 
     // Get user's organization
-    const { data: profile } = await supabase
-      .from('profiles')
+    const { data: userData } = await supabase
+      .from('users')
       .select('organization_id')
       .eq('id', user.id)
       .single();
 
-    if (!profile?.organization_id) {
+    if (!userData?.organization_id) {
       return { success: false, error: 'No organization found' };
     }
 
     // Get current compliance data
     const complianceData = await getCurrentComplianceData(
       supabase,
-      profile.organization_id,
+      userData.organization_id,
       vendorId
     );
 
@@ -82,7 +82,7 @@ export async function createMaturitySnapshot(
     // Calculate change from previous snapshot
     const changeFromPrevious = await calculateChangeFromPrevious(
       supabase,
-      profile.organization_id,
+      userData.organization_id,
       vendorId,
       complianceData
     );
@@ -91,7 +91,7 @@ export async function createMaturitySnapshot(
     const { data: snapshot, error } = await supabase
       .from('maturity_snapshots')
       .insert({
-        organization_id: profile.organization_id,
+        organization_id: userData.organization_id,
         vendor_id: vendorId || null,
         snapshot_type: snapshotType,
         snapshot_date: new Date().toISOString().split('T')[0],
@@ -145,7 +145,7 @@ export async function createMaturitySnapshot(
     // Log the change if there was a significant change
     if (changeFromPrevious && changeFromPrevious.overall_change !== 0) {
       await logMaturityChange(supabase, {
-        organization_id: profile.organization_id,
+        organization_id: userData.organization_id,
         vendor_id: vendorId,
         change_type: 'maturity_level_change',
         previous_value: { level: changeFromPrevious.previous_overall },
@@ -831,19 +831,19 @@ export async function updateSnapshotSettings(
       return { success: false, error: 'Not authenticated' };
     }
 
-    const { data: userProfile } = await supabase
-      .from('profiles')
+    const { data: userRecord } = await supabase
+      .from('users')
       .select('organization_id')
       .eq('id', profile.user.id)
       .single();
 
-    if (!userProfile?.organization_id) {
+    if (!userRecord?.organization_id) {
       return { success: false, error: 'No organization found' };
     }
 
     const { error } = await supabase.from('maturity_snapshot_settings').upsert(
       {
-        organization_id: userProfile.organization_id,
+        organization_id: userRecord.organization_id,
         ...settings,
         updated_at: new Date().toISOString(),
       },
