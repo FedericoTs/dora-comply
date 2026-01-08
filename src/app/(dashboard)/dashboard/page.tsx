@@ -25,9 +25,10 @@ import {
   formatRelativeTime,
   mapActivityType,
 } from '@/lib/activity/queries';
-import { getIncidentStats, getPendingDeadlines } from '@/lib/incidents/queries';
+import { getIncidentStatsEnhanced, getPendingDeadlines } from '@/lib/incidents/queries';
 import { getTestingStats } from '@/lib/testing/queries';
 import { BoardReportExport } from '@/components/reports/board-report-export';
+import { IncidentMetricsCard } from '@/components/incidents/dashboard';
 
 export const metadata: Metadata = {
   title: 'Dashboard | DORA Comply',
@@ -43,7 +44,7 @@ export default async function DashboardPage() {
     getVendorStats(),
     fetchAllTemplateStats(),
     getRecentActivity(5),
-    getIncidentStats(),
+    getIncidentStatsEnhanced(),
     getPendingDeadlines(5),
     getTestingStats(),
   ]);
@@ -202,11 +203,15 @@ export default async function DashboardPage() {
           trend="down"
           period=""
         />
-        <IncidentStatCard
-          major={incidentStats?.by_classification.major ?? 0}
-          significant={incidentStats?.by_classification.significant ?? 0}
-          pending={incidentStats?.pending_reports ?? 0}
-        />
+        {incidentStats ? (
+          <IncidentMetricsCard stats={incidentStats} />
+        ) : (
+          <IncidentStatCard
+            major={0}
+            significant={0}
+            pending={0}
+          />
+        )}
         <TestingStatCard
           testTypeCoverage={testingStats?.test_type_coverage ?? 0}
           openFindings={testingStats?.critical_open_findings ?? 0}

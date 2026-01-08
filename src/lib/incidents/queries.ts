@@ -14,6 +14,10 @@ import type {
   IncidentFilters,
   IncidentSortOptions,
   IncidentStats,
+  IncidentStatsEnhanced,
+  IncidentTrendPoint,
+  ResponseMetrics,
+  ThirdPartyIncidentSummary,
   PendingDeadline,
   CreateIncidentInput,
   UpdateIncidentInput,
@@ -614,6 +618,245 @@ export async function getPendingDeadlines(limit = 10): Promise<{ data: PendingDe
   });
 
   return { data: deadlines, error: null };
+}
+
+// ============================================================================
+// Enhanced Dashboard Statistics (DORA Article 19 Metrics)
+// ============================================================================
+
+/**
+ * Get 30-day incident trend data for dashboard sparkline
+ */
+export async function getIncidentTrendData(days = 30): Promise<{ data: IncidentTrendPoint[]; error: string | null }> {
+  const supabase = await createClient();
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  const { data: incidents, error } = await supabase
+    .from('incidents')
+    .select('classification, detection_datetime')
+    .gte('detection_datetime', startDate.toISOString());
+
+  if (error) {
+    console.error('[Incidents] Trend data error:', error);
+    return { data: [], error: error.message };
+  }
+
+  // Create date buckets for the last N days
+  const trendMap = new Map<string, IncidentTrendPoint>();
+  for (let i = 0; i < days; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() - (days - 1 - i));
+    const dateKey = date.toISOString().split('T')[0];
+    trendMap.set(dateKey, {
+      date: dateKey,
+      total: 0,
+      major: 0,
+      significant: 0,
+      minor: 0,
+    });
+  }
+
+  // Aggregate incidents by date
+  for (const incident of incidents || []) {
+    const dateKey = incident.detection_datetime.split('T')[0];
+    const point = trendMap.get(dateKey);
+    if (point) {
+      point.total++;
+      if (incident.classification === 'major') point.major++;
+      else if (incident.classification === 'significant') point.significant++;
+      else point.minor++;
+    }
+  }
+
+  return { data: Array.from(trendMap.values()), error: null };
+}
+
+/**
+ * Get response time metrics for DORA Article 19 compliance tracking
+ */
+export async function getResponseMetrics(): Promise<{ data: ResponseMetrics | null; error: string | null }> {
+  const supabase = await createClient();
+
+  // Get incidents with timing data (last 90 days for meaningful averages)
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+  const { data: incidents, error: incidentError } = await supabase
+    .from('incidents')
+    .select('detection_datetime, occurrence_datetime, resolution_datetime')
+    .gte('created_at', ninetyDaysAgo.toISOString());
+
+  if (incidentError) {
+    console.error('[Incidents] Response metrics error:', incidentError);
+    return { data: null, error: incidentError.message };
+  }
+
+  // Get report submission timing
+  const { data: reports, error: reportError } = await supabase
+    .from('incident_reports')
+    .select('deadline, submitted_at, status')
+    .gte('created_at', ninetyDaysAgo.toISOString());
+
+  if (reportError) {
+    console.error('[Incidents] Report metrics error:', reportError);
+    return { data: null, error: reportError.message };
+  }
+
+  // Calculate mean time to detect (detection - occurrence)
+  let totalDetectHours = 0;
+  let detectCount = 0;
+  for (const inc of incidents || []) {
+    if (inc.occurrence_datetime && inc.detection_datetime) {
+      const occurrenceDate = new Date(inc.occurrence_datetime);
+      const detectionDate = new Date(inc.detection_datetime);
+      const diffHours = (detectionDate.getTime() - occurrenceDate.getTime()) / (1000 * 60 * 60);
+      if (diffHours >= 0) {
+        totalDetectHours += diffHours;
+        detectCount++;
+      }
+    }
+  }
+
+  // Calculate mean time to resolve (resolution - detection)
+  let totalResolveHours = 0;
+  let resolveCount = 0;
+  for (const inc of incidents || []) {
+    if (inc.resolution_datetime && inc.detection_datetime) {
+      const detectionDate = new Date(inc.detection_datetime);
+      const resolutionDate = new Date(inc.resolution_datetime);
+      const diffHours = (resolutionDate.getTime() - detectionDate.getTime()) / (1000 * 60 * 60);
+      if (diffHours >= 0) {
+        totalResolveHours += diffHours;
+        resolveCount++;
+      }
+    }
+  }
+
+  // Calculate on-time report rate
+  let reportsOnTime = 0;
+  let reportsLate = 0;
+  let totalReportHours = 0;
+  let reportCount = 0;
+
+  for (const report of reports || []) {
+    if (report.status === 'submitted' || report.status === 'acknowledged') {
+      if (report.submitted_at && report.deadline) {
+        const submittedDate = new Date(report.submitted_at);
+        const deadlineDate = new Date(report.deadline);
+        if (submittedDate <= deadlineDate) {
+          reportsOnTime++;
+        } else {
+          reportsLate++;
+        }
+        // Track time from creation to submission (approximation for MTTR)
+        const diffHours = (submittedDate.getTime() - deadlineDate.getTime()) / (1000 * 60 * 60);
+        totalReportHours += Math.abs(diffHours);
+        reportCount++;
+      }
+    }
+  }
+
+  const totalSubmitted = reportsOnTime + reportsLate;
+  const onTimeRate = totalSubmitted > 0 ? Math.round((reportsOnTime / totalSubmitted) * 100) : 100;
+
+  const metrics: ResponseMetrics = {
+    mean_time_to_detect_hours: detectCount > 0 ? Math.round(totalDetectHours / detectCount * 10) / 10 : null,
+    mean_time_to_report_hours: reportCount > 0 ? Math.round(totalReportHours / reportCount * 10) / 10 : null,
+    mean_time_to_resolve_hours: resolveCount > 0 ? Math.round(totalResolveHours / resolveCount * 10) / 10 : null,
+    on_time_report_rate: onTimeRate,
+    reports_on_time: reportsOnTime,
+    reports_late: reportsLate,
+  };
+
+  return { data: metrics, error: null };
+}
+
+/**
+ * Get third-party incident statistics for vendor correlation
+ */
+export async function getThirdPartyIncidentStats(): Promise<{ data: ThirdPartyIncidentSummary[]; error: string | null }> {
+  const supabase = await createClient();
+
+  // Get incidents linked to vendors (last 12 months)
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+  const { data: incidents, error } = await supabase
+    .from('incidents')
+    .select('vendor_id, vendor:vendors(name)')
+    .not('vendor_id', 'is', null)
+    .gte('created_at', oneYearAgo.toISOString());
+
+  if (error) {
+    console.error('[Incidents] Third-party stats error:', error);
+    return { data: [], error: error.message };
+  }
+
+  // Aggregate by vendor
+  const vendorMap = new Map<string, { name: string; count: number }>();
+  for (const incident of incidents || []) {
+    if (incident.vendor_id) {
+      const vendorData = incident.vendor;
+      const vendor = Array.isArray(vendorData)
+        ? (vendorData[0] as { name: string } | undefined)
+        : (vendorData as { name: string } | null);
+      const vendorName = vendor?.name || 'Unknown';
+
+      const existing = vendorMap.get(incident.vendor_id);
+      if (existing) {
+        existing.count++;
+      } else {
+        vendorMap.set(incident.vendor_id, { name: vendorName, count: 1 });
+      }
+    }
+  }
+
+  // Sort by count descending
+  const results: ThirdPartyIncidentSummary[] = Array.from(vendorMap.entries())
+    .map(([vendor_id, data]) => ({
+      vendor_id,
+      vendor_name: data.name,
+      incident_count: data.count,
+    }))
+    .sort((a, b) => b.incident_count - a.incident_count);
+
+  return { data: results, error: null };
+}
+
+/**
+ * Get enhanced incident statistics combining all metrics for dashboard
+ */
+export async function getIncidentStatsEnhanced(): Promise<{ data: IncidentStatsEnhanced | null; error: string | null }> {
+  // Fetch all data in parallel
+  const [baseStatsResult, trendResult, metricsResult, thirdPartyResult] = await Promise.all([
+    getIncidentStats(),
+    getIncidentTrendData(30),
+    getResponseMetrics(),
+    getThirdPartyIncidentStats(),
+  ]);
+
+  if (baseStatsResult.error || !baseStatsResult.data) {
+    return { data: null, error: baseStatsResult.error || 'Failed to fetch base stats' };
+  }
+
+  const enhancedStats: IncidentStatsEnhanced = {
+    ...baseStatsResult.data,
+    trend_30d: trendResult.data || [],
+    response_metrics: metricsResult.data || {
+      mean_time_to_detect_hours: null,
+      mean_time_to_report_hours: null,
+      mean_time_to_resolve_hours: null,
+      on_time_report_rate: 100,
+      reports_on_time: 0,
+      reports_late: 0,
+    },
+    third_party_count: thirdPartyResult.data?.length || 0,
+    third_party_vendors: thirdPartyResult.data?.slice(0, 5) || [], // Top 5 vendors
+  };
+
+  return { data: enhancedStats, error: null };
 }
 
 // ============================================================================

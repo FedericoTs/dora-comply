@@ -266,6 +266,40 @@ export interface PendingDeadline {
 }
 
 // ============================================================================
+// Dashboard Enhanced Types (DORA Article 19 Metrics)
+// ============================================================================
+
+export interface IncidentTrendPoint {
+  date: string;
+  total: number;
+  major: number;
+  significant: number;
+  minor: number;
+}
+
+export interface ResponseMetrics {
+  mean_time_to_detect_hours: number | null;
+  mean_time_to_report_hours: number | null;
+  mean_time_to_resolve_hours: number | null;
+  on_time_report_rate: number;
+  reports_on_time: number;
+  reports_late: number;
+}
+
+export interface ThirdPartyIncidentSummary {
+  vendor_id: string;
+  vendor_name: string;
+  incident_count: number;
+}
+
+export interface IncidentStatsEnhanced extends IncidentStats {
+  trend_30d: IncidentTrendPoint[];
+  response_metrics: ResponseMetrics;
+  third_party_count: number;
+  third_party_vendors: ThirdPartyIncidentSummary[];
+}
+
+// ============================================================================
 // Classification Calculation Types
 // ============================================================================
 
