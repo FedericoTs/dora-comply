@@ -9,12 +9,14 @@ export * from './dora-nis2';
 export * from './dora-iso27001';
 export * from './dora-gdpr';
 export * from './nis2-iso27001';
+export * from './gdpr-iso27001';
 
 // Re-export all mappings as a combined array
 import { DORA_NIS2_MAPPINGS } from './dora-nis2';
 import { DORA_ISO27001_MAPPINGS } from './dora-iso27001';
 import { DORA_GDPR_MAPPINGS } from './dora-gdpr';
 import { NIS2_ISO27001_MAPPINGS } from './nis2-iso27001';
+import { GDPR_ISO27001_MAPPINGS } from './gdpr-iso27001';
 import { CrossFrameworkMapping, FrameworkCode } from '../framework-types';
 
 /**
@@ -25,6 +27,7 @@ export const ALL_FRAMEWORK_MAPPINGS: CrossFrameworkMapping[] = [
   ...DORA_ISO27001_MAPPINGS,
   ...DORA_GDPR_MAPPINGS,
   ...NIS2_ISO27001_MAPPINGS,
+  ...GDPR_ISO27001_MAPPINGS,
 ];
 
 /**
