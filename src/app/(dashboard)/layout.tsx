@@ -14,6 +14,7 @@ import {
   Network,
   FlaskConical,
   BarChart3,
+  Layers,
 } from 'lucide-react';
 import { ThemeToggleSimple } from '@/components/ui/theme-toggle';
 import { NavigationProviders } from '@/components/navigation';
@@ -29,6 +30,7 @@ const navigation = [
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'Resilience Testing', href: '/testing', icon: FlaskConical },
   { name: 'Compliance Trends', href: '/compliance/trends', icon: BarChart3 },
+  { name: 'Frameworks', href: '/frameworks', icon: Layers },
 ];
 
 const secondaryNavigation = [
