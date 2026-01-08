@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   AlertTriangle,
   Clock,
+  Target,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { getVendorStats } from '@/lib/vendors/queries';
@@ -25,6 +26,7 @@ import {
   mapActivityType,
 } from '@/lib/activity/queries';
 import { getIncidentStats, getPendingDeadlines } from '@/lib/incidents/queries';
+import { getTestingStats } from '@/lib/testing/queries';
 import { BoardReportExport } from '@/components/reports/board-report-export';
 
 export const metadata: Metadata = {
@@ -37,16 +39,18 @@ export default async function DashboardPage() {
   const firstName = user?.fullName?.split(' ')[0] || '';
 
   // Fetch real data
-  const [vendorStats, roiStats, recentActivity, incidentStatsResult, pendingDeadlinesResult] = await Promise.all([
+  const [vendorStats, roiStats, recentActivity, incidentStatsResult, pendingDeadlinesResult, testingStatsResult] = await Promise.all([
     getVendorStats(),
     fetchAllTemplateStats(),
     getRecentActivity(5),
     getIncidentStats(),
     getPendingDeadlines(5),
+    getTestingStats(),
   ]);
 
   const incidentStats = incidentStatsResult.data;
   const pendingDeadlines = pendingDeadlinesResult.data;
+  const testingStats = testingStatsResult.data;
 
   // Calculate RoI readiness (average completeness across templates with data)
   const templatesWithData = roiStats.filter(s => s.rowCount > 0);
@@ -63,14 +67,16 @@ export default async function DashboardPage() {
   const totalVendors = vendorStats.total;
   const criticalRisks = vendorStats.by_risk.critical;
 
-  // Check for overdue reports
+  // Check for overdue items
   const overdueReports = incidentStats?.overdue_reports ?? 0;
+  const tlptOverdue = testingStats?.tlpt_overdue ?? 0;
+  const tlptDueSoon = testingStats?.tlpt_due_soon ?? 0;
 
   return (
     <>
       {/* Overdue Reports Alert Banner */}
       {overdueReports > 0 && (
-        <div className="mb-6 p-4 rounded-lg border border-destructive/50 bg-destructive/10 animate-in">
+        <div className="mb-4 p-4 rounded-lg border border-destructive/50 bg-destructive/10 animate-in">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/20">
@@ -90,6 +96,62 @@ export default async function DashboardPage() {
               className="btn-primary bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             >
               Review Overdue
+              <ArrowUpRight className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* TLPT Overdue Alert Banner */}
+      {tlptOverdue > 0 && (
+        <div className="mb-4 p-4 rounded-lg border border-amber-500/50 bg-amber-500/10 animate-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20">
+                <Target className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-amber-700 dark:text-amber-500">
+                  TLPT testing overdue
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  DORA Article 26 requires threat-led penetration testing every 3 years
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/testing/tlpt"
+              className="btn-primary bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Schedule TLPT
+              <ArrowUpRight className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* TLPT Due Soon Warning (only show if no overdue) */}
+      {tlptOverdue === 0 && tlptDueSoon > 0 && (
+        <div className="mb-4 p-4 rounded-lg border border-blue-500/50 bg-blue-500/10 animate-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
+                <Target className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-blue-700 dark:text-blue-400">
+                  TLPT testing due within 6 months
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Plan your next threat-led penetration test to maintain compliance
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/testing/tlpt"
+              className="btn-secondary"
+            >
+              View TLPT Schedule
               <ArrowUpRight className="h-4 w-4 ml-1" />
             </Link>
           </div>
@@ -118,7 +180,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8 stagger">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 stagger">
         <StatCard
           label="Total Vendors"
           value={totalVendors.toString()}
@@ -144,6 +206,11 @@ export default async function DashboardPage() {
           major={incidentStats?.by_classification.major ?? 0}
           significant={incidentStats?.by_classification.significant ?? 0}
           pending={incidentStats?.pending_reports ?? 0}
+        />
+        <TestingStatCard
+          testTypeCoverage={testingStats?.test_type_coverage ?? 0}
+          openFindings={testingStats?.critical_open_findings ?? 0}
+          tlptStatus={tlptOverdue > 0 ? 'overdue' : tlptDueSoon > 0 ? 'due_soon' : 'compliant'}
         />
         <StatCard
           label="Days to Deadline"
@@ -563,6 +630,49 @@ function DeadlineItem({
           <Clock className="h-3.5 w-3.5" />
           <span className="text-xs font-medium">{formatTimeRemaining()}</span>
         </div>
+      </div>
+    </Link>
+  );
+}
+
+function TestingStatCard({
+  testTypeCoverage,
+  openFindings,
+  tlptStatus,
+}: {
+  testTypeCoverage: number;
+  openFindings: number;
+  tlptStatus: 'overdue' | 'due_soon' | 'compliant';
+}) {
+  const getStatusDisplay = () => {
+    switch (tlptStatus) {
+      case 'overdue':
+        return { label: 'TLPT Overdue', color: 'text-destructive', bgColor: 'bg-destructive/10' };
+      case 'due_soon':
+        return { label: 'TLPT Due Soon', color: 'text-amber-600', bgColor: 'bg-amber-500/10' };
+      default:
+        return { label: 'TLPT Compliant', color: 'text-success', bgColor: 'bg-success/10' };
+    }
+  };
+
+  const status = getStatusDisplay();
+
+  return (
+    <Link href="/testing" className="stat-card group hover:border-primary/50 transition-colors">
+      <p className="stat-label mb-2">Testing & TLPT</p>
+      <div className="flex items-baseline gap-2">
+        <p className="stat-value">{testTypeCoverage}%</p>
+        <span className="text-xs text-muted-foreground">coverage</span>
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${status.color} ${status.bgColor}`}>
+          {status.label}
+        </span>
+        {openFindings > 0 && (
+          <span className="text-xs text-muted-foreground">
+            {openFindings} critical
+          </span>
+        )}
       </div>
     </Link>
   );
