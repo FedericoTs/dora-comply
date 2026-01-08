@@ -23,7 +23,6 @@ import {
 import {
   calculateFrameworkCompliance,
   getFrameworkRequirements,
-  getComplianceStatusFromScore,
 } from '@/lib/compliance/framework-calculator';
 
 import { FrameworkSelector } from './framework-selector';

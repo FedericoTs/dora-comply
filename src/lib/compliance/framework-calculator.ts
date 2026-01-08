@@ -22,6 +22,7 @@ import {
 import { NIS2_REQUIREMENTS } from './nis2-requirements';
 import { GDPR_REQUIREMENTS } from './gdpr-requirements';
 import { ISO27001_REQUIREMENTS } from './iso27001-requirements';
+import { DORA_REQUIREMENTS } from './dora-requirements-data';
 import {
   getMappingsForRequirement,
   calculateCrossFrameworkCoverage,
@@ -29,11 +30,41 @@ import {
 } from './mappings';
 
 // ============================================================================
+// DORA Requirements Conversion
+// ============================================================================
+
+// Convert DORA requirements from DORARequirement format to FrameworkRequirement format
+const DORA_FRAMEWORK_REQUIREMENTS: FrameworkRequirement[] = DORA_REQUIREMENTS.map((req, index) => ({
+  id: req.id,
+  framework: 'dora' as FrameworkCode,
+  article_number: req.article_number,
+  title: req.article_title,
+  description: req.requirement_text,
+  category: req.pillar,
+  priority: req.priority as RequirementPriority,
+  evidence_types: req.evidence_needed.map(e => {
+    // Map evidence strings to EvidenceType
+    if (e.toLowerCase().includes('policy')) return 'policy';
+    if (e.toLowerCase().includes('procedure')) return 'procedure';
+    if (e.toLowerCase().includes('soc') || e.toLowerCase().includes('audit')) return 'soc2_report';
+    if (e.toLowerCase().includes('test')) return 'penetration_test';
+    if (e.toLowerCase().includes('training')) return 'training_record';
+    if (e.toLowerCase().includes('contract')) return 'contract';
+    if (e.toLowerCase().includes('certificate')) return 'certificate';
+    return 'technical_control';
+  }) as FrameworkRequirement['evidence_types'],
+  applicability: req.applies_to?.includes('all') ? undefined : req.applies_to as FrameworkRequirement['applicability'],
+  sort_order: index + 1,
+  implementation_guidance: `Implement controls to satisfy: ${req.evidence_needed.join(', ')}`,
+  regulatory_reference: `DORA ${req.chapter ? `Chapter ${req.chapter}, ` : ''}${req.article_number}`,
+}));
+
+// ============================================================================
 // Requirement Access Functions
 // ============================================================================
 
 const FRAMEWORK_REQUIREMENTS: Record<FrameworkCode, FrameworkRequirement[]> = {
-  dora: [], // DORA requirements are in a separate existing file
+  dora: DORA_FRAMEWORK_REQUIREMENTS,
   nis2: NIS2_REQUIREMENTS,
   gdpr: GDPR_REQUIREMENTS,
   iso27001: ISO27001_REQUIREMENTS,
