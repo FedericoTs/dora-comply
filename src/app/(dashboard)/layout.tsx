@@ -13,6 +13,7 @@ import {
   Bell,
   Network,
   FlaskConical,
+  BarChart3,
 } from 'lucide-react';
 import { ThemeToggleSimple } from '@/components/ui/theme-toggle';
 import { NavigationProviders } from '@/components/navigation';
@@ -27,6 +28,7 @@ const navigation = [
   { name: 'Register of Information', href: '/roi', icon: BookOpen },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'Resilience Testing', href: '/testing', icon: FlaskConical },
+  { name: 'Compliance Trends', href: '/compliance/trends', icon: BarChart3 },
 ];
 
 const secondaryNavigation = [
