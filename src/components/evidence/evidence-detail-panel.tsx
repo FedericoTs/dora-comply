@@ -302,7 +302,7 @@ export function EvidenceDetailPanel({
                             </p>
                             {entry.changeReason && (
                               <p className="text-xs text-muted-foreground mt-1 italic">
-                                "{entry.changeReason}"
+                                &quot;{entry.changeReason}&quot;
                               </p>
                             )}
                           </div>

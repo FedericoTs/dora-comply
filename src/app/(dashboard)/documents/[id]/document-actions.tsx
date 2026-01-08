@@ -221,7 +221,7 @@ export function DocumentActions({ document }: DocumentActionsProps) {
           <DialogHeader>
             <DialogTitle>Delete Document</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{document.filename}"? This action
+              Are you sure you want to delete &quot;{document.filename}&quot;? This action
               cannot be undone and will permanently remove the file from storage.
             </DialogDescription>
           </DialogHeader>

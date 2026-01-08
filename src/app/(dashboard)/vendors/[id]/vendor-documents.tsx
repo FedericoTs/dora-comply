@@ -428,7 +428,7 @@ export function VendorDocuments({ vendorId, vendorName }: VendorDocumentsProps) 
           <DialogHeader>
             <DialogTitle>Delete Document</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{selectedDocument?.filename}"? This action
+              Are you sure you want to delete &quot;{selectedDocument?.filename}&quot;? This action
               cannot be undone.
             </DialogDescription>
           </DialogHeader>

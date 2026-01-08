@@ -183,7 +183,7 @@ export async function getDocumentSummary(): Promise<DocumentSummary> {
       return date > now && date <= thirtyDaysFromNow;
     })
     .map(d => {
-      const validUntil = (d.metadata as { valid_until?: string })?.valid_until!;
+      const validUntil = (d.metadata as { valid_until?: string })?.valid_until ?? '';
       return {
         id: d.id,
         name: d.filename,
@@ -206,7 +206,7 @@ export async function getDocumentSummary(): Promise<DocumentSummary> {
       id: d.id,
       name: d.filename,
       vendor_name: d.vendor_id ? (vendorMap[d.vendor_id] || 'Unknown') : 'No vendor',
-      expired_at: (d.metadata as { valid_until?: string })?.valid_until!,
+      expired_at: (d.metadata as { valid_until?: string })?.valid_until ?? '',
     }))
     .slice(0, 10);
 

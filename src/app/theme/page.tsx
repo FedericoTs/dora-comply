@@ -118,7 +118,7 @@ export default function ThemePage() {
               <div>
                 <h1 className="mb-1">Good morning, Sarah</h1>
                 <p className="text-muted-foreground">
-                  Here's what's happening with your compliance program today.
+                  Here&apos;s what&apos;s happening with your compliance program today.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -233,7 +233,7 @@ export default function ThemePage() {
                     <div>
                       <p className="text-sm font-medium mb-1">On track</p>
                       <p className="text-xs text-muted-foreground">
-                        You're ahead of schedule. Keep up the great work!
+                        You&apos;re ahead of schedule. Keep up the great work!
                       </p>
                     </div>
                   </div>

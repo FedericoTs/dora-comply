@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   FileText,
   Upload,
@@ -539,9 +540,9 @@ export function DocumentsClient({ initialData }: DocumentsClientProps) {
               ) : vendors.length === 0 ? (
                 <div className="text-sm text-muted-foreground p-2 border rounded-md">
                   No vendors found. Please{' '}
-                  <a href="/vendors" className="text-primary hover:underline">
+                  <Link href="/vendors" className="text-primary hover:underline">
                     create a vendor
-                  </a>{' '}
+                  </Link>{' '}
                   first.
                 </div>
               ) : (
@@ -612,7 +613,7 @@ export function DocumentsClient({ initialData }: DocumentsClientProps) {
           <DialogHeader>
             <DialogTitle>Delete Document</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{selectedDocument?.filename}"? This action
+              Are you sure you want to delete &quot;{selectedDocument?.filename}&quot;? This action
               cannot be undone.
             </DialogDescription>
           </DialogHeader>
