@@ -13,9 +13,7 @@ import {
   ComplianceStatus,
   RequirementPriority,
   RequirementAssessment,
-  VendorFrameworkCompliance,
   getPriorityWeight,
-  getComplianceStatusColor,
   ALL_FRAMEWORK_CATEGORIES,
 } from './framework-types';
 

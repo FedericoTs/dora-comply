@@ -219,7 +219,9 @@ function calculateRequirementEvidence(
  */
 function createMissingEvidence(
   requirement: DORARequirement,
-  documentInfo: { id: string; name: string }
+  // Parameter kept for API consistency with extractEvidenceForRequirement
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _documentInfo: { id: string; name: string }
 ): VendorDORAEvidence {
   // Find the mapping to get gap description
   const mapping = SOC2_TO_DORA_MAPPINGS.find(

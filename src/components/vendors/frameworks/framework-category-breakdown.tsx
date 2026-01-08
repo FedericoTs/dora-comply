@@ -9,7 +9,6 @@
 
 import { CheckCircle2, AlertTriangle, XCircle, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { FrameworkCode, ComplianceStatus } from '@/lib/compliance/framework-types';
