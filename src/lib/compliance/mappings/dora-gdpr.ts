@@ -18,7 +18,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-001',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art8',
+    source_requirement_id: 'dora-art-8',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-1a-encrypt',    // Encryption
     mapping_type: 'equivalent',
@@ -30,7 +30,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-002',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art8',
+    source_requirement_id: 'dora-art-8',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-1a-pseudo',     // Pseudonymisation
     mapping_type: 'partial',
@@ -42,7 +42,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-003',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',
+    source_requirement_id: 'dora-art-9',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-1b-conf',       // Confidentiality
     mapping_type: 'equivalent',
@@ -54,7 +54,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-004',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',
+    source_requirement_id: 'dora-art-9',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-1b-integ',      // Integrity
     mapping_type: 'equivalent',
@@ -66,7 +66,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-005',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art11',
+    source_requirement_id: 'dora-art-11',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-1b-avail',      // Availability
     mapping_type: 'equivalent',
@@ -78,7 +78,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-006',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',
+    source_requirement_id: 'dora-art-9',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-2-disclosure',  // Protection Against Disclosure
     mapping_type: 'equivalent',
@@ -94,7 +94,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-007',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art10',
+    source_requirement_id: 'dora-art-10',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-1c-resilience', // Resilience
     mapping_type: 'partial',
@@ -106,7 +106,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-008',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art11',
+    source_requirement_id: 'dora-art-11',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-1c-restore',    // Timely Restoration
     mapping_type: 'equivalent',
@@ -118,7 +118,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-009',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art11',
+    source_requirement_id: 'dora-art-11',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-2-destruction', // Protection Against Destruction
     mapping_type: 'equivalent',
@@ -130,7 +130,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-010',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art11',
+    source_requirement_id: 'dora-art-11',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-2-loss',        // Protection Against Loss
     mapping_type: 'equivalent',
@@ -146,7 +146,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-011',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art17',
+    source_requirement_id: 'dora-art-17',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-org-incident',  // Security Incident Response
     mapping_type: 'equivalent',
@@ -162,7 +162,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-012',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art24',
+    source_requirement_id: 'dora-art-24',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-1d-test',       // Regular Testing
     mapping_type: 'partial',
@@ -174,7 +174,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-013',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art25',
+    source_requirement_id: 'dora-art-25',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-1d-assess',     // Security Assessment
     mapping_type: 'partial',
@@ -186,7 +186,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-014',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art12',
+    source_requirement_id: 'dora-art-12',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-1d-eval',       // Evaluation
     mapping_type: 'partial',
@@ -202,7 +202,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-015',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art5',
+    source_requirement_id: 'dora-art-5',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-2-risk',        // Risk Assessment
     mapping_type: 'partial',
@@ -218,7 +218,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-016',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art5',
+    source_requirement_id: 'dora-art-5',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-org-policy',    // Security Policy
     mapping_type: 'equivalent',
@@ -230,7 +230,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-017',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art13',
+    source_requirement_id: 'dora-art-13',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-org-training',  // Staff Training
     mapping_type: 'equivalent',
@@ -242,7 +242,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-018',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art28',
+    source_requirement_id: 'dora-art-28',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-org-vendor',    // Processor Security
     mapping_type: 'partial',
@@ -254,7 +254,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-019',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',
+    source_requirement_id: 'dora-art-9',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-org-access',    // Access Control Policy
     mapping_type: 'equivalent',
@@ -266,7 +266,7 @@ export const DORA_GDPR_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-gdpr-020',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',
+    source_requirement_id: 'dora-art-9',
     target_framework: 'gdpr',
     target_requirement_id: 'gdpr-32-2-alteration',  // Protection Against Alteration
     mapping_type: 'equivalent',

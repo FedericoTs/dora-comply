@@ -173,7 +173,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-013',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-32-1b-resil',
+    source_requirement_id: 'gdpr-32-1c-resilience',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.14',  // Redundancy
     mapping_type: 'equivalent',
@@ -189,7 +189,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-014',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-32-1c',
+    source_requirement_id: 'gdpr-32-1c-restore',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.13',  // Information Backup
     mapping_type: 'equivalent',
@@ -201,7 +201,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-015',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-32-1c',
+    source_requirement_id: 'gdpr-32-1c-restore',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.30',  // ICT Readiness for Business Continuity
     mapping_type: 'partial',
@@ -217,7 +217,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-016',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-32-1d',
+    source_requirement_id: 'gdpr-32-1d-test',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.35',  // Independent Review of Information Security
     mapping_type: 'equivalent',
@@ -229,7 +229,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-017',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-32-1d',
+    source_requirement_id: 'gdpr-32-1d-assess',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.36',  // Compliance with Policies and Standards
     mapping_type: 'partial',
@@ -241,7 +241,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-018',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-32-1d',
+    source_requirement_id: 'gdpr-32-1d-eval',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.8',   // Management of Technical Vulnerabilities
     mapping_type: 'partial',
@@ -257,7 +257,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-019',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-32-2',
+    source_requirement_id: 'gdpr-32-2-risk',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.1',   // Policies for Information Security
     mapping_type: 'partial',
@@ -273,7 +273,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-020',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-32-4',
+    source_requirement_id: 'gdpr-32-org-access',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A6.1',   // Screening
     mapping_type: 'equivalent',
@@ -285,7 +285,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-021',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-32-4',
+    source_requirement_id: 'gdpr-32-org-access',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A6.2',   // Terms and Conditions of Employment
     mapping_type: 'equivalent',
@@ -297,7 +297,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-022',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-32-4',
+    source_requirement_id: 'gdpr-32-org-access',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A6.3',   // Information Security Awareness
     mapping_type: 'equivalent',
@@ -309,7 +309,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-023',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-32-4',
+    source_requirement_id: 'gdpr-32-org-access',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A6.5',   // Responsibilities After Termination
     mapping_type: 'partial',
@@ -325,7 +325,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-024',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-breach-notification',
+    source_requirement_id: 'gdpr-32-org-incident',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.24',  // Information Security Incident Management
     mapping_type: 'equivalent',
@@ -337,7 +337,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-025',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-breach-notification',
+    source_requirement_id: 'gdpr-32-org-incident',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.25',  // Assessment and Decision on Security Events
     mapping_type: 'partial',
@@ -349,7 +349,7 @@ export const GDPR_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'gdpr-iso-026',
     source_framework: 'gdpr',
-    source_requirement_id: 'gdpr-breach-notification',
+    source_requirement_id: 'gdpr-32-org-incident',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.26',  // Response to Information Security Incidents
     mapping_type: 'equivalent',

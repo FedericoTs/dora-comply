@@ -18,7 +18,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-001',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art5',         // ICT Risk Management Framework
+    source_requirement_id: 'dora-art-5',         // ICT Risk Management Framework
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-2a',        // Risk Analysis Policies
     mapping_type: 'equivalent',
@@ -30,7 +30,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-002',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art6',         // ICT Systems & Tools
+    source_requirement_id: 'dora-art-6',         // ICT Systems & Tools
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-2e',        // Security in Systems
     mapping_type: 'equivalent',
@@ -42,7 +42,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-003',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art7',         // Identification
+    source_requirement_id: 'dora-art-7',         // Identification
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-1',         // All-Hazards Approach
     mapping_type: 'partial',
@@ -54,7 +54,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-004',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art8',         // Protection & Prevention
+    source_requirement_id: 'dora-art-8',         // Protection & Prevention
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-2h',        // Cryptography & Encryption
     mapping_type: 'partial',
@@ -66,7 +66,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-005',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art8',         // Protection & Prevention
+    source_requirement_id: 'dora-art-8',         // Protection & Prevention
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-2j',        // MFA & Secure Communications
     mapping_type: 'partial',
@@ -78,7 +78,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-006',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',         // Detection
+    source_requirement_id: 'dora-art-9',         // Detection
     target_framework: 'nis2',
     target_requirement_id: 'nis2-rm-detection', // Detection Capabilities
     mapping_type: 'equivalent',
@@ -90,7 +90,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-007',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art10',        // Response & Recovery
+    source_requirement_id: 'dora-art-10',        // Response & Recovery
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-2b',        // Incident Handling
     mapping_type: 'equivalent',
@@ -102,7 +102,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-008',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art11',        // Backup Policies
+    source_requirement_id: 'dora-art-11',        // Backup Policies
     target_framework: 'nis2',
     target_requirement_id: 'nis2-rm-backup',    // Backup Management
     mapping_type: 'equivalent',
@@ -114,7 +114,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-009',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art12',        // Learning & Evolution
+    source_requirement_id: 'dora-art-12',        // Learning & Evolution
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-2f',        // Cybersecurity Measure Assessment
     mapping_type: 'partial',
@@ -126,7 +126,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-010',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art13',        // Communication Policies
+    source_requirement_id: 'dora-art-13',        // Communication Policies
     target_framework: 'nis2',
     target_requirement_id: 'nis2-23-5',         // User/Customer Notification
     mapping_type: 'partial',
@@ -142,7 +142,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-011',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art17',        // ICT Incident Classification
+    source_requirement_id: 'dora-art-17',        // ICT Incident Classification
     target_framework: 'nis2',
     target_requirement_id: 'nis2-23-1',         // Significant Incident Notification
     mapping_type: 'partial',
@@ -154,7 +154,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-012',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art19',        // Incident Reporting to Authorities
+    source_requirement_id: 'dora-art-19',        // Incident Reporting to Authorities
     target_framework: 'nis2',
     target_requirement_id: 'nis2-23-4a',        // Early Warning (24h)
     mapping_type: 'equivalent',
@@ -166,7 +166,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-013',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art19',        // Incident Reporting
+    source_requirement_id: 'dora-art-19',        // Incident Reporting
     target_framework: 'nis2',
     target_requirement_id: 'nis2-23-4b',        // Incident Notification (72h)
     mapping_type: 'equivalent',
@@ -178,7 +178,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-014',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art19',        // Incident Reporting
+    source_requirement_id: 'dora-art-19',        // Incident Reporting
     target_framework: 'nis2',
     target_requirement_id: 'nis2-23-4c',        // Final Report (1 month)
     mapping_type: 'equivalent',
@@ -194,7 +194,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-015',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art24',        // General Testing Req
+    source_requirement_id: 'dora-art-24',        // General Testing Req
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-2f',        // Assessment of Measures
     mapping_type: 'partial',
@@ -206,7 +206,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-016',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art25',        // Testing Requirements
+    source_requirement_id: 'dora-art-25',        // Testing Requirements
     target_framework: 'nis2',
     target_requirement_id: 'nis2-rm-vuln-mgmt', // Vulnerability Management
     mapping_type: 'partial',
@@ -222,7 +222,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-017',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art28',        // Third-Party Risk Policy
+    source_requirement_id: 'dora-art-28',        // Third-Party Risk Policy
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-2d',        // Supply Chain Security
     mapping_type: 'partial',
@@ -234,7 +234,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-018',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art29',        // Assessment of Providers
+    source_requirement_id: 'dora-art-29',        // Assessment of Providers
     target_framework: 'nis2',
     target_requirement_id: 'nis2-rm-vendor-assess', // Supplier Assessment
     mapping_type: 'equivalent',
@@ -246,7 +246,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-019',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art30',        // Contractual Requirements
+    source_requirement_id: 'dora-art-30',        // Contractual Requirements
     target_framework: 'nis2',
     target_requirement_id: 'nis2-rm-vendor-contract', // Security Contractual Requirements
     mapping_type: 'equivalent',
@@ -262,7 +262,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-020',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art5',         // Management Body Role
+    source_requirement_id: 'dora-art-5',         // Management Body Role
     target_framework: 'nis2',
     target_requirement_id: 'nis2-20-1',         // Management Body Accountability
     mapping_type: 'equivalent',
@@ -274,7 +274,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-021',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art13',        // Training Requirements
+    source_requirement_id: 'dora-art-13',        // Training Requirements
     target_framework: 'nis2',
     target_requirement_id: 'nis2-20-2',         // Management Body Training
     mapping_type: 'equivalent',
@@ -286,7 +286,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-022',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art13',        // Awareness Programs
+    source_requirement_id: 'dora-art-13',        // Awareness Programs
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-2g',        // Basic Cyber Hygiene
     mapping_type: 'equivalent',
@@ -302,7 +302,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-023',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art11',        // Business Continuity Policy
+    source_requirement_id: 'dora-art-11',        // Business Continuity Policy
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-2c',        // Business Continuity & Crisis Mgmt
     mapping_type: 'equivalent',
@@ -314,7 +314,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-024',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art11',        // Recovery Procedures
+    source_requirement_id: 'dora-art-11',        // Recovery Procedures
     target_framework: 'nis2',
     target_requirement_id: 'nis2-rm-recovery',  // System Recovery
     mapping_type: 'equivalent',
@@ -330,7 +330,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-025',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',         // Access Control Requirements
+    source_requirement_id: 'dora-art-9',         // Access Control Requirements
     target_framework: 'nis2',
     target_requirement_id: 'nis2-21-2i',        // HR Security & Access Control
     mapping_type: 'partial',
@@ -342,7 +342,7 @@ export const DORA_NIS2_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-nis2-026',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',         // Privileged Access
+    source_requirement_id: 'dora-art-9',         // Privileged Access
     target_framework: 'nis2',
     target_requirement_id: 'nis2-rm-privileged', // Privileged Access Management
     mapping_type: 'equivalent',

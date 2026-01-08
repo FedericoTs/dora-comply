@@ -17,7 +17,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-001',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art5',
+    source_requirement_id: 'dora-art-5',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.1',          // Policies for Information Security
     mapping_type: 'equivalent',
@@ -29,7 +29,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-002',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art5',
+    source_requirement_id: 'dora-art-5',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.2',          // Security Roles & Responsibilities
     mapping_type: 'equivalent',
@@ -41,7 +41,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-003',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art6',
+    source_requirement_id: 'dora-art-6',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.25',         // Secure Development Life Cycle
     mapping_type: 'partial',
@@ -53,7 +53,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-004',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art7',
+    source_requirement_id: 'dora-art-7',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.9',          // Inventory of Assets
     mapping_type: 'equivalent',
@@ -65,7 +65,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-005',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art7',
+    source_requirement_id: 'dora-art-7',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.12',         // Classification of Information
     mapping_type: 'partial',
@@ -77,7 +77,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-006',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art8',
+    source_requirement_id: 'dora-art-8',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.24',         // Use of Cryptography
     mapping_type: 'equivalent',
@@ -89,7 +89,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-007',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art8',
+    source_requirement_id: 'dora-art-8',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.5',          // Secure Authentication
     mapping_type: 'equivalent',
@@ -101,7 +101,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-008',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art8',
+    source_requirement_id: 'dora-art-8',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.20',         // Networks Security
     mapping_type: 'partial',
@@ -113,7 +113,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-009',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',
+    source_requirement_id: 'dora-art-9',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.16',         // Monitoring Activities
     mapping_type: 'equivalent',
@@ -125,7 +125,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-010',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',
+    source_requirement_id: 'dora-art-9',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.15',         // Logging
     mapping_type: 'equivalent',
@@ -137,7 +137,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-011',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',
+    source_requirement_id: 'dora-art-9',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.15',         // Access Control
     mapping_type: 'equivalent',
@@ -149,7 +149,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-012',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art9',
+    source_requirement_id: 'dora-art-9',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.2',          // Privileged Access Rights
     mapping_type: 'equivalent',
@@ -165,7 +165,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-013',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art10',
+    source_requirement_id: 'dora-art-10',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.26',         // Response to Incidents
     mapping_type: 'equivalent',
@@ -177,7 +177,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-014',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art11',
+    source_requirement_id: 'dora-art-11',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.13',         // Information Backup
     mapping_type: 'equivalent',
@@ -189,7 +189,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-015',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art11',
+    source_requirement_id: 'dora-art-11',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.30',         // ICT Readiness for Business Continuity
     mapping_type: 'equivalent',
@@ -205,7 +205,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-016',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art17',
+    source_requirement_id: 'dora-art-17',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.24',         // Incident Management Planning
     mapping_type: 'equivalent',
@@ -217,7 +217,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-017',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art17',
+    source_requirement_id: 'dora-art-17',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.25',         // Assessment and Decision on Events
     mapping_type: 'equivalent',
@@ -229,7 +229,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-018',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art19',
+    source_requirement_id: 'dora-art-19',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.5',          // Contact with Authorities
     mapping_type: 'partial',
@@ -241,7 +241,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-019',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art12',
+    source_requirement_id: 'dora-art-12',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.27',         // Learning from Incidents
     mapping_type: 'equivalent',
@@ -253,7 +253,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-020',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art20',
+    source_requirement_id: 'dora-art-20',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.28',         // Collection of Evidence
     mapping_type: 'equivalent',
@@ -269,7 +269,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-021',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art24',
+    source_requirement_id: 'dora-art-24',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.8',          // Management of Technical Vulnerabilities
     mapping_type: 'partial',
@@ -281,7 +281,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-022',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art25',
+    source_requirement_id: 'dora-art-25',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.29',         // Security Testing in Development
     mapping_type: 'partial',
@@ -293,7 +293,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-023',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art26',
+    source_requirement_id: 'dora-art-26',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.35',         // Independent Review
     mapping_type: 'partial',
@@ -309,7 +309,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-024',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art28',
+    source_requirement_id: 'dora-art-28',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.19',         // Supplier Relationships Security
     mapping_type: 'equivalent',
@@ -321,7 +321,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-025',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art29',
+    source_requirement_id: 'dora-art-29',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.21',         // Managing Security in ICT Supply Chain
     mapping_type: 'equivalent',
@@ -333,7 +333,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-026',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art30',
+    source_requirement_id: 'dora-art-30',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.20',         // Security in Supplier Agreements
     mapping_type: 'equivalent',
@@ -345,7 +345,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-027',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art31',
+    source_requirement_id: 'dora-art-31',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.22',         // Monitoring Supplier Services
     mapping_type: 'equivalent',
@@ -357,7 +357,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-028',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art32',
+    source_requirement_id: 'dora-art-32',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.23',         // Cloud Services Security
     mapping_type: 'partial',
@@ -373,7 +373,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-029',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art13',
+    source_requirement_id: 'dora-art-13',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A6.3',          // Security Awareness Training
     mapping_type: 'equivalent',
@@ -385,7 +385,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-030',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art14',
+    source_requirement_id: 'dora-art-14',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A5.31',         // Legal & Regulatory Requirements
     mapping_type: 'equivalent',
@@ -397,7 +397,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-031',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art8',
+    source_requirement_id: 'dora-art-8',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.9',          // Configuration Management
     mapping_type: 'partial',
@@ -409,7 +409,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-032',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art8',
+    source_requirement_id: 'dora-art-8',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.22',         // Segregation of Networks
     mapping_type: 'partial',
@@ -421,7 +421,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-033',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art8',
+    source_requirement_id: 'dora-art-8',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.7',          // Protection Against Malware
     mapping_type: 'equivalent',
@@ -433,7 +433,7 @@ export const DORA_ISO27001_MAPPINGS: CrossFrameworkMapping[] = [
   {
     id: 'dora-iso-034',
     source_framework: 'dora',
-    source_requirement_id: 'dora-art6',
+    source_requirement_id: 'dora-art-6',
     target_framework: 'iso27001',
     target_requirement_id: 'iso-A8.32',         // Change Management
     mapping_type: 'equivalent',
