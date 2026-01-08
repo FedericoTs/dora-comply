@@ -45,6 +45,32 @@ export const contactTypeSchema = z.enum([
 ]);
 
 // ============================================
+// CTPP (Critical Third-Party Provider) SCHEMAS
+// ============================================
+
+export const ctppDesignationSourceSchema = z.enum([
+  'esa_list',
+  'self_identified',
+  'authority_notification',
+]);
+
+export const ctppDesignatingAuthoritySchema = z.enum(['EBA', 'ESMA', 'EIOPA']);
+
+export const oversightPlanStatusSchema = z.enum([
+  'not_applicable',
+  'pending',
+  'in_progress',
+  'completed',
+]);
+
+export const ctppSubstitutabilitySchema = z.enum([
+  'easily_substitutable',
+  'moderately_difficult',
+  'highly_concentrated',
+  'no_alternatives',
+]);
+
+// ============================================
 // LEI VALIDATION
 // ============================================
 
@@ -160,6 +186,28 @@ export const updateVendorSchema = z.object({
   primary_contact: vendorContactSchema.optional(),
   notes: z.string().max(5000).optional().or(z.literal('')).nullable(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+
+  // CTPP (Critical Third-Party Provider) fields - DORA Articles 33-44
+  is_ctpp: z.boolean().optional(),
+  ctpp_designation_date: z.string().optional().nullable(),
+  ctpp_designation_source: ctppDesignationSourceSchema.optional().nullable(),
+  ctpp_designating_authority: ctppDesignatingAuthoritySchema.optional().nullable(),
+  ctpp_designation_reason: z.string().max(1000).optional().nullable(),
+  lead_overseer: ctppDesignatingAuthoritySchema.optional().nullable(),
+  lead_overseer_assigned_date: z.string().optional().nullable(),
+  lead_overseer_contact_email: z.string().email().optional().or(z.literal('')).nullable(),
+  joint_examination_team: z.boolean().optional(),
+  oversight_plan_status: oversightPlanStatusSchema.optional(),
+  last_oversight_assessment_date: z.string().optional().nullable(),
+  next_oversight_assessment_date: z.string().optional().nullable(),
+  oversight_findings_count: z.number().int().min(0).optional(),
+  oversight_recommendations_pending: z.number().int().min(0).optional(),
+  info_sharing_portal_access: z.boolean().optional(),
+  info_sharing_portal_url: z.string().url().optional().or(z.literal('')).nullable(),
+  last_info_exchange_date: z.string().optional().nullable(),
+  ctpp_exit_strategy_documented: z.boolean().optional(),
+  ctpp_exit_strategy_last_review: z.string().optional().nullable(),
+  ctpp_substitutability_assessment: ctppSubstitutabilitySchema.optional().nullable(),
 });
 
 export type UpdateVendorFormData = z.infer<typeof updateVendorSchema>;

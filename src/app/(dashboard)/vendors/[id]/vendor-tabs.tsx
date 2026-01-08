@@ -10,7 +10,7 @@
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { useCallback, type ReactNode } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { FileText, Users, ScrollText, Sparkles, Target, Radio, Layers } from 'lucide-react';
+import { FileText, Users, ScrollText, Sparkles, Target, Radio, Layers, Shield } from 'lucide-react';
 
 interface VendorTabsProps {
   overview: ReactNode;
@@ -21,6 +21,8 @@ interface VendorTabsProps {
   dora: ReactNode;
   monitoring: ReactNode;
   frameworks: ReactNode;
+  ctppOversight?: ReactNode;
+  showCTTPTab?: boolean;
 }
 
 export function VendorTabs({
@@ -32,6 +34,8 @@ export function VendorTabs({
   dora,
   monitoring,
   frameworks,
+  ctppOversight,
+  showCTTPTab = false,
 }: VendorTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -79,6 +83,12 @@ export function VendorTabs({
           <Layers className="h-4 w-4 mr-1.5" />
           Frameworks
         </TabsTrigger>
+        {showCTTPTab && (
+          <TabsTrigger value="ctpp-oversight">
+            <Shield className="h-4 w-4 mr-1.5" />
+            CTPP Oversight
+          </TabsTrigger>
+        )}
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
@@ -112,6 +122,12 @@ export function VendorTabs({
       <TabsContent value="frameworks">
         {frameworks}
       </TabsContent>
+
+      {showCTTPTab && ctppOversight && (
+        <TabsContent value="ctpp-oversight">
+          {ctppOversight}
+        </TabsContent>
+      )}
     </Tabs>
   );
 }

@@ -26,6 +26,7 @@ import {
   VendorAddressCard,
   VendorESAFields,
   VendorEnrichmentTab,
+  CTTPOversightPanel,
 } from '@/components/vendors/detail';
 import { VendorMonitoringTab } from '@/components/vendors/monitoring';
 import { SimpleBreadcrumb } from '@/components/navigation';
@@ -370,6 +371,8 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
           />
         }
         frameworks={<VendorFrameworksTab vendorId={vendor.id} vendorName={vendor.name} />}
+        ctppOversight={<CTTPOversightPanel vendor={vendor} />}
+        showCTTPTab={vendor.is_ctpp || false}
       />
     </div>
   );

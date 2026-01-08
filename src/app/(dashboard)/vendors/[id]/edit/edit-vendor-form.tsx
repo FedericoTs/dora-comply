@@ -61,12 +61,20 @@ import {
   STATUS_INFO,
   PROVIDER_TYPE_LABELS,
   SERVICE_TYPE_LABELS,
+  CTPP_DESIGNATION_SOURCE_LABELS,
+  CTPP_AUTHORITY_LABELS,
+  OVERSIGHT_PLAN_STATUS_INFO,
+  CTPP_SUBSTITUTABILITY_INFO,
   type Vendor,
   type VendorWithRelations,
   type VendorTier,
   type VendorStatus,
   type ProviderType,
   type ServiceType,
+  type CTTPDesignationSource,
+  type CTTPDesignatingAuthority,
+  type OversightPlanStatus,
+  type CTTPSubstitutability,
 } from '@/lib/vendors/types';
 import { updateVendor } from '@/lib/vendors/actions';
 import { validateLEI, getCountryFlag } from '@/lib/external/gleif';
@@ -151,6 +159,19 @@ export function EditVendorForm({ vendor }: EditVendorFormProps) {
       is_intra_group: vendor.is_intra_group,
       primary_contact: vendor.primary_contact || { name: '' },
       notes: vendor.notes || '',
+      // CTPP fields
+      is_ctpp: vendor.is_ctpp || false,
+      ctpp_designation_date: vendor.ctpp_designation_date || '',
+      ctpp_designation_source: vendor.ctpp_designation_source as CTTPDesignationSource | undefined,
+      ctpp_designating_authority: vendor.ctpp_designating_authority as CTTPDesignatingAuthority | undefined,
+      ctpp_designation_reason: vendor.ctpp_designation_reason || '',
+      lead_overseer: vendor.lead_overseer as CTTPDesignatingAuthority | undefined,
+      lead_overseer_assigned_date: vendor.lead_overseer_assigned_date || '',
+      lead_overseer_contact_email: vendor.lead_overseer_contact_email || '',
+      joint_examination_team: vendor.joint_examination_team || false,
+      oversight_plan_status: (vendor.oversight_plan_status as OversightPlanStatus) || 'not_applicable',
+      ctpp_exit_strategy_documented: vendor.ctpp_exit_strategy_documented || false,
+      ctpp_substitutability_assessment: vendor.ctpp_substitutability_assessment as CTTPSubstitutability | undefined,
     },
   });
 
@@ -162,6 +183,10 @@ export function EditVendorForm({ vendor }: EditVendorFormProps) {
   const doraChanged = !!(dirtyFields.supports_critical_function || dirtyFields.critical_functions || dirtyFields.is_intra_group);
   const contactChanged = !!dirtyFields.primary_contact;
   const notesChanged = !!dirtyFields.notes;
+  const ctppChanged = !!(dirtyFields.is_ctpp || dirtyFields.ctpp_designation_source || dirtyFields.ctpp_designating_authority || dirtyFields.lead_overseer || dirtyFields.ctpp_exit_strategy_documented || dirtyFields.ctpp_substitutability_assessment);
+
+  // Watch is_ctpp to show/hide CTPP section
+  const isCTPP = form.watch('is_ctpp');
 
   // Warn on navigation if unsaved changes
   useEffect(() => {
@@ -246,6 +271,19 @@ export function EditVendorForm({ vendor }: EditVendorFormProps) {
     if (dirtyFields.is_intra_group) changedData.is_intra_group = data.is_intra_group;
     if (dirtyFields.primary_contact) changedData.primary_contact = data.primary_contact;
     if (dirtyFields.notes) changedData.notes = data.notes;
+    // CTPP fields
+    if (dirtyFields.is_ctpp) changedData.is_ctpp = data.is_ctpp;
+    if (dirtyFields.ctpp_designation_date) changedData.ctpp_designation_date = data.ctpp_designation_date;
+    if (dirtyFields.ctpp_designation_source) changedData.ctpp_designation_source = data.ctpp_designation_source;
+    if (dirtyFields.ctpp_designating_authority) changedData.ctpp_designating_authority = data.ctpp_designating_authority;
+    if (dirtyFields.ctpp_designation_reason) changedData.ctpp_designation_reason = data.ctpp_designation_reason;
+    if (dirtyFields.lead_overseer) changedData.lead_overseer = data.lead_overseer;
+    if (dirtyFields.lead_overseer_assigned_date) changedData.lead_overseer_assigned_date = data.lead_overseer_assigned_date;
+    if (dirtyFields.lead_overseer_contact_email) changedData.lead_overseer_contact_email = data.lead_overseer_contact_email;
+    if (dirtyFields.joint_examination_team) changedData.joint_examination_team = data.joint_examination_team;
+    if (dirtyFields.oversight_plan_status) changedData.oversight_plan_status = data.oversight_plan_status;
+    if (dirtyFields.ctpp_exit_strategy_documented) changedData.ctpp_exit_strategy_documented = data.ctpp_exit_strategy_documented;
+    if (dirtyFields.ctpp_substitutability_assessment) changedData.ctpp_substitutability_assessment = data.ctpp_substitutability_assessment;
 
     const result = await updateVendor(vendor.id, changedData);
     setIsSubmitting(false);
@@ -619,6 +657,255 @@ export function EditVendorForm({ vendor }: EditVendorFormProps) {
                   </FormItem>
                 )}
               />
+            </div>
+          </FormSection>
+
+          {/* CTPP Oversight - DORA Articles 33-44 */}
+          <FormSection
+            title="CTPP Oversight"
+            icon={Shield}
+            hasChanges={ctppChanged}
+            defaultOpen={isCTPP || vendor.is_ctpp}
+          >
+            <div className="space-y-6">
+              {/* Is CTPP Toggle */}
+              <FormField
+                control={form.control}
+                name="is_ctpp"
+                render={({ field }) => (
+                  <FormItem className="flex items-start gap-3 space-y-0 rounded-lg border p-4 bg-error/5 border-error/20">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="cursor-pointer font-semibold">
+                        Critical Third-Party Provider (CTPP)
+                      </FormLabel>
+                      <FormDescription>
+                        This vendor is designated as a CTPP under DORA Articles 33-44,
+                        subject to direct oversight by European Supervisory Authorities
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {/* CTPP Details - only show when is_ctpp is true */}
+              {isCTPP && (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="ctpp_designation_source"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Designation Source</FormLabel>
+                          <Select
+                            value={field.value || ''}
+                            onValueChange={(value) => field.onChange(value || null)}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select source..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {(Object.keys(CTPP_DESIGNATION_SOURCE_LABELS) as CTTPDesignationSource[]).map(
+                                (source) => (
+                                  <SelectItem key={source} value={source}>
+                                    {CTPP_DESIGNATION_SOURCE_LABELS[source]}
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            How this CTPP designation was identified
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="ctpp_designating_authority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Designating Authority</FormLabel>
+                          <Select
+                            value={field.value || ''}
+                            onValueChange={(value) => field.onChange(value || null)}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select ESA..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {(Object.keys(CTPP_AUTHORITY_LABELS) as CTTPDesignatingAuthority[]).map(
+                                (auth) => (
+                                  <SelectItem key={auth} value={auth}>
+                                    {CTPP_AUTHORITY_LABELS[auth]}
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="lead_overseer"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Lead Overseer</FormLabel>
+                          <Select
+                            value={field.value || ''}
+                            onValueChange={(value) => field.onChange(value || null)}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select ESA..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {(Object.keys(CTPP_AUTHORITY_LABELS) as CTTPDesignatingAuthority[]).map(
+                                (auth) => (
+                                  <SelectItem key={auth} value={auth}>
+                                    {auth}
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            ESA responsible for oversight (DORA Art. 34)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="oversight_plan_status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Oversight Plan Status</FormLabel>
+                          <Select
+                            value={field.value || 'not_applicable'}
+                            onValueChange={(value) => field.onChange(value)}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {(Object.keys(OVERSIGHT_PLAN_STATUS_INFO) as OversightPlanStatus[]).map(
+                                (status) => (
+                                  <SelectItem key={status} value={status}>
+                                    {OVERSIGHT_PLAN_STATUS_INFO[status].label}
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="ctpp_substitutability_assessment"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Substitutability Assessment</FormLabel>
+                          <Select
+                            value={field.value || ''}
+                            onValueChange={(value) => field.onChange(value || null)}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select assessment..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {(Object.keys(CTPP_SUBSTITUTABILITY_INFO) as CTTPSubstitutability[]).map(
+                                (sub) => (
+                                  <SelectItem key={sub} value={sub}>
+                                    {CTPP_SUBSTITUTABILITY_INFO[sub].label}
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            {field.value && CTPP_SUBSTITUTABILITY_INFO[field.value as CTTPSubstitutability]?.description}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="ctpp_exit_strategy_documented"
+                      render={({ field }) => (
+                        <FormItem className="flex items-start gap-3 space-y-0 rounded-lg border p-4">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="cursor-pointer">
+                              Exit Strategy Documented
+                            </FormLabel>
+                            <FormDescription>
+                              Exit plan exists per DORA Article 28(8)
+                            </FormDescription>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="joint_examination_team"
+                    render={({ field }) => (
+                      <FormItem className="flex items-start gap-3 space-y-0 rounded-lg border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel className="cursor-pointer">
+                            Joint Examination Team Formed
+                          </FormLabel>
+                          <FormDescription>
+                            A joint examination team has been established per DORA Article 37
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
             </div>
           </FormSection>
 

@@ -44,6 +44,48 @@ export type ContactType =
   | 'escalation';
 
 // ============================================
+// CTPP (Critical Third-Party Provider) TYPES
+// Per DORA Articles 33-44
+// ============================================
+
+export type CTTPDesignationSource = 'esa_list' | 'self_identified' | 'authority_notification';
+export type CTTPDesignatingAuthority = 'EBA' | 'ESMA' | 'EIOPA';
+export type OversightPlanStatus = 'not_applicable' | 'pending' | 'in_progress' | 'completed';
+export type CTTPSubstitutability = 'easily_substitutable' | 'moderately_difficult' | 'highly_concentrated' | 'no_alternatives';
+
+export interface CTTPOversightInfo {
+  // Designation (Art. 33)
+  is_ctpp: boolean;
+  ctpp_designation_date: string | null;
+  ctpp_designation_source: CTTPDesignationSource | null;
+  ctpp_designating_authority: CTTPDesignatingAuthority | null;
+  ctpp_designation_reason: string | null;
+
+  // Lead Overseer (Art. 33-34)
+  lead_overseer: CTTPDesignatingAuthority | null;
+  lead_overseer_assigned_date: string | null;
+  lead_overseer_contact_email: string | null;
+  joint_examination_team: boolean;
+
+  // Oversight Framework (Art. 35-37)
+  oversight_plan_status: OversightPlanStatus;
+  last_oversight_assessment_date: string | null;
+  next_oversight_assessment_date: string | null;
+  oversight_findings_count: number;
+  oversight_recommendations_pending: number;
+
+  // Information Sharing (Art. 38)
+  info_sharing_portal_access: boolean;
+  info_sharing_portal_url: string | null;
+  last_info_exchange_date: string | null;
+
+  // Exit Strategy (Art. 28(8))
+  ctpp_exit_strategy_documented: boolean;
+  ctpp_exit_strategy_last_review: string | null;
+  ctpp_substitutability_assessment: CTTPSubstitutability | null;
+}
+
+// ============================================
 // CORE TYPES
 // ============================================
 
@@ -117,6 +159,28 @@ export interface Vendor {
   monitoring_domain?: string | null;
   last_monitoring_sync?: string | null;
   monitoring_alert_threshold?: number | null;
+
+  // CTPP Oversight (from Migration 017 - DORA Articles 33-44)
+  is_ctpp?: boolean;
+  ctpp_designation_date?: string | null;
+  ctpp_designation_source?: CTTPDesignationSource | null;
+  ctpp_designating_authority?: CTTPDesignatingAuthority | null;
+  ctpp_designation_reason?: string | null;
+  lead_overseer?: CTTPDesignatingAuthority | null;
+  lead_overseer_assigned_date?: string | null;
+  lead_overseer_contact_email?: string | null;
+  joint_examination_team?: boolean;
+  oversight_plan_status?: OversightPlanStatus;
+  last_oversight_assessment_date?: string | null;
+  next_oversight_assessment_date?: string | null;
+  oversight_findings_count?: number;
+  oversight_recommendations_pending?: number;
+  info_sharing_portal_access?: boolean;
+  info_sharing_portal_url?: string | null;
+  last_info_exchange_date?: string | null;
+  ctpp_exit_strategy_documented?: boolean;
+  ctpp_exit_strategy_last_review?: string | null;
+  ctpp_substitutability_assessment?: CTTPSubstitutability | null;
 
   // Contact
   primary_contact: VendorContact;
@@ -418,4 +482,50 @@ export const STATUS_INFO: Record<VendorStatus, { label: string; color: string }>
   pending: { label: 'Pending', color: 'bg-warning/10 text-warning' },
   inactive: { label: 'Inactive', color: 'bg-muted text-muted-foreground' },
   offboarding: { label: 'Offboarding', color: 'bg-error/10 text-error' },
+};
+
+// ============================================
+// CTPP UI HELPER CONSTANTS
+// ============================================
+
+export const CTPP_DESIGNATION_SOURCE_LABELS: Record<CTTPDesignationSource, string> = {
+  esa_list: 'ESA Published List',
+  self_identified: 'Self-Identified',
+  authority_notification: 'Authority Notification',
+};
+
+export const CTPP_AUTHORITY_LABELS: Record<CTTPDesignatingAuthority, string> = {
+  EBA: 'European Banking Authority (EBA)',
+  ESMA: 'European Securities and Markets Authority (ESMA)',
+  EIOPA: 'European Insurance and Occupational Pensions Authority (EIOPA)',
+};
+
+export const OVERSIGHT_PLAN_STATUS_INFO: Record<OversightPlanStatus, { label: string; color: string }> = {
+  not_applicable: { label: 'Not Applicable', color: 'bg-muted text-muted-foreground' },
+  pending: { label: 'Pending', color: 'bg-warning/10 text-warning' },
+  in_progress: { label: 'In Progress', color: 'bg-info/10 text-info' },
+  completed: { label: 'Completed', color: 'bg-success/10 text-success' },
+};
+
+export const CTPP_SUBSTITUTABILITY_INFO: Record<CTTPSubstitutability, { label: string; color: string; description: string }> = {
+  easily_substitutable: {
+    label: 'Easily Substitutable',
+    color: 'bg-success/10 text-success',
+    description: 'Multiple alternative providers available',
+  },
+  moderately_difficult: {
+    label: 'Moderately Difficult',
+    color: 'bg-warning/10 text-warning',
+    description: 'Limited alternatives, manageable transition',
+  },
+  highly_concentrated: {
+    label: 'Highly Concentrated',
+    color: 'bg-error/10 text-error',
+    description: 'Few alternatives, significant market concentration',
+  },
+  no_alternatives: {
+    label: 'No Alternatives',
+    color: 'bg-destructive/10 text-destructive',
+    description: 'No viable alternatives in the market',
+  },
 };
