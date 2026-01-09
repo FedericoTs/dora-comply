@@ -205,7 +205,7 @@ export default async function DashboardPage() {
       )}
 
       {/* Page Header */}
-      <div className="flex items-start justify-between mb-8 animate-in">
+      <div data-tour="welcome" className="flex items-start justify-between mb-8 animate-in">
         <div>
           <h1 className="mb-1">{getGreeting()}{firstName ? `, ${firstName}` : ''}</h1>
           <p className="text-muted-foreground">
@@ -214,7 +214,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <BoardReportExport />
-          <Link href="/vendors/new" className="btn-primary">
+          <Link href="/vendors/new" className="btn-primary" data-tour="add-vendor">
             <Plus className="h-4 w-4" />
             Add vendor
           </Link>
@@ -222,7 +222,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <StatCardGrid columns={6} className="mb-8 stagger">
+      <StatCardGrid columns={6} className="mb-8 stagger" data-tour="stats-grid">
         <StatCard
           label="Total Vendors"
           value={totalVendors}
@@ -276,7 +276,7 @@ export default async function DashboardPage() {
       {/* Main Grid */}
       <div className="grid grid-cols-3 gap-6">
         {/* Recent Activity */}
-        <div className="col-span-2 card-premium p-6 animate-slide-up">
+        <div data-tour="recent-activity" className="col-span-2 card-premium p-6 animate-slide-up">
           <div className="flex items-center justify-between mb-6">
             <h3>Recent Activity</h3>
             <Link
@@ -323,7 +323,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Deadline Card */}
-        <div className="card-premium p-6 animate-slide-up">
+        <div data-tour="deadline" className="card-premium p-6 animate-slide-up">
           <div className="flex items-center gap-2 text-muted-foreground mb-4">
             <Calendar className="h-4 w-4" />
             <span className="text-sm font-medium">RoI Submission</span>
@@ -544,7 +544,7 @@ function GettingStartedCard({ stepsCompleted }: { stepsCompleted: boolean[] }) {
 
   if (allCompleted) {
     return (
-      <div className="col-span-2 card-premium p-6 animate-slide-up">
+      <div data-tour="getting-started" className="col-span-2 card-premium p-6 animate-slide-up">
         <div className="py-8 text-center">
           <div className="relative inline-block mb-4">
             <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto">
@@ -572,7 +572,7 @@ function GettingStartedCard({ stepsCompleted }: { stepsCompleted: boolean[] }) {
   }
 
   return (
-    <div className="col-span-2 card-premium p-6 animate-slide-up">
+    <div data-tour="getting-started" className="col-span-2 card-premium p-6 animate-slide-up">
       <div className="flex items-center justify-between mb-6">
         <h3>Getting Started</h3>
         <span className="badge badge-default">

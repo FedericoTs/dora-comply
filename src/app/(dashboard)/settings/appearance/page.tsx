@@ -18,6 +18,8 @@ import {
   Globe,
   LayoutGrid,
   Loader2,
+  HelpCircle,
+  RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -33,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
 import {
   getAppearancePreferences,
@@ -376,6 +379,48 @@ export default function AppearanceSettingsPage() {
               checked={preferences.compactMode}
               onCheckedChange={handleCompactModeChange}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Help & Onboarding */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <HelpCircle className="h-5 w-5" />
+            <CardTitle className="text-base">Help & Onboarding</CardTitle>
+          </div>
+          <CardDescription>
+            Guides and tutorials to help you get started
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Product Tour</Label>
+              <p className="text-sm text-muted-foreground">
+                Take a guided tour of the dashboard and key features
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // Clear tour completion status and redirect to dashboard
+                try {
+                  localStorage.removeItem('dora-comply-tour-completed');
+                  toast.success('Tour reset! Redirecting to dashboard...');
+                  setTimeout(() => {
+                    window.location.href = '/dashboard';
+                  }, 500);
+                } catch {
+                  toast.error('Failed to reset tour');
+                }
+              }}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Restart Tour
+            </Button>
           </div>
         </CardContent>
       </Card>

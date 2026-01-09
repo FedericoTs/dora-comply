@@ -20,6 +20,7 @@ import { NavigationProviders } from '@/components/navigation';
 import { CopilotChat } from '@/components/copilot';
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 import { checkAuthStatus, logout } from '@/lib/auth';
+import { ProductTour } from '@/components/onboarding/product-tour';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -56,7 +57,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-background">
       <div className="flex min-h-screen">
         {/* Sidebar - sticky, doesn't scroll with content */}
-        <aside className="w-64 border-r border-border bg-sidebar flex flex-col sticky top-0 h-screen overflow-y-auto">
+        <aside data-tour="sidebar" className="w-64 border-r border-border bg-sidebar flex flex-col sticky top-0 h-screen overflow-y-auto">
           {/* Logo */}
           <div className="h-16 px-6 flex items-center border-b border-sidebar-border">
             <Link href="/dashboard" className="flex items-center gap-3">
@@ -153,7 +154,12 @@ export default async function DashboardLayout({
         </main>
 
         {/* AI Compliance Copilot */}
-        <CopilotChat />
+        <div data-tour="copilot">
+          <CopilotChat />
+        </div>
+
+        {/* Product Tour - shows on first visit */}
+        <ProductTour />
       </div>
     </div>
   );
