@@ -145,14 +145,14 @@ async function TemplateDetailContent({ templateId }: { templateId: RoiTemplateId
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Required:</span>
-          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400">
             {columns.filter(c => c.required).length} fields
           </Badge>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Status:</span>
           {validation.isValid ? (
-            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Valid</Badge>
+            <Badge className="bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400">Valid</Badge>
           ) : (
             <Badge variant="destructive">{errorCount} errors</Badge>
           )}
@@ -214,11 +214,11 @@ async function TemplateDetailContent({ templateId }: { templateId: RoiTemplateId
           <div className="flex flex-wrap items-center gap-6 text-xs text-muted-foreground border rounded-lg px-4 py-2 bg-muted/30">
             <span className="font-medium">Legend:</span>
             <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-amber-50 border border-amber-200" />
+              <div className="w-4 h-4 rounded bg-amber-50 border border-amber-200 dark:bg-amber-900/30 dark:border-amber-700" />
               <span>Required field</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-0.5 text-amber-700 font-medium">
+              <span className="inline-flex items-center gap-0.5 text-amber-700 dark:text-amber-400 font-medium">
                 <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                 </svg>
@@ -227,7 +227,7 @@ async function TemplateDetailContent({ templateId }: { templateId: RoiTemplateId
               <span>Required value missing</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-red-100 border border-red-200" />
+              <div className="w-4 h-4 rounded bg-red-100 border border-red-200 dark:bg-red-900/30 dark:border-red-700" />
               <span>Validation error</span>
             </div>
             <div className="flex items-center gap-1.5">

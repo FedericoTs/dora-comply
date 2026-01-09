@@ -83,18 +83,18 @@ function getClassificationStyles(classification: string) {
 function getStatusStyles(status: string) {
   switch (status) {
     case 'draft':
-      return 'bg-slate-100 text-slate-600';
+      return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
     case 'detected':
-      return 'bg-amber-100 text-amber-700';
+      return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
     case 'initial_submitted':
     case 'intermediate_submitted':
-      return 'bg-blue-100 text-blue-700';
+      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
     case 'final_submitted':
-      return 'bg-green-100 text-green-700';
+      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
     case 'closed':
-      return 'bg-slate-100 text-slate-500';
+      return 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400';
     default:
-      return 'bg-slate-100 text-slate-600';
+      return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
   }
 }
 
@@ -196,10 +196,10 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
               className={cn(
                 'flex h-16 w-16 shrink-0 items-center justify-center rounded-full',
                 incident.classification === 'major'
-                  ? 'bg-red-100 text-red-600'
+                  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
                   : incident.classification === 'significant'
-                  ? 'bg-amber-100 text-amber-600'
-                  : 'bg-slate-100 text-slate-600'
+                  ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
               )}
             >
               <ClassificationIcon className="h-8 w-8" />

@@ -160,8 +160,8 @@ export function SupplyChainVisualization({
               <div className={cn(
                 'rounded-lg p-2.5',
                 selectedNode?.type === 'entity' && 'bg-primary/10',
-                selectedNode?.type === 'third_party' && 'bg-orange-500/10',
-                selectedNode?.type === 'fourth_party' && 'bg-blue-500/10'
+                selectedNode?.type === 'third_party' && 'bg-orange-500/10 dark:bg-orange-500/20',
+                selectedNode?.type === 'fourth_party' && 'bg-blue-500/10 dark:bg-blue-500/20'
               )}>
                 {selectedNode?.type === 'entity' ? (
                   <Building2 className="h-5 w-5 text-primary" />
@@ -203,7 +203,7 @@ export function SupplyChainVisualization({
                         className={cn(
                           selectedNode.type === 'entity' && 'bg-primary',
                           selectedNode.type === 'third_party' && 'bg-orange-500 hover:bg-orange-500/90',
-                          selectedNode.type === 'fourth_party' && 'bg-blue-100 text-blue-700 hover:bg-blue-100'
+                          selectedNode.type === 'fourth_party' && 'bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/50 dark:text-blue-300'
                         )}
                       >
                         {selectedNode.type === 'entity'
@@ -221,9 +221,9 @@ export function SupplyChainVisualization({
                       <Badge
                         variant="outline"
                         className={cn(
-                          selectedNode.tier === 'critical' && 'border-red-200 bg-red-50 text-red-700',
-                          selectedNode.tier === 'important' && 'border-orange-200 bg-orange-50 text-orange-700',
-                          selectedNode.tier === 'standard' && 'border-green-200 bg-green-50 text-green-700'
+                          selectedNode.tier === 'critical' && 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400',
+                          selectedNode.tier === 'important' && 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+                          selectedNode.tier === 'standard' && 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400'
                         )}
                       >
                         {selectedNode.tier === 'critical' && (
@@ -303,14 +303,14 @@ export function SupplyChainVisualization({
 
                 {/* Fourth Party Info */}
                 {selectedNode.type === 'fourth_party' && (
-                  <Card className="border-blue-100 bg-blue-50/30">
+                  <Card className="border-blue-100 bg-blue-50/30 dark:border-blue-800 dark:bg-blue-900/20">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2 text-blue-700">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2 text-blue-700 dark:text-blue-400">
                         <Link2 className="h-4 w-4" />
                         Fourth-Party Details
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="text-sm text-blue-700/80">
+                    <CardContent className="text-sm text-blue-700/80 dark:text-blue-300/80">
                       <p>
                         This is a subcontractor of one of your third-party vendors.
                         Per DORA Article 28(8), you should maintain visibility of
