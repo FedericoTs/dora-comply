@@ -145,6 +145,7 @@ export function EditVendorForm({ vendor }: EditVendorFormProps) {
   // Initialize form with vendor data
   const form = useForm<UpdateVendorFormData>({
     resolver: zodResolver(updateVendorSchema),
+    mode: 'onTouched', // Validate on blur, then on change
     defaultValues: {
       name: vendor.name,
       lei: vendor.lei || '',

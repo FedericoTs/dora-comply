@@ -353,15 +353,8 @@ export function VendorCertifications({
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Adding...
-                      </>
-                    ) : (
-                      'Add Certification'
-                    )}
+                  <Button type="submit" loading={isSubmitting}>
+                    Add Certification
                   </Button>
                 </DialogFooter>
               </form>

@@ -83,6 +83,7 @@ export function ContractFormDialog({
 
   const form = useForm<CreateContractFormData>({
     resolver: zodResolver(createContractSchema),
+    mode: 'onTouched',
     defaultValues: {
       vendor_id: vendorId,
       contract_ref: contract?.contract_ref || '',

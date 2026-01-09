@@ -361,15 +361,8 @@ export function IncidentWizard({
         </Button>
 
         {currentStep === STEPS.length - 1 ? (
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Create Incident'
-            )}
+          <Button onClick={handleSubmit} loading={isSubmitting}>
+            Create Incident
           </Button>
         ) : (
           <Button onClick={goToNextStep}>

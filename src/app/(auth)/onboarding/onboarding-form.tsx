@@ -90,6 +90,7 @@ export function OnboardingForm() {
 
   const form = useForm<OnboardingInput>({
     resolver: zodResolver(onboardingSchema),
+    mode: 'onTouched',
     defaultValues: {
       organizationName: '',
       lei: '',

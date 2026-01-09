@@ -65,6 +65,7 @@ export function AddVendorWizard() {
 
   const form = useForm<CreateVendorFormInput, unknown, CreateVendorFormData>({
     resolver: zodResolver(createVendorSchema),
+    mode: 'onTouched', // Validate on blur, then on change
     defaultValues: {
       name: '',
       lei: '',
@@ -570,15 +571,8 @@ export function AddVendorWizard() {
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Vendor'
-                )}
+              <Button type="submit" loading={isSubmitting}>
+                Create Vendor
               </Button>
             )}
           </div>

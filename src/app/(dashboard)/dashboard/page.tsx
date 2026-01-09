@@ -10,7 +10,6 @@ import {
   Calendar,
   Zap,
   Plus,
-  Filter,
   MoreHorizontal,
   AlertTriangle,
   Clock,
@@ -30,8 +29,19 @@ import {
 import { getIncidentStatsEnhanced, getPendingDeadlines } from '@/lib/incidents/queries';
 import { getTestingStats } from '@/lib/testing/queries';
 import { getOrganizationContext } from '@/lib/org/context';
+import { getDocumentStats } from '@/lib/documents/queries';
 import { BoardReportExport } from '@/components/reports/board-report-export';
 import { IncidentMetricsCard } from '@/components/incidents/dashboard';
+
+// ============================================================================
+// Time-aware greeting
+// ============================================================================
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export const metadata: Metadata = {
   title: 'Dashboard | DORA Comply',
@@ -43,7 +53,7 @@ export default async function DashboardPage() {
   const firstName = user?.fullName?.split(' ')[0] || '';
 
   // Fetch real data including organization context for entity classification
-  const [vendorStats, roiStats, recentActivity, incidentStatsResult, pendingDeadlinesResult, testingStatsResult, orgContext] = await Promise.all([
+  const [vendorStats, roiStats, recentActivity, incidentStatsResult, pendingDeadlinesResult, testingStatsResult, orgContext, documentStats] = await Promise.all([
     getVendorStats(),
     fetchAllTemplateStats(),
     getRecentActivity(5),
@@ -51,6 +61,7 @@ export default async function DashboardPage() {
     getPendingDeadlines(5),
     getTestingStats(),
     getOrganizationContext(),
+    getDocumentStats(),
   ]);
 
   const incidentStats = incidentStatsResult.data;
@@ -197,17 +208,13 @@ export default async function DashboardPage() {
       {/* Page Header */}
       <div className="flex items-start justify-between mb-8 animate-in">
         <div>
-          <h1 className="mb-1">Good morning{firstName ? `, ${firstName}` : ''}</h1>
+          <h1 className="mb-1">{getGreeting()}{firstName ? `, ${firstName}` : ''}</h1>
           <p className="text-muted-foreground">
             Here&apos;s what&apos;s happening with your compliance program today.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <BoardReportExport />
-          <button className="btn-secondary">
-            <Filter className="h-4 w-4" />
-            Filter
-          </button>
           <Link href="/vendors/new" className="btn-primary">
             <Plus className="h-4 w-4" />
             Add vendor
@@ -266,10 +273,13 @@ export default async function DashboardPage() {
         <div className="col-span-2 card-premium p-6 animate-slide-up">
           <div className="flex items-center justify-between mb-6">
             <h3>Recent Activity</h3>
-            <button className="text-sm text-primary font-medium hover:underline flex items-center gap-1">
+            <Link
+              href="/activity"
+              className="text-sm text-primary font-medium hover:underline flex items-center gap-1"
+            >
               View all
               <ArrowUpRight className="h-3.5 w-3.5" />
-            </button>
+            </Link>
           </div>
           <div className="space-y-0">
             {recentActivity.length > 0 ? (
@@ -412,7 +422,7 @@ export default async function DashboardPage() {
               step={2}
               title="Upload vendor contracts and certifications"
               href="/documents"
-              completed={false}
+              completed={documentStats.total > 0}
             />
             <StepItem
               step={3}
@@ -424,7 +434,7 @@ export default async function DashboardPage() {
               step={4}
               title="Set up incident reporting workflows"
               href="/incidents"
-              completed={false}
+              completed={(incidentStats?.total ?? 0) > 0}
             />
           </div>
         </div>

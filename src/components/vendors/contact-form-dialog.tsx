@@ -58,6 +58,7 @@ export function ContactFormDialog({
 
   const form = useForm<CreateContactFormData>({
     resolver: zodResolver(createContactSchema),
+    mode: 'onTouched',
     defaultValues: {
       vendor_id: vendorId,
       contact_type: contact?.contact_type || 'primary',
