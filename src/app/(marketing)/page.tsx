@@ -93,13 +93,13 @@ function DeadlineCountdown() {
   }, []);
 
   return (
-    <div className="flex items-center gap-4 text-sm">
+    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-sm">
       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10 text-warning border border-warning/20">
         <Clock className="h-4 w-4" />
         <span className="font-semibold">{timeLeft.days}</span>
         <span className="text-warning/70">days</span>
       </div>
-      <span className="text-muted-foreground">until first RoI submission deadline</span>
+      <span className="text-muted-foreground text-center sm:text-left">until first RoI submission deadline</span>
     </div>
   );
 }
@@ -261,38 +261,38 @@ function HeroSection() {
             </div>
 
             {/* Dashboard Preview */}
-            <div className="bg-slate-50 rounded-b-xl p-6 min-h-[400px]">
-              <div className="grid grid-cols-3 gap-4">
-                {/* Stats Row */}
-                <div className="col-span-3 grid grid-cols-4 gap-4">
-                  <div className="bg-white rounded-xl p-4 border shadow-sm">
-                    <div className="text-sm text-muted-foreground mb-1">RoI Readiness</div>
-                    <div className="text-2xl font-bold text-success">94%</div>
-                    <div className="w-full bg-success/20 rounded-full h-1.5 mt-2">
+            <div className="bg-slate-50 rounded-b-xl p-3 sm:p-6 min-h-[300px] sm:min-h-[400px]">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                {/* Stats Row - 2x2 on mobile, 4 cols on desktop */}
+                <div className="col-span-1 sm:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+                  <div className="bg-white rounded-xl p-3 sm:p-4 border shadow-sm">
+                    <div className="text-xs sm:text-sm text-muted-foreground mb-1">RoI Readiness</div>
+                    <div className="text-xl sm:text-2xl font-bold text-success">94%</div>
+                    <div className="w-full bg-success/20 rounded-full h-1.5 mt-2 hidden sm:block">
                       <div className="bg-success h-1.5 rounded-full" style={{ width: '94%' }} />
                     </div>
                   </div>
-                  <div className="bg-white rounded-xl p-4 border shadow-sm">
-                    <div className="text-sm text-muted-foreground mb-1">Vendors Assessed</div>
-                    <div className="text-2xl font-bold">147</div>
-                    <div className="text-xs text-success flex items-center gap-1 mt-1">
+                  <div className="bg-white rounded-xl p-3 sm:p-4 border shadow-sm">
+                    <div className="text-xs sm:text-sm text-muted-foreground mb-1">Vendors</div>
+                    <div className="text-xl sm:text-2xl font-bold">147</div>
+                    <div className="text-xs text-success items-center gap-1 mt-1 hidden sm:flex">
                       <TrendingUp className="h-3 w-3" /> +12 this week
                     </div>
                   </div>
-                  <div className="bg-white rounded-xl p-4 border shadow-sm">
-                    <div className="text-sm text-muted-foreground mb-1">Documents Parsed</div>
-                    <div className="text-2xl font-bold">312</div>
-                    <div className="text-xs text-muted-foreground mt-1">Avg. 45s per doc</div>
+                  <div className="bg-white rounded-xl p-3 sm:p-4 border shadow-sm">
+                    <div className="text-xs sm:text-sm text-muted-foreground mb-1">Documents</div>
+                    <div className="text-xl sm:text-2xl font-bold">312</div>
+                    <div className="text-xs text-muted-foreground mt-1 hidden sm:block">Avg. 45s per doc</div>
                   </div>
-                  <div className="bg-white rounded-xl p-4 border shadow-sm">
-                    <div className="text-sm text-muted-foreground mb-1">Critical Issues</div>
-                    <div className="text-2xl font-bold text-warning">3</div>
-                    <div className="text-xs text-warning mt-1">Action required</div>
+                  <div className="bg-white rounded-xl p-3 sm:p-4 border shadow-sm">
+                    <div className="text-xs sm:text-sm text-muted-foreground mb-1">Issues</div>
+                    <div className="text-xl sm:text-2xl font-bold text-warning">3</div>
+                    <div className="text-xs text-warning mt-1 hidden sm:block">Action required</div>
                   </div>
                 </div>
 
-                {/* Content Area */}
-                <div className="col-span-2 bg-white rounded-xl p-4 border shadow-sm">
+                {/* Content Area - Hidden on mobile for cleaner look */}
+                <div className="hidden sm:block sm:col-span-2 bg-white rounded-xl p-4 border shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <span className="font-medium">Recent Assessments</span>
                     <Badge variant="secondary">Live</Badge>
@@ -309,7 +309,7 @@ function HeroSection() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl p-4 border shadow-sm">
+                <div className="hidden sm:block bg-white rounded-xl p-4 border shadow-sm">
                   <div className="font-medium mb-3">Compliance Score</div>
                   <div className="flex items-center justify-center">
                     <div className="relative w-24 h-24">
@@ -660,20 +660,20 @@ function AIParsingSection() {
               ))}
             </div>
 
-            <div className="flex items-center gap-6 p-4 rounded-xl bg-slate-50 border">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary">45s</div>
-                <div className="text-sm text-muted-foreground">Average parse time</div>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 sm:gap-6 p-4 rounded-xl bg-slate-50 border">
+              <div className="text-center min-w-[80px]">
+                <div className="text-3xl sm:text-4xl font-bold text-primary">45s</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Avg. parse time</div>
               </div>
-              <div className="w-px h-12 bg-border" />
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary">98%</div>
-                <div className="text-sm text-muted-foreground">Extraction accuracy</div>
+              <div className="hidden sm:block w-px h-12 bg-border" />
+              <div className="text-center min-w-[80px]">
+                <div className="text-3xl sm:text-4xl font-bold text-primary">98%</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Accuracy</div>
               </div>
-              <div className="w-px h-12 bg-border" />
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary">40h</div>
-                <div className="text-sm text-muted-foreground">Saved per vendor</div>
+              <div className="hidden sm:block w-px h-12 bg-border" />
+              <div className="text-center min-w-[80px]">
+                <div className="text-3xl sm:text-4xl font-bold text-primary">40h</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Saved/vendor</div>
               </div>
             </div>
           </div>

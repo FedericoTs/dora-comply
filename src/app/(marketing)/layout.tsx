@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { Shield, Menu, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { MarketingNav } from '@/components/marketing/nav';
 
 export const metadata: Metadata = {
   title: {
@@ -75,60 +73,6 @@ export const metadata: Metadata = {
     },
   },
 };
-
-const navigation = [
-  { name: 'Features', href: '#features' },
-  { name: 'How it Works', href: '#how-it-works' },
-  { name: 'Pricing', href: '#pricing' },
-  { name: 'Security', href: '#security' },
-];
-
-function MarketingNav() {
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border/50">
-      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white transition-transform group-hover:scale-105">
-              <Shield className="h-5 w-5" />
-            </div>
-            <span className="font-semibold text-lg tracking-tight">
-              DORA<span className="text-primary">Comply</span>
-            </span>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {item.name}
-              </Link>
-            ))}
-          </div>
-
-          {/* CTAs */}
-          <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
-                Log in
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button size="sm" className="shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow">
-                Start Free Trial
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
-    </header>
-  );
-}
 
 export default function MarketingLayout({
   children,

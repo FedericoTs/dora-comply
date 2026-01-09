@@ -268,9 +268,9 @@ export default async function DashboardPage() {
       {/* Overdue Reports Alert Banner */}
       {overdueReports > 0 && (
         <div className="mb-4 p-4 rounded-lg border border-destructive/50 bg-destructive/10 animate-in">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/20">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/20">
                 <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
               <div>
@@ -284,7 +284,7 @@ export default async function DashboardPage() {
             </div>
             <Link
               href="/incidents?filter=overdue"
-              className="btn-primary bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              className="btn-primary bg-destructive hover:bg-destructive/90 text-destructive-foreground shrink-0"
             >
               Review Overdue
               <ArrowUpRight className="h-4 w-4 ml-1" />
@@ -296,9 +296,9 @@ export default async function DashboardPage() {
       {/* TLPT Overdue Alert Banner - Only for significant entities */}
       {tlptRequired && tlptOverdue > 0 && (
         <div className="mb-4 p-4 rounded-lg border border-amber-500/50 bg-amber-500/10 animate-in">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
                 <Target className="h-5 w-5 text-amber-600" />
               </div>
               <div>
@@ -312,7 +312,7 @@ export default async function DashboardPage() {
             </div>
             <Link
               href="/testing/tlpt"
-              className="btn-primary bg-amber-600 hover:bg-amber-700 text-white"
+              className="btn-primary bg-amber-600 hover:bg-amber-700 text-white shrink-0"
             >
               Schedule TLPT
               <ArrowUpRight className="h-4 w-4 ml-1" />
@@ -324,9 +324,9 @@ export default async function DashboardPage() {
       {/* TLPT Due Soon Warning - Only for significant entities */}
       {tlptRequired && tlptOverdue === 0 && tlptDueSoon > 0 && (
         <div className="mb-4 p-4 rounded-lg border border-blue-500/50 bg-blue-500/10 animate-in">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20">
                 <Target className="h-5 w-5 text-blue-600" />
               </div>
               <div>
@@ -340,7 +340,7 @@ export default async function DashboardPage() {
             </div>
             <Link
               href="/testing/tlpt"
-              className="btn-secondary"
+              className="btn-secondary shrink-0"
             >
               View TLPT Schedule
               <ArrowUpRight className="h-4 w-4 ml-1" />
@@ -376,7 +376,7 @@ export default async function DashboardPage() {
       )}
 
       {/* Page Header */}
-      <div data-tour="welcome" className="flex items-start justify-between mb-8 animate-in">
+      <div data-tour="welcome" className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8 animate-in">
         <div>
           <h1 className="mb-1">{getGreeting()}{firstName ? `, ${firstName}` : ''}</h1>
           <p className="text-muted-foreground">
@@ -387,7 +387,8 @@ export default async function DashboardPage() {
           <BoardReportExport />
           <Link href="/vendors/new" className="btn-primary" data-tour="add-vendor">
             <Plus className="h-4 w-4" />
-            Add vendor
+            <span className="hidden sm:inline">Add vendor</span>
+            <span className="sm:hidden">Add</span>
           </Link>
         </div>
       </div>
