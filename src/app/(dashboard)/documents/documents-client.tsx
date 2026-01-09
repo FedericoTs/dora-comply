@@ -22,6 +22,7 @@ import {
   Award,
   Bug,
 } from 'lucide-react';
+import { EmptyState, SearchEmptyState, FilterEmptyState, NoDocumentsState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -326,21 +327,24 @@ export function DocumentsClient({ initialData }: DocumentsClientProps) {
 
         <CardContent>
           {documents.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No documents found</h3>
-              <p className="text-muted-foreground mb-4">
-                {search || typeFilter !== 'all'
-                  ? 'Try adjusting your search or filters'
-                  : 'Upload your first compliance document to get started'}
-              </p>
-              {!search && typeFilter === 'all' && (
-                <Button onClick={() => setIsUploadOpen(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Document
-                </Button>
-              )}
-            </div>
+            search ? (
+              <SearchEmptyState
+                searchQuery={search}
+                onClear={() => {
+                  setSearch('');
+                  fetchDocuments(1);
+                }}
+              />
+            ) : typeFilter !== 'all' ? (
+              <FilterEmptyState
+                onClear={() => {
+                  setTypeFilter('all');
+                  fetchDocuments(1);
+                }}
+              />
+            ) : (
+              <NoDocumentsState onUpload={() => setIsUploadOpen(true)} />
+            )
           ) : (
             <>
               <div className="rounded-md border">

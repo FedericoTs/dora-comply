@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { MoreVertical, ArrowUpDown, CheckCircle2, Clock, AlertTriangle, ExternalLink } from 'lucide-react';
+import { MoreVertical, ArrowUpDown, CheckCircle2, Clock, AlertTriangle, ExternalLink, Building2 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Table,
   TableBody,
@@ -106,9 +107,15 @@ export function VendorTable({
 
   if (vendors.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-muted-foreground">No vendors found</p>
-      </div>
+      <EmptyState
+        icon={Building2}
+        title="No vendors found"
+        description="Add your first ICT service provider to start managing third-party risks and DORA compliance."
+        action={{
+          label: 'Add Vendor',
+          href: '/vendors/new',
+        }}
+      />
     );
   }
 

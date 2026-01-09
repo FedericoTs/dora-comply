@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Search, Filter, X, AlertTriangle } from 'lucide-react';
+import { EmptyState, SearchEmptyState, FilterEmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -292,20 +293,24 @@ export function IncidentList({ incidents, loading = false }: IncidentListProps) 
 
       {/* Incidents Grid */}
       {filteredAndSortedIncidents.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <AlertTriangle className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="font-medium text-lg">No incidents found</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            {search || activeFiltersCount > 0
-              ? 'Try adjusting your search or filters'
-              : 'No incidents have been reported yet'}
-          </p>
-          {(search || activeFiltersCount > 0) && (
-            <Button variant="outline" size="sm" onClick={clearFilters} className="mt-4">
-              Clear filters
-            </Button>
-          )}
-        </div>
+        search ? (
+          <SearchEmptyState
+            searchQuery={search}
+            onClear={() => setSearch('')}
+          />
+        ) : activeFiltersCount > 0 ? (
+          <FilterEmptyState onClear={clearFilters} />
+        ) : (
+          <EmptyState
+            icon={AlertTriangle}
+            title="No incidents reported"
+            description="When ICT-related incidents occur, they will appear here for tracking and regulatory reporting."
+            action={{
+              label: 'Report Incident',
+              href: '/incidents/new',
+            }}
+          />
+        )
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredAndSortedIncidents.map((incident) => (

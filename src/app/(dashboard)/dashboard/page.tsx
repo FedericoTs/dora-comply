@@ -2,8 +2,6 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import {
   FileText,
-  TrendingUp,
-  TrendingDown,
   ArrowUpRight,
   CheckCircle2,
   AlertCircle,
@@ -32,6 +30,7 @@ import { getOrganizationContext } from '@/lib/org/context';
 import { getDocumentStats } from '@/lib/documents/queries';
 import { BoardReportExport } from '@/components/reports/board-report-export';
 import { IncidentMetricsCard } from '@/components/incidents/dashboard';
+import { StatCard, StatCardGrid } from '@/components/ui/stat-card';
 
 // ============================================================================
 // Time-aware greeting
@@ -223,27 +222,31 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 stagger">
+      <StatCardGrid columns={6} className="mb-8 stagger">
         <StatCard
           label="Total Vendors"
-          value={totalVendors.toString()}
-          change={totalVendors > 0 ? `+${totalVendors}` : '+0'}
-          trend="up"
-          period="total"
+          value={totalVendors}
+          trend={totalVendors > 0 ? 'up' : 'neutral'}
+          trendLabel={`${totalVendors} total`}
+          href="/vendors"
+          size="compact"
         />
         <StatCard
           label="RoI Readiness"
           value={`${avgRoiCompleteness}%`}
-          change={avgRoiCompleteness > 0 ? `${templatesWithData.length} templates` : 'No data yet'}
-          trend="up"
-          period=""
+          progress={avgRoiCompleteness}
+          description={avgRoiCompleteness > 0 ? `${templatesWithData.length} templates` : 'No data yet'}
+          href="/roi"
+          size="compact"
         />
         <StatCard
           label="Critical Risks"
-          value={criticalRisks.toString()}
-          change={criticalRisks === 0 ? 'None' : `${criticalRisks} vendors`}
-          trend="down"
-          period=""
+          value={criticalRisks}
+          variant={criticalRisks > 0 ? 'error' : 'success'}
+          trend={criticalRisks === 0 ? 'neutral' : 'down'}
+          trendLabel={criticalRisks === 0 ? 'None' : `${criticalRisks} vendors`}
+          href="/vendors?risk=critical"
+          size="compact"
         />
         {incidentStats ? (
           <IncidentMetricsCard stats={incidentStats} />
@@ -262,10 +265,13 @@ export default async function DashboardPage() {
         />
         <StatCard
           label="Days to Deadline"
-          value={daysToDeadline.toString()}
-          subtitle="April 30, 2025"
+          value={daysToDeadline}
+          description="April 30, 2025"
+          variant={daysToDeadline <= 30 ? 'warning' : 'default'}
+          href="/roi/submissions"
+          size="compact"
         />
-      </div>
+      </StatCardGrid>
 
       {/* Main Grid */}
       <div className="grid grid-cols-3 gap-6">
@@ -406,38 +412,14 @@ export default async function DashboardPage() {
         </div>
 
         {/* Getting Started */}
-        <div className="col-span-2 card-premium p-6 animate-slide-up">
-          <div className="flex items-center justify-between mb-6">
-            <h3>Getting Started</h3>
-            <span className="badge badge-default">4 steps</span>
-          </div>
-          <div className="space-y-4">
-            <StepItem
-              step={1}
-              title="Add your first ICT third-party provider"
-              href="/vendors/new"
-              completed={totalVendors > 0}
-            />
-            <StepItem
-              step={2}
-              title="Upload vendor contracts and certifications"
-              href="/documents"
-              completed={documentStats.total > 0}
-            />
-            <StepItem
-              step={3}
-              title="Generate your Register of Information"
-              href="/roi"
-              completed={avgRoiCompleteness > 0}
-            />
-            <StepItem
-              step={4}
-              title="Set up incident reporting workflows"
-              href="/incidents"
-              completed={(incidentStats?.total ?? 0) > 0}
-            />
-          </div>
-        </div>
+        <GettingStartedCard
+          stepsCompleted={[
+            totalVendors > 0,
+            documentStats.total > 0,
+            avgRoiCompleteness > 0,
+            (incidentStats?.total ?? 0) > 0,
+          ]}
+        />
       </div>
     </>
   );
@@ -446,43 +428,6 @@ export default async function DashboardPage() {
 /* ============================================
    COMPONENTS
    ============================================ */
-
-function StatCard({
-  label,
-  value,
-  change,
-  trend,
-  period,
-  subtitle,
-}: {
-  label: string;
-  value: string;
-  change?: string;
-  trend?: 'up' | 'down';
-  period?: string;
-  subtitle?: string;
-}) {
-  return (
-    <div className="stat-card">
-      <p className="stat-label mb-2">{label}</p>
-      <p className="stat-value">{value}</p>
-      {change && (
-        <div className="flex items-center gap-1.5 mt-2">
-          {trend === 'up' ? (
-            <TrendingUp className="h-4 w-4 text-success" />
-          ) : (
-            <TrendingDown className="h-4 w-4 text-success" />
-          )}
-          <span className="text-sm text-success font-medium">{change}</span>
-          {period && <span className="text-sm text-muted-foreground">{period}</span>}
-        </div>
-      )}
-      {subtitle && (
-        <p className="text-sm text-muted-foreground mt-2">{subtitle}</p>
-      )}
-    </div>
-  );
-}
 
 function ActivityItem({
   title,
@@ -583,6 +528,85 @@ function StepItem({
       <span className="flex-1 text-sm font-medium">{title}</span>
       <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
     </Link>
+  );
+}
+
+const STEPS = [
+  { step: 1, title: 'Add your first ICT third-party provider', href: '/vendors/new' },
+  { step: 2, title: 'Upload vendor contracts and certifications', href: '/documents' },
+  { step: 3, title: 'Generate your Register of Information', href: '/roi' },
+  { step: 4, title: 'Set up incident reporting workflows', href: '/incidents' },
+];
+
+function GettingStartedCard({ stepsCompleted }: { stepsCompleted: boolean[] }) {
+  const completedCount = stepsCompleted.filter(Boolean).length;
+  const allCompleted = completedCount === STEPS.length;
+
+  if (allCompleted) {
+    return (
+      <div className="col-span-2 card-premium p-6 animate-slide-up">
+        <div className="py-8 text-center">
+          <div className="relative inline-block mb-4">
+            <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="h-10 w-10 text-success" />
+            </div>
+            <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-primary flex items-center justify-center animate-bounce">
+              <span className="text-xs">🎉</span>
+            </div>
+          </div>
+          <h3 className="text-xl font-semibold mb-2">Setup Complete!</h3>
+          <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+            You&apos;ve completed all the essential steps. Your DORA compliance journey is off to a great start.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Link href="/compliance/trends" className="btn-primary">
+              View Compliance Trends
+            </Link>
+            <Link href="/vendors" className="btn-secondary">
+              Manage Vendors
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="col-span-2 card-premium p-6 animate-slide-up">
+      <div className="flex items-center justify-between mb-6">
+        <h3>Getting Started</h3>
+        <span className="badge badge-default">
+          {completedCount}/{STEPS.length} completed
+        </span>
+      </div>
+      <div className="space-y-4">
+        {STEPS.map((step, index) => (
+          <StepItem
+            key={step.step}
+            step={step.step}
+            title={step.title}
+            href={step.href}
+            completed={stepsCompleted[index]}
+          />
+        ))}
+      </div>
+      {completedCount > 0 && (
+        <div className="mt-6 pt-4 border-t border-border">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Progress</span>
+            <span className="font-medium text-primary">
+              {Math.round((completedCount / STEPS.length) * 100)}%
+            </span>
+          </div>
+          <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500"
+              style={{ width: `${(completedCount / STEPS.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
