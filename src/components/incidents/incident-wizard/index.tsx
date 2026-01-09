@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, Clock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -24,12 +24,16 @@ import { toast } from 'sonner';
  * 5. Review - Confirm and submit
  */
 const STEPS = [
-  { id: 'basic-info', title: 'Basic Info', description: 'What happened and when' },
-  { id: 'impact', title: 'Impact', description: 'Business and client impact' },
-  { id: 'classification', title: 'Classification', description: 'DORA severity assessment' },
-  { id: 'details', title: 'Details', description: 'Context and remediation' },
-  { id: 'review', title: 'Review', description: 'Confirm and submit' },
+  { id: 'basic-info', title: 'Basic Info', description: 'What happened and when', time: '2 min' },
+  { id: 'impact', title: 'Impact', description: 'Business and client impact', time: '3 min' },
+  { id: 'classification', title: 'Classification', description: 'DORA severity assessment', time: '1 min' },
+  { id: 'details', title: 'Details', description: 'Context and remediation', time: '2 min' },
+  { id: 'review', title: 'Review', description: 'Confirm and submit', time: '1 min' },
 ];
+
+// Total estimated time and DORA deadline reminder
+const TOTAL_TIME = '~9 min';
+const DORA_DEADLINE_NOTICE = '4-hour initial report deadline under DORA';
 
 export interface WizardData {
   // Step 1: Basic Info
@@ -280,6 +284,22 @@ export function IncidentWizard({
 
   return (
     <div className="space-y-6">
+      {/* Time Estimate and Deadline Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+        <div className="flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0" />
+          <div>
+            <p className="font-medium text-amber-800 dark:text-amber-400">{DORA_DEADLINE_NOTICE}</p>
+            <p className="text-sm text-amber-700 dark:text-amber-500/80">Complete this wizard to submit your initial report</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-500">
+          <Clock className="h-4 w-4" />
+          <span className="font-medium">{TOTAL_TIME}</span>
+          <span>to complete</span>
+        </div>
+      </div>
+
       {/* Progress Steps */}
       <nav aria-label="Progress">
         <ol className="flex items-center">

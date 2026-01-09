@@ -1,42 +1,13 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import {
-  Shield,
-  LayoutDashboard,
-  Building2,
-  FileText,
-  BookOpen,
-  AlertTriangle,
-  Settings,
-  LogOut,
-  Network,
-  FlaskConical,
-  BarChart3,
-  Layers,
-} from 'lucide-react';
+import { Shield, LogOut } from 'lucide-react';
 import { ThemeToggleSimple } from '@/components/ui/theme-toggle';
-import { NavigationProviders, MobileSidebar } from '@/components/navigation';
+import { NavigationProviders, MobileSidebar, SidebarNav } from '@/components/navigation';
 import { CopilotChat } from '@/components/copilot';
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 import { checkAuthStatus, logout } from '@/lib/auth';
 import { ProductTour } from '@/components/onboarding/product-tour';
 import { GlobalSearch } from '@/components/search/global-search';
-
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Vendors', href: '/vendors', icon: Building2 },
-  { name: 'Concentration Risk', href: '/concentration', icon: Network },
-  { name: 'Documents', href: '/documents', icon: FileText },
-  { name: 'Register of Information', href: '/roi', icon: BookOpen },
-  { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
-  { name: 'Resilience Testing', href: '/testing', icon: FlaskConical },
-  { name: 'Compliance Trends', href: '/compliance/trends', icon: BarChart3 },
-  { name: 'Frameworks', href: '/frameworks', icon: Layers },
-];
-
-const secondaryNavigation = [
-  { name: 'Settings', href: '/settings', icon: Settings },
-];
 
 export default async function DashboardLayout({
   children,
@@ -68,41 +39,8 @@ export default async function DashboardLayout({
             </Link>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="nav-item"
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="flex-1 text-sm">{item.name}</span>
-                </Link>
-              );
-            })}
-
-            <div className="pt-6 pb-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3">
-                Settings
-              </span>
-            </div>
-            {secondaryNavigation.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="nav-item"
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="flex-1 text-sm">{item.name}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          {/* Navigation - Grouped with collapsible sections */}
+          <SidebarNav />
 
           {/* User */}
           <div className="p-4 border-t border-sidebar-border">

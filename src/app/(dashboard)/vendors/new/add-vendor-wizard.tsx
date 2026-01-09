@@ -13,6 +13,7 @@ import {
   Shield,
   Users,
   Search,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -52,10 +53,13 @@ import { validateLEI, searchEntities, getCountryFlag } from '@/lib/external/glei
 import type { GLEIFEntity } from '@/lib/vendors/types';
 
 const STEPS = [
-  { id: 1, title: 'Basic Info', description: 'Name and LEI lookup', icon: Building2 },
-  { id: 2, title: 'Classification', description: 'Tier and provider type', icon: Shield },
-  { id: 3, title: 'DORA Details', description: 'Critical functions', icon: Users },
+  { id: 1, title: 'Basic Info', description: 'Name and LEI lookup', icon: Building2, time: '1 min', requiredFields: 1, optionalFields: 1 },
+  { id: 2, title: 'Classification', description: 'Tier and provider type', icon: Shield, time: '1 min', requiredFields: 1, optionalFields: 3 },
+  { id: 3, title: 'DORA Details', description: 'Critical functions', icon: Users, time: '1 min', requiredFields: 0, optionalFields: 4 },
 ];
+
+// Calculate total estimated time
+const TOTAL_TIME = '~3 min';
 
 export function AddVendorWizard() {
   const router = useRouter();
@@ -158,10 +162,16 @@ export function AddVendorWizard() {
 
   return (
     <div className="space-y-6">
-      {/* Progress Bar */}
+      {/* Progress Bar with Time Estimate */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Step {currentStep} of {STEPS.length}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-muted-foreground">Step {currentStep} of {STEPS.length}</span>
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              {TOTAL_TIME} total
+            </span>
+          </div>
           <span className="font-medium text-primary">{Math.round((currentStep / STEPS.length) * 100)}% complete</span>
         </div>
         <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -279,7 +289,8 @@ export function AddVendorWizard() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-1.5">
-                            LEI (Legal Entity Identifier)
+                            LEI
+                            <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
                             <HelpTooltip content={DORA_HELP.lei} />
                           </FormLabel>
                           <div className="flex gap-2">
@@ -382,6 +393,7 @@ export function AddVendorWizard() {
                       <FormItem>
                         <FormLabel className="flex items-center gap-1.5">
                           Provider Type
+                          <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
                           <HelpTooltip content={DORA_HELP.providerType} />
                         </FormLabel>
                         <Select
@@ -413,7 +425,10 @@ export function AddVendorWizard() {
                     name="headquarters_country"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Headquarters Country</FormLabel>
+                        <FormLabel className="flex items-center gap-1.5">
+                          Headquarters Country
+                          <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
+                        </FormLabel>
                         <FormControl>
                           <CountrySelect
                             value={field.value}
@@ -434,7 +449,10 @@ export function AddVendorWizard() {
                     name="service_types"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Service Types</FormLabel>
+                        <FormLabel className="flex items-center gap-1.5">
+                          Service Types
+                          <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
+                        </FormLabel>
                         <div className="grid gap-2 sm:grid-cols-2">
                           {(Object.keys(SERVICE_TYPE_LABELS) as ServiceType[]).map(
                             (type) => (
