@@ -17,6 +17,9 @@ import {
   AlertTriangle,
   Clock,
   Lock,
+  Monitor,
+  Globe,
+  LogOut,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -45,6 +48,17 @@ import type { UserRole } from '@/lib/auth/types';
 // Roles that require MFA
 const MFA_REQUIRED_ROLES: UserRole[] = ['owner', 'admin'];
 
+// Session type from API
+interface Session {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  user_agent: string | null;
+  ip: string | null;
+  last_active_at: string | null;
+  is_current: boolean;
+}
+
 export default function SecuritySettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [factors, setFactors] = useState<MFAFactor[]>([]);
@@ -53,6 +67,12 @@ export default function SecuritySettingsPage() {
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [factorToDelete, setFactorToDelete] = useState<MFAFactor | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Session state
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
+  const [revokingAll, setRevokingAll] = useState(false);
 
   // Load MFA factors and AAL info
   const loadMFAData = useCallback(async () => {
@@ -87,6 +107,72 @@ export default function SecuritySettingsPage() {
   useEffect(() => {
     loadMFAData();
   }, [loadMFAData]);
+
+  // Load sessions
+  const loadSessions = useCallback(async () => {
+    try {
+      const response = await fetch('/api/settings/sessions');
+      if (response.ok) {
+        const data = await response.json();
+        setSessions(data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to load sessions:', error);
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
+
+  // Revoke a specific session
+  const handleRevokeSession = async (sessionId: string) => {
+    setRevokingSessionId(sessionId);
+    try {
+      const response = await fetch(`/api/settings/sessions/${sessionId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Failed to revoke session');
+      }
+
+      toast.success('Session revoked');
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    } catch (error) {
+      console.error('Revoke session error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to revoke session');
+    } finally {
+      setRevokingSessionId(null);
+    }
+  };
+
+  // Revoke all other sessions
+  const handleRevokeAllOther = async () => {
+    setRevokingAll(true);
+    try {
+      const response = await fetch('/api/settings/sessions', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Failed to revoke sessions');
+      }
+
+      const result = await response.json();
+      toast.success(result.message || 'Signed out of other sessions');
+      setSessions((prev) => prev.filter((s) => s.is_current));
+    } catch (error) {
+      console.error('Revoke all sessions error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to revoke sessions');
+    } finally {
+      setRevokingAll(false);
+    }
+  };
 
   // Handle MFA setup completion
   const handleSetupComplete = () => {
@@ -147,6 +233,39 @@ export default function SecuritySettingsPage() {
 
   const hasMFA = factors.length > 0;
   const mfaRequired = userRole && MFA_REQUIRED_ROLES.includes(userRole);
+  const otherSessions = sessions.filter((s) => !s.is_current);
+
+  // Parse user agent to get device/browser info
+  const parseUserAgent = (ua: string | null) => {
+    if (!ua) return { browser: 'Unknown Browser', device: 'Unknown Device', os: 'Unknown' };
+
+    let browser = 'Unknown Browser';
+    let os = 'Unknown';
+    let device = 'Desktop';
+
+    // Detect browser
+    if (ua.includes('Firefox/')) browser = 'Firefox';
+    else if (ua.includes('Edg/')) browser = 'Edge';
+    else if (ua.includes('Chrome/')) browser = 'Chrome';
+    else if (ua.includes('Safari/') && !ua.includes('Chrome')) browser = 'Safari';
+    else if (ua.includes('Opera') || ua.includes('OPR/')) browser = 'Opera';
+
+    // Detect OS
+    if (ua.includes('Windows')) os = 'Windows';
+    else if (ua.includes('Mac OS X') || ua.includes('Macintosh')) os = 'macOS';
+    else if (ua.includes('Linux') && !ua.includes('Android')) os = 'Linux';
+    else if (ua.includes('Android')) os = 'Android';
+    else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+
+    // Detect device type
+    if (ua.includes('Mobile') || ua.includes('Android') || ua.includes('iPhone')) {
+      device = 'Mobile';
+    } else if (ua.includes('iPad') || ua.includes('Tablet')) {
+      device = 'Tablet';
+    }
+
+    return { browser, os, device };
+  };
 
   if (isLoading) {
     return (
@@ -268,24 +387,121 @@ export default function SecuritySettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Active Sessions - Coming Soon */}
+      {/* Active Sessions */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Active Sessions
-          </CardTitle>
-          <CardDescription>
-            View and manage your active login sessions across devices
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8 text-muted-foreground">
-            <div className="text-center">
-              <Lock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Coming soon</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Monitor className="h-5 w-5" />
+                Active Sessions
+              </CardTitle>
+              <CardDescription>
+                View and manage your active login sessions across devices
+              </CardDescription>
             </div>
+            {otherSessions.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRevokeAllOther}
+                disabled={revokingAll}
+                className="text-destructive hover:text-destructive"
+              >
+                {revokingAll ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <LogOut className="h-4 w-4 mr-2" />
+                )}
+                Sign Out All Other
+              </Button>
+            )}
           </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {sessionsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <div className="text-center">
+                <Monitor className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No active sessions found</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {sessions.map((session) => {
+                const { browser, os, device } = parseUserAgent(session.user_agent);
+                const isRevoking = revokingSessionId === session.id;
+
+                return (
+                  <div
+                    key={session.id}
+                    className={`flex items-center justify-between p-3 border rounded-lg ${
+                      session.is_current ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${session.is_current ? 'bg-primary/10' : 'bg-muted'}`}>
+                        {device === 'Mobile' ? (
+                          <Smartphone className={`h-4 w-4 ${session.is_current ? 'text-primary' : 'text-muted-foreground'}`} />
+                        ) : (
+                          <Monitor className={`h-4 w-4 ${session.is_current ? 'text-primary' : 'text-muted-foreground'}`} />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">
+                            {browser} on {os}
+                          </p>
+                          {session.is_current && (
+                            <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+                              Current
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          {session.ip && (
+                            <span className="flex items-center gap-1">
+                              <Globe className="h-3 w-3" />
+                              {session.ip}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {session.last_active_at
+                              ? `Active ${formatRelativeTime(session.last_active_at)}`
+                              : `Started ${formatRelativeTime(session.created_at)}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {!session.is_current && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRevokeSession(session.id)}
+                        disabled={isRevoking}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        {isRevoking ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <LogOut className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+
+              <p className="text-xs text-muted-foreground pt-2">
+                Sessions automatically expire after 7 days of inactivity.
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
 
