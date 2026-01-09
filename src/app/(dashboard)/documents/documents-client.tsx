@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useTransition, useEffect, useMemo } from 'react';
+import { useState, useCallback, useTransition, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -29,6 +29,7 @@ import {
   ArrowUpDown,
   SlidersHorizontal,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 import { EmptyState, SearchEmptyState, FilterEmptyState, NoDocumentsState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
@@ -100,6 +101,7 @@ import {
   fetchDocumentsAction,
 } from '@/lib/documents/actions';
 import { fetchVendorsAction } from '@/lib/vendors/actions';
+import { DocumentParsingStatus, ProcessingIndicator } from '@/components/documents/document-parsing-status';
 
 // ============================================================================
 // Types
@@ -162,7 +164,7 @@ function getDocumentStatus(doc: DocumentWithVendor): StatusFilter {
   return 'active';
 }
 
-function getStatusBadge(status: StatusFilter) {
+function getStatusBadge(status: StatusFilter, doc?: DocumentWithVendor) {
   switch (status) {
     case 'expired':
       return (
@@ -179,20 +181,40 @@ function getStatusBadge(status: StatusFilter) {
         </Badge>
       );
     case 'processing':
-      return (
-        <Badge variant="outline" className="gap-1 border-info text-info">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          Processing
-        </Badge>
+      // Use enhanced AI analysis indicator for processing documents
+      return doc ? (
+        <DocumentParsingStatus
+          status={doc.parsing_status}
+          showTooltip={true}
+        />
+      ) : (
+        <ProcessingIndicator />
       );
     case 'failed':
-      return (
+      return doc ? (
+        <DocumentParsingStatus
+          status="failed"
+          error={doc.parsing_error}
+          showTooltip={true}
+        />
+      ) : (
         <Badge variant="destructive" className="gap-1">
           <X className="h-3 w-3" />
           Failed
         </Badge>
       );
     case 'active':
+      // Show analyzed badge for completed docs, active for others
+      if (doc?.parsing_status === 'completed') {
+        return (
+          <DocumentParsingStatus
+            status="completed"
+            parsedAt={doc.parsed_at}
+            confidence={doc.parsing_confidence}
+            showTooltip={true}
+          />
+        );
+      }
       return (
         <Badge variant="outline" className="gap-1 border-success text-success">
           <CheckCircle2 className="h-3 w-3" />
@@ -286,6 +308,93 @@ export function DocumentsClient({ initialData, initialVendors = [] }: DocumentsC
         });
     }
   }, [isUploadOpen, vendorFilter, vendors.length]);
+
+  // Track processing document IDs for notifications
+  const processingIdsRef = useRef<Set<string>>(new Set());
+
+  // Poll for status updates when documents are processing
+  useEffect(() => {
+    // Check if any documents are processing
+    const processingDocs = documents.filter(
+      d => d.parsing_status === 'pending' || d.parsing_status === 'processing'
+    );
+
+    // Track which documents were processing
+    const currentProcessingIds = new Set(processingDocs.map(d => d.id));
+
+    // If no documents are processing, clear the ref and stop
+    if (processingDocs.length === 0) {
+      processingIdsRef.current = new Set();
+      return;
+    }
+
+    // Poll every 5 seconds while documents are processing
+    const pollInterval = setInterval(async () => {
+      const result = await fetchDocumentsAction({
+        filters: {
+          search: debouncedSearch || undefined,
+          type: typeFilters.length > 0 ? typeFilters : undefined,
+          vendor_id: vendorFilter !== 'all' ? vendorFilter : undefined,
+        },
+        pagination: { page, limit: initialData.limit },
+        sort: { field: sortField === 'vendor' ? 'created_at' : sortField, direction: sortDirection },
+      });
+
+      // Check for completed documents that were processing
+      const previouslyProcessing = processingIdsRef.current;
+      const newlyCompleted = result.data.filter(
+        d => previouslyProcessing.has(d.id) && d.parsing_status === 'completed'
+      );
+      const newlyFailed = result.data.filter(
+        d => previouslyProcessing.has(d.id) && d.parsing_status === 'failed'
+      );
+
+      // Show toast notifications for completed documents
+      newlyCompleted.forEach(doc => {
+        toast.success('AI Analysis Complete', {
+          description: (
+            <span>
+              <Sparkles className="inline h-3 w-3 mr-1" />
+              {doc.filename} has been analyzed
+              {doc.parsing_confidence && (
+                <span className="text-muted-foreground ml-1">
+                  ({Math.round(doc.parsing_confidence * 100)}% confidence)
+                </span>
+              )}
+            </span>
+          ),
+          action: {
+            label: 'View',
+            onClick: () => router.push(`/documents/${doc.id}`),
+          },
+        });
+      });
+
+      // Show toast for failed documents
+      newlyFailed.forEach(doc => {
+        toast.error('AI Analysis Failed', {
+          description: doc.parsing_error || `Failed to analyze ${doc.filename}`,
+        });
+      });
+
+      // Update state
+      setDocuments(result.data);
+      setTotal(result.total);
+
+      // Update tracking ref
+      const stillProcessing = result.data.filter(
+        d => d.parsing_status === 'pending' || d.parsing_status === 'processing'
+      );
+      processingIdsRef.current = new Set(stillProcessing.map(d => d.id));
+
+      // If nothing is processing anymore, the effect will clean up on next render
+    }, 5000);
+
+    // Store current processing IDs
+    processingIdsRef.current = currentProcessingIds;
+
+    return () => clearInterval(pollInterval);
+  }, [documents, debouncedSearch, typeFilters, vendorFilter, page, sortField, sortDirection, initialData.limit, router]);
 
   const totalPages = Math.ceil(total / initialData.limit);
 
@@ -635,7 +744,7 @@ export function DocumentsClient({ initialData, initialVendors = [] }: DocumentsC
         <TableCell className="text-muted-foreground">
           {new Date(doc.created_at).toLocaleDateString()}
         </TableCell>
-        <TableCell>{getStatusBadge(status)}</TableCell>
+        <TableCell>{getStatusBadge(status, doc)}</TableCell>
         <TableCell>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -694,7 +803,7 @@ export function DocumentsClient({ initialData, initialVendors = [] }: DocumentsC
                 <TypeIcon className="h-4 w-4 text-white" />
               </div>
             </div>
-            {getStatusBadge(status)}
+            {getStatusBadge(status, doc)}
           </div>
 
           <Link href={`/documents/${doc.id}`} className="block hover:text-primary">
