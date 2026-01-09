@@ -36,6 +36,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { HelpTooltip, DORA_HELP } from '@/components/ui/help-tooltip';
 import { cn } from '@/lib/utils';
 import { createVendorSchema, type CreateVendorFormData, type CreateVendorFormInput } from '@/lib/vendors/schemas';
 import {
@@ -157,6 +158,20 @@ export function AddVendorWizard() {
 
   return (
     <div className="space-y-6">
+      {/* Progress Bar */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Step {currentStep} of {STEPS.length}</span>
+          <span className="font-medium text-primary">{Math.round((currentStep / STEPS.length) * 100)}% complete</span>
+        </div>
+        <div className="h-2 rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+            style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
+          />
+        </div>
+      </div>
+
       {/* Step Indicator */}
       <div className="flex items-center justify-between">
         {STEPS.map((step, index) => (
@@ -263,7 +278,10 @@ export function AddVendorWizard() {
                       name="lei"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>LEI (Legal Entity Identifier)</FormLabel>
+                          <FormLabel className="flex items-center gap-1.5">
+                            LEI (Legal Entity Identifier)
+                            <HelpTooltip content={DORA_HELP.lei} />
+                          </FormLabel>
                           <div className="flex gap-2">
                             <FormControl>
                               <Input
@@ -328,7 +346,10 @@ export function AddVendorWizard() {
                     name="tier"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Vendor Tier *</FormLabel>
+                        <FormLabel className="flex items-center gap-1.5">
+                          Vendor Tier *
+                          <HelpTooltip content={DORA_HELP.tier} />
+                        </FormLabel>
                         <div className="grid gap-3 sm:grid-cols-3">
                           {(Object.keys(TIER_INFO) as VendorTier[]).map((tier) => (
                             <button
@@ -359,7 +380,10 @@ export function AddVendorWizard() {
                     name="provider_type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Provider Type</FormLabel>
+                        <FormLabel className="flex items-center gap-1.5">
+                          Provider Type
+                          <HelpTooltip content={DORA_HELP.providerType} />
+                        </FormLabel>
                         <Select
                           value={field.value || ''}
                           onValueChange={field.onChange}
