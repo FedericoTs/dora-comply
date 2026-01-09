@@ -3,11 +3,11 @@
 /**
  * Notification Dropdown Component
  *
- * Displays recent notifications in a dropdown panel.
- * Shows sample notifications for now - will be connected to real data later.
+ * Displays notifications from the database with real-time updates.
+ * Features mark as read, dismiss, and links to notification settings.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import {
   Bell,
@@ -19,85 +19,76 @@ import {
   Check,
   X,
   ChevronRight,
+  Loader2,
+  Inbox,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import {
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  dismissNotification,
+  seedSampleNotifications,
+  type Notification,
+  type NotificationType,
+} from '@/lib/notifications/actions';
 
-// Sample notification type
-interface Notification {
-  id: string;
-  type: 'incident' | 'vendor' | 'compliance' | 'security' | 'system';
-  title: string;
-  message: string;
-  timestamp: Date;
-  read: boolean;
-  href?: string;
-}
+// ============================================================================
+// Configuration
+// ============================================================================
 
-// Sample notifications for demo
-const SAMPLE_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'incident',
-    title: 'Incident Report Due',
-    message: 'Initial notification for INC-2025-001 due in 4 hours',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
-    read: false,
-    href: '/incidents',
+const NOTIFICATION_CONFIG: Record<NotificationType, {
+  icon: typeof AlertTriangle;
+  iconClass: string;
+  bgClass: string;
+  borderClass: string;
+}> = {
+  incident: {
+    icon: AlertTriangle,
+    iconClass: 'text-error',
+    bgClass: 'bg-error/10',
+    borderClass: 'border-error/20',
   },
-  {
-    id: '2',
-    type: 'vendor',
-    title: 'Assessment Expiring',
-    message: 'CloudSync Ltd. assessment expires in 7 days',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    read: false,
-    href: '/vendors',
+  vendor: {
+    icon: Building2,
+    iconClass: 'text-warning',
+    bgClass: 'bg-warning/10',
+    borderClass: 'border-warning/20',
   },
-  {
-    id: '3',
-    type: 'compliance',
-    title: 'RoI Deadline Approaching',
-    message: 'Annual Register of Information due in 14 days',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    read: true,
-    href: '/roi',
+  compliance: {
+    icon: FileText,
+    iconClass: 'text-primary',
+    bgClass: 'bg-primary/10',
+    borderClass: 'border-primary/20',
   },
-  {
-    id: '4',
-    type: 'security',
-    title: 'New Login Detected',
-    message: 'Login from a new device in London, UK',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
-    read: true,
-    href: '/settings/security',
+  security: {
+    icon: Shield,
+    iconClass: 'text-info',
+    bgClass: 'bg-info/10',
+    borderClass: 'border-info/20',
   },
-];
-
-const NOTIFICATION_ICONS = {
-  incident: AlertTriangle,
-  vendor: Building2,
-  compliance: FileText,
-  security: Shield,
-  system: Settings,
+  system: {
+    icon: Settings,
+    iconClass: 'text-muted-foreground',
+    bgClass: 'bg-muted',
+    borderClass: 'border-muted',
+  },
 };
 
-const NOTIFICATION_COLORS = {
-  incident: 'text-error bg-error/10',
-  vendor: 'text-warning bg-warning/10',
-  compliance: 'text-primary bg-primary/10',
-  security: 'text-info bg-info/10',
-  system: 'text-muted-foreground bg-muted',
-};
+// ============================================================================
+// Helpers
+// ============================================================================
 
-function formatRelativeTime(date: Date): string {
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -108,163 +99,272 @@ function formatRelativeTime(date: Date): string {
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
+// ============================================================================
+// Component
+// ============================================================================
+
 export function NotificationDropdown() {
-  const [notifications, setNotifications] = useState<Notification[]>(SAMPLE_NOTIFICATIONS);
   const [isOpen, setIsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+  // Load notifications
+  const loadNotifications = async () => {
+    const result = await getNotifications();
+    if (result.success && result.data) {
+      setNotifications(result.data);
+      setUnreadCount(result.stats?.unread || 0);
+    }
+    setIsLoading(false);
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  // Initial load and seed sample notifications if needed
+  useEffect(() => {
+    const init = async () => {
+      await seedSampleNotifications();
+      await loadNotifications();
+    };
+    init();
+  }, []);
+
+  // Reload when dropdown opens
+  useEffect(() => {
+    if (isOpen) {
+      loadNotifications();
+    }
+  }, [isOpen]);
+
+  // Handle mark as read
+  const handleMarkAsRead = (id: string) => {
+    startTransition(async () => {
+      const result = await markNotificationAsRead(id);
+      if (result.success) {
+        setNotifications(prev =>
+          prev.map(n => n.id === id ? { ...n, read: true, read_at: new Date().toISOString() } : n)
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      } else {
+        toast.error('Failed to mark as read');
+      }
+    });
   };
 
-  const dismissNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  // Handle mark all as read
+  const handleMarkAllAsRead = () => {
+    startTransition(async () => {
+      const result = await markAllNotificationsAsRead();
+      if (result.success) {
+        setNotifications(prev =>
+          prev.map(n => ({ ...n, read: true, read_at: new Date().toISOString() }))
+        );
+        setUnreadCount(0);
+        toast.success('All notifications marked as read');
+      } else {
+        toast.error('Failed to mark all as read');
+      }
+    });
+  };
+
+  // Handle dismiss
+  const handleDismiss = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    startTransition(async () => {
+      const notification = notifications.find(n => n.id === id);
+      const result = await dismissNotification(id);
+      if (result.success) {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+        if (notification && !notification.read) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+      } else {
+        toast.error('Failed to dismiss notification');
+      }
+    });
+  };
+
+  // Handle refresh
+  const handleRefresh = () => {
+    startTransition(async () => {
+      await loadNotifications();
+    });
   };
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <button className="icon-btn relative">
-          <Bell className="h-5 w-5" />
+        <button className="icon-btn relative group">
+          <Bell className="h-5 w-5 transition-transform group-hover:scale-110" />
           {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            </span>
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 p-0">
+
+      <DropdownMenuContent
+        align="end"
+        className="w-96 p-0 overflow-hidden rounded-xl border-border/50 shadow-xl"
+        sideOffset={8}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b">
+        <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b">
           <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-primary" />
             <h3 className="font-semibold text-sm">Notifications</h3>
             {unreadCount > 0 && (
-              <Badge variant="secondary" className="text-xs px-1.5">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
                 {unreadCount}
-              </Badge>
+              </span>
             )}
           </div>
-          {unreadCount > 0 && (
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={markAllAsRead}
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleRefresh}
+              disabled={isPending}
             >
-              <Check className="h-3 w-3 mr-1" />
-              Mark all read
+              <RefreshCw className={cn("h-3.5 w-3.5", isPending && "animate-spin")} />
             </Button>
-          )}
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs gap-1 text-primary hover:text-primary"
+                onClick={handleMarkAllAsRead}
+                disabled={isPending}
+              >
+                <Check className="h-3 w-3" />
+                Mark all read
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Notification List */}
-        <div className="max-h-[400px] overflow-y-auto">
-          {notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Bell className="h-8 w-8 text-muted-foreground/50 mb-2" />
-              <p className="text-sm text-muted-foreground">No notifications</p>
-              <p className="text-xs text-muted-foreground">
-                You&apos;re all caught up!
+        <div className="max-h-[420px] overflow-y-auto scrollbar-thin">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <div className="rounded-full bg-muted p-4 mb-3">
+                <Inbox className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <p className="font-medium text-sm">All caught up!</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                No new notifications to show
               </p>
             </div>
           ) : (
-            notifications.map((notification) => {
-              const Icon = NOTIFICATION_ICONS[notification.type];
-              const colorClass = NOTIFICATION_COLORS[notification.type];
+            <div className="divide-y divide-border/50">
+              {notifications.map((notification) => {
+                const config = NOTIFICATION_CONFIG[notification.type];
+                const Icon = config.icon;
 
-              return (
-                <div
-                  key={notification.id}
-                  className={cn(
-                    'relative group flex gap-3 p-3 border-b last:border-0 transition-colors',
-                    !notification.read && 'bg-accent/50',
-                    'hover:bg-muted/50'
-                  )}
-                >
-                  {/* Icon */}
-                  <div className={cn('p-2 rounded-lg shrink-0', colorClass)}>
-                    <Icon className="h-4 w-4" />
-                  </div>
+                return (
+                  <div
+                    key={notification.id}
+                    className={cn(
+                      'relative group flex gap-3 p-4 transition-all duration-200 cursor-pointer',
+                      !notification.read && 'bg-accent/40',
+                      'hover:bg-muted/60'
+                    )}
+                    onClick={() => {
+                      if (!notification.read) {
+                        handleMarkAsRead(notification.id);
+                      }
+                    }}
+                  >
+                    {/* Unread indicator */}
+                    {!notification.read && (
+                      <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary shadow-sm shadow-primary/50" />
+                    )}
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p
-                          className={cn(
-                            'text-sm font-medium leading-tight',
-                            !notification.read && 'text-foreground',
-                            notification.read && 'text-muted-foreground'
-                          )}
-                        >
+                    {/* Icon */}
+                    <div className={cn(
+                      'flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border',
+                      config.bgClass,
+                      config.borderClass
+                    )}>
+                      <Icon className={cn('h-5 w-5', config.iconClass)} />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={cn(
+                          'text-sm font-medium leading-tight line-clamp-1',
+                          notification.read ? 'text-muted-foreground' : 'text-foreground'
+                        )}>
                           {notification.title}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                          {notification.message}
-                        </p>
+
+                        {/* Dismiss button */}
+                        <button
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 -m-1 hover:bg-muted rounded-lg"
+                          onClick={(e) => handleDismiss(notification.id, e)}
+                          disabled={isPending}
+                        >
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
                       </div>
 
-                      {/* Dismiss button */}
-                      <button
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          dismissNotification(notification.id);
-                        }}
-                      >
-                        <X className="h-3 w-3 text-muted-foreground" />
-                      </button>
-                    </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {notification.message}
+                      </p>
 
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-[10px] text-muted-foreground">
-                        {formatRelativeTime(notification.timestamp)}
-                      </span>
-                      {notification.href && (
-                        <Link
-                          href={notification.href}
-                          className="text-xs text-primary hover:underline flex items-center gap-0.5"
-                          onClick={() => {
-                            markAsRead(notification.id);
-                            setIsOpen(false);
-                          }}
-                        >
-                          View
-                          <ChevronRight className="h-3 w-3" />
-                        </Link>
-                      )}
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[11px] text-muted-foreground/70">
+                          {formatRelativeTime(notification.created_at)}
+                        </span>
+
+                        {notification.href && (
+                          <Link
+                            href={notification.href}
+                            className="inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!notification.read) {
+                                handleMarkAsRead(notification.id);
+                              }
+                              setIsOpen(false);
+                            }}
+                          >
+                            View
+                            <ChevronRight className="h-3 w-3" />
+                          </Link>
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  {/* Unread indicator */}
-                  {!notification.read && (
-                    <div className="absolute left-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-primary rounded-full" />
-                  )}
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           )}
         </div>
 
-        <DropdownMenuSeparator className="m-0" />
-
         {/* Footer */}
-        <div className="p-2">
-          <Link href="/settings/notifications">
+        <div className="p-2 bg-muted/30 border-t">
+          <Link href="/settings/notifications" onClick={() => setIsOpen(false)}>
             <Button
               variant="ghost"
-              className="w-full justify-center text-xs h-8"
-              onClick={() => setIsOpen(false)}
+              className="w-full justify-center text-xs h-9 gap-2 hover:bg-primary/10 hover:text-primary"
             >
-              <Settings className="h-3 w-3 mr-1.5" />
+              <Settings className="h-3.5 w-3.5" />
               Notification Settings
             </Button>
           </Link>
