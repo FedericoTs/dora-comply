@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CountrySelect } from '@/components/ui/country-select';
 import {
   Form,
   FormControl,
@@ -390,18 +391,14 @@ export function AddVendorWizard() {
                       <FormItem>
                         <FormLabel>Headquarters Country</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="ISO 3166-1 alpha-2 code (e.g., US, DE)"
-                            maxLength={2}
-                            className="uppercase"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.value.toUpperCase())
-                            }
+                          <CountrySelect
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select headquarters country..."
                           />
                         </FormControl>
                         <FormDescription>
-                          2-letter country code (auto-filled from LEI if available)
+                          Auto-filled from LEI if available
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

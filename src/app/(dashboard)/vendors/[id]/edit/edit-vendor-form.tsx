@@ -78,6 +78,7 @@ import {
 } from '@/lib/vendors/types';
 import { updateVendor } from '@/lib/vendors/actions';
 import { validateLEI, getCountryFlag } from '@/lib/external/gleif';
+import { CountrySelect } from '@/components/ui/country-select';
 import type { GLEIFEntity } from '@/lib/vendors/types';
 
 interface EditVendorFormProps {
@@ -450,25 +451,12 @@ export function EditVendorForm({ vendor }: EditVendorFormProps) {
                     <FormItem>
                       <FormLabel>Headquarters Country</FormLabel>
                       <FormControl>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            placeholder="e.g., US, DE, FR"
-                            maxLength={2}
-                            className="uppercase"
-                            {...field}
-                            value={field.value || ''}
-                            onChange={(e) =>
-                              field.onChange(e.target.value.toUpperCase())
-                            }
-                          />
-                          {field.value && (
-                            <span className="text-xl">
-                              {getCountryFlag(field.value)}
-                            </span>
-                          )}
-                        </div>
+                        <CountrySelect
+                          value={field.value || ''}
+                          onChange={field.onChange}
+                          placeholder="Select headquarters country..."
+                        />
                       </FormControl>
-                      <FormDescription>ISO 3166-1 alpha-2 code</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -482,12 +470,15 @@ export function EditVendorForm({ vendor }: EditVendorFormProps) {
                   <FormItem>
                     <FormLabel>Jurisdiction</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="e.g., European Union, United States"
-                        {...field}
+                      <CountrySelect
                         value={field.value || ''}
+                        onChange={field.onChange}
+                        placeholder="Select legal jurisdiction..."
                       />
                     </FormControl>
+                    <FormDescription>
+                      Country of legal jurisdiction for this vendor
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
