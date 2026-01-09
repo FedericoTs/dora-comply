@@ -20,6 +20,10 @@ import {
   Eye,
   Search,
   Trash2,
+  Clock,
+  RefreshCw,
+  XCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -68,6 +72,17 @@ interface TeamMember {
   isCurrent: boolean;
 }
 
+interface PendingInvitation {
+  id: string;
+  email: string;
+  role: 'admin' | 'analyst' | 'viewer';
+  status: string;
+  created_at: string;
+  expires_at: string;
+  invitedBy: string;
+  isExpired: boolean;
+}
+
 // Role configuration aligned with DORA responsibilities
 const ROLE_CONFIG = {
   owner: {
@@ -103,30 +118,41 @@ const ROLE_CONFIG = {
 export default function TeamSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<string>('analyst');
   const [isInviting, setIsInviting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [processingInviteId, setProcessingInviteId] = useState<string | null>(null);
 
-  // Load team members
+  // Load team members and invitations
   useEffect(() => {
-    async function loadTeam() {
+    async function loadTeamData() {
       try {
-        const response = await fetch('/api/settings/team');
-        if (response.ok) {
-          const data = await response.json();
+        const [teamResponse, invitesResponse] = await Promise.all([
+          fetch('/api/settings/team'),
+          fetch('/api/settings/team/invite'),
+        ]);
+
+        if (teamResponse.ok) {
+          const data = await teamResponse.json();
           setMembers(data.data || []);
         }
+
+        if (invitesResponse.ok) {
+          const data = await invitesResponse.json();
+          setInvitations(data.data || []);
+        }
       } catch (error) {
-        console.error('Failed to load team:', error);
+        console.error('Failed to load team data:', error);
         toast.error('Failed to load team members');
       } finally {
         setIsLoading(false);
       }
     }
 
-    loadTeam();
+    loadTeamData();
   }, []);
 
   // Invite team member
@@ -146,15 +172,85 @@ export default function TeamSettingsPage() {
         throw new Error(error.error?.message || 'Failed to send invitation');
       }
 
+      const result = await response.json();
       toast.success(`Invitation sent to ${inviteEmail}`);
       setInviteOpen(false);
       setInviteEmail('');
       setInviteRole('analyst');
+
+      // Add new invitation to list
+      if (result.data) {
+        setInvitations((prev) => [
+          {
+            ...result.data,
+            invitedBy: 'You',
+            isExpired: false,
+          },
+          ...prev,
+        ]);
+      }
     } catch (error) {
       console.error('Invite error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to send invitation');
     } finally {
       setIsInviting(false);
+    }
+  }
+
+  // Resend invitation
+  async function handleResendInvite(inviteId: string) {
+    setProcessingInviteId(inviteId);
+    try {
+      const response = await fetch(`/api/settings/team/invite/${inviteId}`, {
+        method: 'PATCH',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Failed to resend invitation');
+      }
+
+      const result = await response.json();
+      toast.success('Invitation resent successfully');
+
+      // Update invitation in list
+      setInvitations((prev) =>
+        prev.map((inv) =>
+          inv.id === inviteId
+            ? { ...inv, expires_at: result.data.expires_at, isExpired: false }
+            : inv
+        )
+      );
+    } catch (error) {
+      console.error('Resend error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to resend invitation');
+    } finally {
+      setProcessingInviteId(null);
+    }
+  }
+
+  // Revoke invitation
+  async function handleRevokeInvite(inviteId: string) {
+    setProcessingInviteId(inviteId);
+    try {
+      const response = await fetch(`/api/settings/team/invite/${inviteId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Failed to revoke invitation');
+      }
+
+      toast.success('Invitation revoked');
+
+      // Remove invitation from list
+      setInvitations((prev) => prev.filter((inv) => inv.id !== inviteId));
+    } catch (error) {
+      console.error('Revoke error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to revoke invitation');
+    } finally {
+      setProcessingInviteId(null);
     }
   }
 
@@ -218,6 +314,29 @@ export default function TeamSettingsPage() {
         .slice(0, 2);
     }
     return email.slice(0, 2).toUpperCase();
+  };
+
+  // Format relative time
+  const formatRelativeTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return 'Expired';
+    if (diffDays === 0) return 'Expires today';
+    if (diffDays === 1) return 'Expires tomorrow';
+    return `Expires in ${diffDays} days`;
+  };
+
+  // Format date for sent
+  const formatSentDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+    });
   };
 
   if (isLoading) {
@@ -335,6 +454,95 @@ export default function TeamSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pending Invitations */}
+      {invitations.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Clock className="h-4 w-4 text-amber-500" />
+                Pending Invitations ({invitations.length})
+              </CardTitle>
+            </div>
+            <CardDescription>
+              These invitations are waiting for recipients to accept
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {invitations.map((invitation) => {
+                const roleConfig = ROLE_CONFIG[invitation.role as keyof typeof ROLE_CONFIG];
+                const RoleIcon = roleConfig?.icon || Eye;
+                const isProcessing = processingInviteId === invitation.id;
+
+                return (
+                  <div
+                    key={invitation.id}
+                    className={cn(
+                      'flex items-center justify-between p-4 transition-colors',
+                      invitation.isExpired && 'bg-amber-50 dark:bg-amber-950/20'
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{invitation.email}</p>
+                          {invitation.isExpired && (
+                            <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Expired
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Sent {formatSentDate(invitation.created_at)} by {invitation.invitedBy} · {formatRelativeTime(invitation.expires_at)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className={cn('gap-1', roleConfig?.color)}>
+                        <RoleIcon className="h-3 w-3" />
+                        {roleConfig?.label || invitation.role}
+                      </Badge>
+
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleResendInvite(invitation.id)}
+                          disabled={isProcessing}
+                          title="Resend invitation"
+                        >
+                          {isProcessing ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRevokeInvite(invitation.id)}
+                          disabled={isProcessing}
+                          title="Revoke invitation"
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Separator />
 
