@@ -14,6 +14,8 @@ import {
   Target,
   Shield,
   Scale,
+  PartyPopper,
+  Upload,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { getVendorStats } from '@/lib/vendors/queries';
@@ -273,10 +275,38 @@ export default async function DashboardPage() {
         />
       </StatCardGrid>
 
+      {/* Aha Moment Card - Celebrates first vendor and guides next step */}
+      {totalVendors === 1 && documentStats.total === 0 && (
+        <div className="mb-8 animate-in">
+          <div className="card-premium p-6 bg-gradient-to-br from-primary/5 via-primary/10 to-transparent border-primary/20">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                <PartyPopper className="h-7 w-7 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold mb-1">
+                  Great start! Your first vendor is registered
+                </h3>
+                <p className="text-muted-foreground">
+                  You&apos;re on your way to DORA compliance. Next, upload contracts and certifications to build your Register of Information.
+                </p>
+              </div>
+              <Link
+                href="/documents"
+                className="btn-primary shrink-0"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Documents
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Grid */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
-        <div data-tour="recent-activity" className="col-span-2 card-premium p-6 animate-slide-up">
+        <div data-tour="recent-activity" className="col-span-1 lg:col-span-2 card-premium p-6 animate-slide-up">
           <div className="flex items-center justify-between mb-6">
             <h3>Recent Activity</h3>
             <Link
@@ -416,8 +446,8 @@ export default async function DashboardPage() {
           stepsCompleted={[
             totalVendors > 0,
             documentStats.total > 0,
-            avgRoiCompleteness > 0,
             (incidentStats?.total ?? 0) > 0,
+            avgRoiCompleteness > 0,
           ]}
         />
       </div>
@@ -534,8 +564,8 @@ function StepItem({
 const STEPS = [
   { step: 1, title: 'Add your first ICT third-party provider', href: '/vendors/new' },
   { step: 2, title: 'Upload vendor contracts and certifications', href: '/documents' },
-  { step: 3, title: 'Generate your Register of Information', href: '/roi' },
-  { step: 4, title: 'Set up incident reporting workflows', href: '/incidents' },
+  { step: 3, title: 'Set up incident reporting workflows', href: '/incidents' },
+  { step: 4, title: 'Complete your Register of Information', href: '/roi' },
 ];
 
 function GettingStartedCard({ stepsCompleted }: { stepsCompleted: boolean[] }) {
@@ -544,7 +574,7 @@ function GettingStartedCard({ stepsCompleted }: { stepsCompleted: boolean[] }) {
 
   if (allCompleted) {
     return (
-      <div data-tour="getting-started" className="col-span-2 card-premium p-6 animate-slide-up">
+      <div data-tour="getting-started" className="col-span-1 lg:col-span-2 card-premium p-6 animate-slide-up">
         <div className="py-8 text-center">
           <div className="relative inline-block mb-4">
             <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto">
@@ -572,7 +602,7 @@ function GettingStartedCard({ stepsCompleted }: { stepsCompleted: boolean[] }) {
   }
 
   return (
-    <div data-tour="getting-started" className="col-span-2 card-premium p-6 animate-slide-up">
+    <div data-tour="getting-started" className="col-span-1 lg:col-span-2 card-premium p-6 animate-slide-up">
       <div className="flex items-center justify-between mb-6">
         <h3>Getting Started</h3>
         <span className="badge badge-default">
