@@ -129,7 +129,7 @@ function MarketingNav() {
       <nav className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="flex h-[72px] items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/20 transition-transform group-hover:scale-105">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-600/25 transition-transform group-hover:scale-105">
               <Shield className="h-5 w-5" />
             </div>
             <div className="flex flex-col">
@@ -161,7 +161,7 @@ function MarketingNav() {
               </Button>
             </Link>
             <Link href="/contact">
-              <Button className="bg-slate-900 hover:bg-slate-800 text-white px-6 h-11 text-[15px] font-medium shadow-lg shadow-slate-900/20">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-11 text-[15px] font-medium shadow-lg shadow-emerald-600/25">
                 Request Access
               </Button>
             </Link>
@@ -203,7 +203,7 @@ function HeroSection() {
           {/* Headline */}
           <h1 className="text-[52px] lg:text-[64px] font-semibold leading-[1.08] tracking-[-0.02em] text-slate-900 mb-8">
             The definitive platform for{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-slate-700 to-slate-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-400">
               DORA compliance
             </span>
           </h1>
@@ -217,7 +217,7 @@ function HeroSection() {
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-start gap-4 mb-16">
             <Link href="/contact">
-              <Button size="lg" className="h-14 px-8 text-base bg-slate-900 hover:bg-slate-800 text-white shadow-xl shadow-slate-900/20 group">
+              <Button size="lg" className="h-14 px-8 text-base bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/25 group">
                 Schedule a Demo
                 <ArrowRight className="ml-3 h-5 w-5 transition-transform group-hover:translate-x-1" />
               </Button>
@@ -333,7 +333,7 @@ function HeroSection() {
                           </div>
                           <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-slate-900 rounded-full transition-all"
+                              className="h-full bg-emerald-600 rounded-full transition-all"
                               style={{ width: `${fw.pct}%` }}
                             />
                           </div>
@@ -464,7 +464,7 @@ function PlatformOverview() {
                 key={i}
                 className="group relative p-8 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all duration-300"
               >
-                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-6 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                   <Icon className="h-6 w-6" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">{feature.title}</h3>
@@ -494,7 +494,7 @@ function PlatformOverview() {
 
 function FourthPartySection() {
   return (
-    <section className="py-24 bg-slate-900 text-white overflow-hidden">
+    <section className="py-24 bg-emerald-950 text-white overflow-hidden">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div>
@@ -539,7 +539,7 @@ function FourthPartySection() {
                     </div>
                     <div>
                       <div className="font-semibold mb-1">{item.title}</div>
-                      <div className="text-sm text-slate-400">{item.description}</div>
+                      <div className="text-sm text-emerald-200/60">{item.description}</div>
                     </div>
                   </div>
                 );
@@ -556,8 +556,8 @@ function FourthPartySection() {
 
           {/* Visual representation */}
           <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-transparent to-slate-900 z-10 pointer-events-none" />
-            <div className="relative rounded-2xl bg-slate-800 border border-slate-700 p-8">
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-950 via-transparent to-emerald-950 z-10 pointer-events-none" />
+            <div className="relative rounded-2xl bg-emerald-900/50 border border-emerald-800/50 p-8">
               <div className="space-y-4">
                 {/* Your organization */}
                 <div className="flex justify-center">
@@ -568,11 +568,11 @@ function FourthPartySection() {
 
                 {/* Direct vendors */}
                 <div className="flex justify-center gap-4 py-4">
-                  <div className="w-px h-8 bg-slate-600" />
+                  <div className="w-px h-8 bg-emerald-700/50" />
                 </div>
                 <div className="flex justify-center gap-6">
                   {['Cloud Provider', 'Payment Processor', 'Data Analytics'].map((vendor, i) => (
-                    <div key={i} className="px-4 py-2 rounded-lg bg-slate-700 text-sm font-medium text-white border border-slate-600">
+                    <div key={i} className="px-4 py-2 rounded-lg bg-emerald-800/50 text-sm font-medium text-white border border-emerald-700/50">
                       {vendor}
                     </div>
                   ))}
@@ -580,9 +580,9 @@ function FourthPartySection() {
 
                 {/* Fourth parties */}
                 <div className="flex justify-center gap-4 py-4">
-                  <div className="w-px h-8 bg-slate-600" />
-                  <div className="w-px h-8 bg-slate-600" />
-                  <div className="w-px h-8 bg-slate-600" />
+                  <div className="w-px h-8 bg-emerald-700/50" />
+                  <div className="w-px h-8 bg-emerald-700/50" />
+                  <div className="w-px h-8 bg-emerald-700/50" />
                 </div>
                 <div className="grid grid-cols-5 gap-3">
                   {['CDN Services', 'DNS Provider', 'Auth Service', 'Storage', 'Monitoring', 'Card Networks', 'Fraud Detection', 'ML Platform', 'Data Lake', 'API Gateway'].map((sub, i) => (
@@ -590,7 +590,7 @@ function FourthPartySection() {
                       key={i}
                       className={cn(
                         "px-2 py-1.5 rounded text-xs text-center",
-                        i === 3 || i === 6 ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-slate-700/50 text-slate-400 border border-slate-600/50"
+                        i === 3 || i === 6 ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-emerald-800/30 text-emerald-200/70 border border-emerald-700/30"
                       )}
                     >
                       {sub}
@@ -598,11 +598,11 @@ function FourthPartySection() {
                   ))}
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-slate-700 flex items-center justify-between">
-                  <div className="text-sm text-slate-400">
+                <div className="mt-6 pt-6 border-t border-emerald-800/50 flex items-center justify-between">
+                  <div className="text-sm text-emerald-200/70">
                     <span className="text-amber-400 font-medium">2 concentration risks</span> detected across chains
                   </div>
-                  <span className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300">Live monitoring</span>
+                  <span className="text-xs px-2 py-1 rounded bg-emerald-800/50 text-emerald-200">Live monitoring</span>
                 </div>
               </div>
             </div>
@@ -682,13 +682,13 @@ function CapabilitiesSection() {
               </div>
 
               <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 mb-4">
-                <div className="w-8 h-8 rounded bg-slate-900 flex items-center justify-center">
+                <div className="w-8 h-8 rounded bg-emerald-600 flex items-center justify-center">
                   <Sparkles className="h-4 w-4 text-white" />
                 </div>
                 <div className="flex-1">
                   <div className="text-sm font-medium text-slate-900">Analyzing document...</div>
                   <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1">
-                    <div className="bg-slate-900 h-1.5 rounded-full w-[72%] transition-all" />
+                    <div className="bg-emerald-600 h-1.5 rounded-full w-[72%] transition-all" />
                   </div>
                 </div>
                 <span className="text-sm text-slate-500">72%</span>
@@ -796,7 +796,7 @@ function RoISection() {
             </div>
 
             <Link href="/contact">
-              <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white">
+              <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white">
                 See RoI Generation
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
@@ -814,7 +814,7 @@ function RoISection() {
 
 function MetricsSection() {
   return (
-    <section className="py-20 bg-slate-900 text-white">
+    <section className="py-20 bg-emerald-950 text-white">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-16">
           {[
@@ -825,7 +825,7 @@ function MetricsSection() {
           ].map((stat, i) => (
             <div key={i} className="text-center">
               <div className="text-4xl lg:text-5xl font-semibold mb-2">{stat.value}</div>
-              <div className="text-slate-400">{stat.label}</div>
+              <div className="text-emerald-200/60">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -878,7 +878,7 @@ function ComplianceSection() {
         <div className="mt-12 p-8 rounded-2xl bg-slate-50 border border-slate-200">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center">
                 <Scale className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -943,9 +943,9 @@ function EnterpriseSection() {
                 </div>
               </div>
 
-              <div className="bg-slate-900 p-10 lg:p-12 text-white">
+              <div className="bg-emerald-950 p-10 lg:p-12 text-white">
                 <h3 className="text-2xl font-semibold mb-4">Request access</h3>
-                <p className="text-slate-300 mb-8">
+                <p className="text-emerald-100/70 mb-8">
                   Schedule a consultation with our team to discuss your compliance requirements
                   and see the platform in action.
                 </p>
@@ -972,7 +972,7 @@ function EnterpriseSection() {
                   </Button>
                 </Link>
 
-                <p className="text-center text-xs text-slate-400 mt-4">
+                <p className="text-center text-xs text-emerald-200/50 mt-4">
                   Response within one business day
                 </p>
               </div>
@@ -1031,7 +1031,7 @@ function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8">
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-3 mb-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
                 <Shield className="h-5 w-5" />
               </div>
               <span className="font-semibold text-lg text-slate-900">DORA Comply</span>
