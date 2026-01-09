@@ -16,13 +16,17 @@ import {
   Calendar,
   FlaskConical,
   Bug,
+  Scale,
+  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getTestingStats, getTests, getTLPTEngagements, getOpenFindingsSummary } from '@/lib/testing/queries';
+import { getOrganizationContext } from '@/lib/org/context';
 import {
   getTestTypeLabel,
   getTestStatusColor,
@@ -37,13 +41,14 @@ export const metadata = {
 };
 
 // Stats Cards Component
-async function TestingStatsCards() {
+async function TestingStatsCards({ tlptRequired }: { tlptRequired: boolean }) {
   const { data: stats } = await getTestingStats();
 
   if (!stats) {
     return null;
   }
 
+  // Build stat cards based on entity classification
   const statCards = [
     {
       title: 'Active Programmes',
@@ -64,14 +69,24 @@ async function TestingStatsCards() {
       description: `${stats.critical_open_findings} critical`,
       variant: stats.critical_open_findings > 0 ? 'destructive' : 'default',
     },
-    {
-      title: 'TLPT Status',
-      value: stats.tlpt_overdue > 0 ? 'Action Needed' : 'On Track',
-      icon: Target,
-      description: `${stats.tlpt_due_soon} due soon`,
-      variant: stats.tlpt_overdue > 0 ? 'destructive' : 'default',
-      textValue: true,
-    },
+    // Show TLPT status differently based on whether it's required
+    tlptRequired
+      ? {
+          title: 'TLPT Status',
+          value: stats.tlpt_overdue > 0 ? 'Action Needed' : 'On Track',
+          icon: Target,
+          description: `${stats.tlpt_due_soon} due soon`,
+          variant: stats.tlpt_overdue > 0 ? 'destructive' : 'default',
+          textValue: true,
+        }
+      : {
+          title: 'TLPT',
+          value: 'N/A',
+          icon: Target,
+          description: 'Not required for your entity',
+          variant: 'default',
+          textValue: true,
+        },
   ];
 
   return (
@@ -418,7 +433,53 @@ function ListSkeleton() {
   );
 }
 
-export default function TestingPage() {
+// Non-Significant Entity Info Card
+function NonSignificantTLPTInfo() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Info className="h-4 w-4" />
+          TLPT Not Required
+        </CardTitle>
+        <CardDescription>Based on your entity classification</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Alert className="border-info/50 bg-info/5">
+          <Scale className="h-4 w-4 text-info" />
+          <AlertTitle className="text-info">Non-Significant Entity</AlertTitle>
+          <AlertDescription className="text-sm">
+            Threat-Led Penetration Testing (TLPT) under DORA Article 26-27 is mandatory only
+            for significant financial entities. Your organization is classified as non-significant.
+          </AlertDescription>
+        </Alert>
+        <p className="text-sm text-muted-foreground">
+          While TLPT is not required, you may still conduct voluntary advanced penetration testing
+          as part of your resilience testing programme.
+        </p>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/settings/organization">
+              Review Classification
+            </Link>
+          </Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/testing/tlpt/new">
+              Plan Voluntary TLPT
+            </Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default async function TestingPage() {
+  // Fetch organization context for entity classification
+  const orgContext = await getOrganizationContext();
+  const tlptRequired = orgContext?.classification?.tlptRequired ?? false;
+  const simplifiedFramework = orgContext?.classification?.simplifiedFramework ?? false;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -430,12 +491,14 @@ export default function TestingPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/testing/tlpt/new">
-              <Target className="mr-2 h-4 w-4" />
-              Plan TLPT
-            </Link>
-          </Button>
+          {tlptRequired && (
+            <Button variant="outline" asChild>
+              <Link href="/testing/tlpt/new">
+                <Target className="mr-2 h-4 w-4" />
+                Plan TLPT
+              </Link>
+            </Button>
+          )}
           <Button asChild>
             <Link href="/testing/tests/new">
               <Plus className="mr-2 h-4 w-4" />
@@ -445,9 +508,21 @@ export default function TestingPage() {
         </div>
       </div>
 
+      {/* Simplified Framework Banner */}
+      {simplifiedFramework && (
+        <Alert className="border-success/50 bg-success/10">
+          <Scale className="h-4 w-4 text-success" />
+          <AlertTitle className="text-success">Simplified Framework (Article 16)</AlertTitle>
+          <AlertDescription>
+            Your organization qualifies for proportionate testing requirements. Focus on basic
+            resilience testing per your risk profile.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Stats Cards */}
       <Suspense fallback={<StatsCardsSkeleton />}>
-        <TestingStatsCards />
+        <TestingStatsCards tlptRequired={tlptRequired} />
       </Suspense>
 
       {/* Main Content Grid */}
@@ -458,9 +533,14 @@ export default function TestingPage() {
             <RecentTestsCard />
           </Suspense>
 
-          <Suspense fallback={<ListSkeleton />}>
-            <TLPTStatusCard />
-          </Suspense>
+          {/* TLPT Section - only for significant entities, or show info for non-significant */}
+          {tlptRequired ? (
+            <Suspense fallback={<ListSkeleton />}>
+              <TLPTStatusCard />
+            </Suspense>
+          ) : (
+            <NonSignificantTLPTInfo />
+          )}
         </div>
 
         {/* Sidebar */}
@@ -489,14 +569,18 @@ export default function TestingPage() {
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Article 26</span>
-                <Badge variant="outline">TLPT / 3 Years</Badge>
+                <Badge variant={tlptRequired ? 'default' : 'secondary'}>
+                  TLPT{tlptRequired ? ' Required' : ' (Significant only)'}
+                </Badge>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Article 27</span>
                 <Badge variant="outline">Tester Requirements</Badge>
               </div>
               <p className="text-xs text-muted-foreground pt-2 border-t">
-                Financial entities must establish comprehensive testing programmes based on risk.
+                {tlptRequired
+                  ? 'As a significant entity, you must conduct TLPT every 3 years.'
+                  : 'Financial entities must establish testing programmes based on risk.'}
               </p>
             </CardContent>
           </Card>

@@ -15,6 +15,8 @@ import {
   AlertTriangle,
   Clock,
   Target,
+  Shield,
+  Scale,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { getVendorStats } from '@/lib/vendors/queries';
@@ -27,6 +29,7 @@ import {
 } from '@/lib/activity/queries';
 import { getIncidentStatsEnhanced, getPendingDeadlines } from '@/lib/incidents/queries';
 import { getTestingStats } from '@/lib/testing/queries';
+import { getOrganizationContext } from '@/lib/org/context';
 import { BoardReportExport } from '@/components/reports/board-report-export';
 import { IncidentMetricsCard } from '@/components/incidents/dashboard';
 
@@ -39,19 +42,25 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   const firstName = user?.fullName?.split(' ')[0] || '';
 
-  // Fetch real data
-  const [vendorStats, roiStats, recentActivity, incidentStatsResult, pendingDeadlinesResult, testingStatsResult] = await Promise.all([
+  // Fetch real data including organization context for entity classification
+  const [vendorStats, roiStats, recentActivity, incidentStatsResult, pendingDeadlinesResult, testingStatsResult, orgContext] = await Promise.all([
     getVendorStats(),
     fetchAllTemplateStats(),
     getRecentActivity(5),
     getIncidentStatsEnhanced(),
     getPendingDeadlines(5),
     getTestingStats(),
+    getOrganizationContext(),
   ]);
 
   const incidentStats = incidentStatsResult.data;
   const pendingDeadlines = pendingDeadlinesResult.data;
   const testingStats = testingStatsResult.data;
+
+  // Entity classification determines TLPT requirements
+  const classification = orgContext?.classification;
+  const tlptRequired = classification?.tlptRequired ?? false;
+  const simplifiedFramework = classification?.simplifiedFramework ?? false;
 
   // Calculate RoI readiness (average completeness across templates with data)
   const templatesWithData = roiStats.filter(s => s.rowCount > 0);
@@ -103,8 +112,8 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* TLPT Overdue Alert Banner */}
-      {tlptOverdue > 0 && (
+      {/* TLPT Overdue Alert Banner - Only for significant entities */}
+      {tlptRequired && tlptOverdue > 0 && (
         <div className="mb-4 p-4 rounded-lg border border-amber-500/50 bg-amber-500/10 animate-in">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -116,7 +125,7 @@ export default async function DashboardPage() {
                   TLPT testing overdue
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  DORA Article 26 requires threat-led penetration testing every 3 years
+                  DORA Article 26 requires threat-led penetration testing every 3 years for significant entities
                 </p>
               </div>
             </div>
@@ -131,8 +140,8 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* TLPT Due Soon Warning (only show if no overdue) */}
-      {tlptOverdue === 0 && tlptDueSoon > 0 && (
+      {/* TLPT Due Soon Warning - Only for significant entities */}
+      {tlptRequired && tlptOverdue === 0 && tlptDueSoon > 0 && (
         <div className="mb-4 p-4 rounded-lg border border-blue-500/50 bg-blue-500/10 animate-in">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -153,6 +162,32 @@ export default async function DashboardPage() {
               className="btn-secondary"
             >
               View TLPT Schedule
+              <ArrowUpRight className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Simplified Framework Banner - For Art. 16 entities */}
+      {simplifiedFramework && (
+        <div className="mb-4 p-4 rounded-lg border border-success/50 bg-success/10 animate-in">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/20">
+              <Scale className="h-5 w-5 text-success" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-success">
+                Simplified ICT Risk Framework (Article 16)
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Your organization qualifies for proportionate DORA requirements. TLPT is not mandatory.
+              </p>
+            </div>
+            <Link
+              href="/settings/organization"
+              className="btn-ghost text-success hover:text-success/80"
+            >
+              View Classification
               <ArrowUpRight className="h-4 w-4 ml-1" />
             </Link>
           </div>
@@ -216,6 +251,7 @@ export default async function DashboardPage() {
           testTypeCoverage={testingStats?.test_type_coverage ?? 0}
           openFindings={testingStats?.critical_open_findings ?? 0}
           tlptStatus={tlptOverdue > 0 ? 'overdue' : tlptDueSoon > 0 ? 'due_soon' : 'compliant'}
+          tlptRequired={tlptRequired}
         />
         <StatCard
           label="Days to Deadline"
@@ -644,12 +680,18 @@ function TestingStatCard({
   testTypeCoverage,
   openFindings,
   tlptStatus,
+  tlptRequired,
 }: {
   testTypeCoverage: number;
   openFindings: number;
   tlptStatus: 'overdue' | 'due_soon' | 'compliant';
+  tlptRequired: boolean;
 }) {
   const getStatusDisplay = () => {
+    // If TLPT is not required (non-significant entity), show different status
+    if (!tlptRequired) {
+      return { label: 'TLPT N/A', color: 'text-muted-foreground', bgColor: 'bg-muted' };
+    }
     switch (tlptStatus) {
       case 'overdue':
         return { label: 'TLPT Overdue', color: 'text-destructive', bgColor: 'bg-destructive/10' };
@@ -664,7 +706,7 @@ function TestingStatCard({
 
   return (
     <Link href="/testing" className="stat-card group hover:border-primary/50 transition-colors">
-      <p className="stat-label mb-2">Testing & TLPT</p>
+      <p className="stat-label mb-2">{tlptRequired ? 'Testing & TLPT' : 'Resilience Testing'}</p>
       <div className="flex items-baseline gap-2">
         <p className="stat-value">{testTypeCoverage}%</p>
         <span className="text-xs text-muted-foreground">coverage</span>

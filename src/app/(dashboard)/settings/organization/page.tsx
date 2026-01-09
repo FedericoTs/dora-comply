@@ -21,6 +21,10 @@ import {
   Info,
   ExternalLink,
   RefreshCw,
+  Scale,
+  Shield,
+  TrendingUp,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -46,7 +50,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import {
+  ENTITY_TYPE_INFO,
+  DORA_ARTICLE_DESCRIPTIONS,
+} from '@/lib/compliance/entity-classification';
 
 // Schema
 const organizationSchema = z.object({
@@ -61,6 +72,13 @@ const organizationSchema = z.object({
     'ict_service_provider',
   ]),
   jurisdiction: z.string().min(2, 'Jurisdiction is required'),
+  // Entity classification fields
+  significanceLevel: z.enum(['significant', 'non_significant', 'simplified']),
+  significanceRationale: z.string().optional(),
+  // Number fields stored as strings to allow empty values
+  employeeCount: z.string().optional(),
+  totalAssetsEur: z.string().optional(),
+  annualGrossPremiumEur: z.string().optional(),
 });
 
 type OrganizationFormData = z.infer<typeof organizationSchema>;
@@ -164,8 +182,17 @@ export default function OrganizationSettingsPage() {
       lei: '',
       entityType: 'financial_entity',
       jurisdiction: 'EU',
+      significanceLevel: 'non_significant',
+      significanceRationale: '',
+      employeeCount: '',
+      totalAssetsEur: '',
+      annualGrossPremiumEur: '',
     },
   });
+
+  // Watch significance level for conditional rendering
+  const significanceLevel = form.watch('significanceLevel');
+  const entityType = form.watch('entityType');
 
   // Load organization data
   useEffect(() => {
@@ -175,11 +202,24 @@ export default function OrganizationSettingsPage() {
         if (response.ok) {
           const data = await response.json();
           if (data.data) {
+            // Determine significance level from flags
+            let sigLevel: 'significant' | 'non_significant' | 'simplified' = 'non_significant';
+            if (data.data.simplified_framework_eligible) {
+              sigLevel = 'simplified';
+            } else if (data.data.is_significant) {
+              sigLevel = 'significant';
+            }
+
             form.reset({
               name: data.data.name || '',
               lei: data.data.lei || '',
               entityType: data.data.entity_type || 'financial_entity',
               jurisdiction: data.data.jurisdiction || 'EU',
+              significanceLevel: sigLevel,
+              significanceRationale: data.data.significance_rationale || '',
+              employeeCount: data.data.employee_count || '',
+              totalAssetsEur: data.data.total_assets_eur || '',
+              annualGrossPremiumEur: data.data.annual_gross_premium_eur || '',
             });
 
             // If LEI exists, validate it
@@ -256,6 +296,13 @@ export default function OrganizationSettingsPage() {
   async function onSubmit(data: OrganizationFormData) {
     setIsSaving(true);
     try {
+      // Parse string numbers to actual numbers, or null if empty
+      const parseNumber = (val: string | undefined): number | null => {
+        if (!val || val.trim() === '') return null;
+        const num = Number(val);
+        return isNaN(num) ? null : num;
+      };
+
       const response = await fetch('/api/settings/organization', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -264,6 +311,13 @@ export default function OrganizationSettingsPage() {
           lei: data.lei || null,
           entity_type: data.entityType,
           jurisdiction: data.jurisdiction,
+          // Classification fields
+          is_significant: data.significanceLevel === 'significant',
+          simplified_framework_eligible: data.significanceLevel === 'simplified',
+          significance_rationale: data.significanceLevel === 'significant' ? data.significanceRationale : null,
+          employee_count: parseNumber(data.employeeCount),
+          total_assets_eur: parseNumber(data.totalAssetsEur),
+          annual_gross_premium_eur: parseNumber(data.annualGrossPremiumEur),
         }),
       });
 
@@ -523,6 +577,282 @@ export default function OrganizationSettingsPage() {
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          {/* Entity Classification Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Scale className="h-4 w-4" />
+                Entity Classification
+              </CardTitle>
+              <CardDescription>
+                DORA applies proportionally based on entity significance. This determines your testing and reporting requirements.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Significance Level Selection */}
+              <FormField
+                control={form.control}
+                name="significanceLevel"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Significance Assessment</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="space-y-3"
+                      >
+                        {/* Significant Entity */}
+                        <div
+                          className={cn(
+                            'flex items-start space-x-3 border rounded-lg p-4 cursor-pointer transition-colors',
+                            field.value === 'significant'
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-primary/50'
+                          )}
+                          onClick={() => field.onChange('significant')}
+                        >
+                          <RadioGroupItem value="significant" id="significant" className="mt-1" />
+                          <div className="flex-1 space-y-1">
+                            <Label htmlFor="significant" className="font-medium cursor-pointer flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-primary" />
+                              Significant Entity
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              Subject to enhanced oversight including mandatory TLPT (Art. 26-27) every 3 years.
+                              Typically includes systemically important institutions.
+                            </p>
+                            {!ENTITY_TYPE_INFO[entityType]?.canBeSignificant && (
+                              <p className="text-xs text-warning mt-2">
+                                Note: {ENTITY_TYPE_INFO[entityType]?.label} entities are not typically designated as significant.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Non-Significant Entity */}
+                        <div
+                          className={cn(
+                            'flex items-start space-x-3 border rounded-lg p-4 cursor-pointer transition-colors',
+                            field.value === 'non_significant'
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-primary/50'
+                          )}
+                          onClick={() => field.onChange('non_significant')}
+                        >
+                          <RadioGroupItem value="non_significant" id="non_significant" className="mt-1" />
+                          <div className="flex-1 space-y-1">
+                            <Label htmlFor="non_significant" className="font-medium cursor-pointer flex items-center gap-2">
+                              <TrendingUp className="h-4 w-4 text-info" />
+                              Non-Significant Entity
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              Standard DORA requirements apply. Not subject to mandatory TLPT but may conduct
+                              voluntary penetration testing.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Simplified Framework */}
+                        <div
+                          className={cn(
+                            'flex items-start space-x-3 border rounded-lg p-4 cursor-pointer transition-colors',
+                            field.value === 'simplified'
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-primary/50',
+                            !ENTITY_TYPE_INFO[entityType]?.canUseSimplified && 'opacity-50'
+                          )}
+                          onClick={() => {
+                            if (ENTITY_TYPE_INFO[entityType]?.canUseSimplified) {
+                              field.onChange('simplified');
+                            }
+                          }}
+                        >
+                          <RadioGroupItem
+                            value="simplified"
+                            id="simplified"
+                            className="mt-1"
+                            disabled={!ENTITY_TYPE_INFO[entityType]?.canUseSimplified}
+                          />
+                          <div className="flex-1 space-y-1">
+                            <Label
+                              htmlFor="simplified"
+                              className={cn(
+                                'font-medium cursor-pointer flex items-center gap-2',
+                                !ENTITY_TYPE_INFO[entityType]?.canUseSimplified && 'cursor-not-allowed'
+                              )}
+                            >
+                              <Users className="h-4 w-4 text-success" />
+                              Simplified Framework (Art. 16)
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              For small or exempted institutions only. Proportionate ICT risk management requirements apply.
+                            </p>
+                            {!ENTITY_TYPE_INFO[entityType]?.canUseSimplified && (
+                              <p className="text-xs text-destructive mt-2">
+                                {ENTITY_TYPE_INFO[entityType]?.label} entities are not eligible for the simplified framework.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Significance Rationale - Only show when significant is selected */}
+              {significanceLevel === 'significant' && (
+                <FormField
+                  control={form.control}
+                  name="significanceRationale"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Significance Rationale</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder="Document the basis for the significant entity designation (e.g., regulatory notification, asset thresholds, systemic importance criteria)..."
+                          className="min-h-[100px]"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Required for audit trail. Document why this entity is designated as significant under DORA.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <Separator />
+
+              {/* Size Metrics (Optional) */}
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Size Metrics (Optional)</h4>
+                  <p className="text-xs text-muted-foreground">
+                    These metrics help assess eligibility thresholds. They are optional but useful for regulatory documentation.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="employeeCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1.5">
+                          <Users className="h-3.5 w-3.5" />
+                          Employee Count
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="number"
+                            placeholder="e.g., 500"
+                            min={1}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="totalAssetsEur"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1.5">
+                          <TrendingUp className="h-3.5 w-3.5" />
+                          Total Assets (EUR)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="number"
+                            placeholder="e.g., 500000000"
+                            min={0}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {entityType === 'insurance_undertaking' && (
+                    <FormField
+                      control={form.control}
+                      name="annualGrossPremiumEur"
+                      render={({ field }) => (
+                        <FormItem className="sm:col-span-2">
+                          <FormLabel>Annual Gross Premium (EUR)</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              placeholder="e.g., 100000000"
+                              min={0}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            For insurance undertakings - used for significance threshold calculation
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Classification Summary */}
+              <Alert className="border-info/50 bg-info/5">
+                <Info className="h-4 w-4 text-info" />
+                <AlertTitle className="text-info">Classification Summary</AlertTitle>
+                <AlertDescription className="text-sm">
+                  {significanceLevel === 'significant' && (
+                    <div className="space-y-2 mt-2">
+                      <p>As a <strong>significant entity</strong>, your organization is subject to:</p>
+                      <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                        <li>Full ICT Risk Management Framework (Art. 5-15)</li>
+                        <li>Incident Reporting within DORA deadlines (Art. 17-23)</li>
+                        <li>Mandatory TLPT every 3 years (Art. 26-27)</li>
+                        <li>Third-party risk management (Art. 28-30)</li>
+                      </ul>
+                    </div>
+                  )}
+                  {significanceLevel === 'non_significant' && (
+                    <div className="space-y-2 mt-2">
+                      <p>As a <strong>non-significant entity</strong>, your organization is subject to:</p>
+                      <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                        <li>Full ICT Risk Management Framework (Art. 5-15)</li>
+                        <li>Incident Reporting within DORA deadlines (Art. 17-23)</li>
+                        <li>Digital Operational Resilience Testing (Art. 24-25)</li>
+                        <li>Third-party risk management (Art. 28-30)</li>
+                      </ul>
+                      <p className="text-xs mt-2">Note: TLPT is not mandatory but voluntary testing is recommended.</p>
+                    </div>
+                  )}
+                  {significanceLevel === 'simplified' && (
+                    <div className="space-y-2 mt-2">
+                      <p>Under the <strong>simplified framework</strong> (Art. 16), your organization has:</p>
+                      <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                        <li>Simplified ICT Risk Management (Art. 16)</li>
+                        <li>Incident Reporting within DORA deadlines (Art. 17-23)</li>
+                        <li>Basic Resilience Testing (Art. 24-25)</li>
+                        <li>Third-party risk management (Art. 28-30)</li>
+                      </ul>
+                      <p className="text-xs mt-2">Proportionate requirements apply based on your size and risk profile.</p>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
 
