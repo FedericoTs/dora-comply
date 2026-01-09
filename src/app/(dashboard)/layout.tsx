@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   Settings,
   LogOut,
-  Search,
   Network,
   FlaskConical,
   BarChart3,
@@ -21,6 +20,7 @@ import { CopilotChat } from '@/components/copilot';
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 import { checkAuthStatus, logout } from '@/lib/auth';
 import { ProductTour } from '@/components/onboarding/product-tour';
+import { GlobalSearch } from '@/components/search/global-search';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -130,14 +130,7 @@ export default async function DashboardLayout({
           {/* Top Bar */}
           <header className="h-16 px-8 flex items-center justify-between border-b border-border bg-background sticky top-0 z-10">
             <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search anything..."
-                  className="w-80 pl-10 pr-4 py-2 rounded-lg bg-muted border-0 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
+              <GlobalSearch />
             </div>
             <div className="flex items-center gap-2">
               <NotificationDropdown />
