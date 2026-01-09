@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -77,16 +77,92 @@ const USE_CASE_LABELS: Record<string, { label: string; description: string }> = 
   },
 };
 
+const JURISDICTIONS = [
+  { value: 'EU', label: 'European Union (General)' },
+  { value: 'AT', label: 'Austria' },
+  { value: 'BE', label: 'Belgium' },
+  { value: 'BG', label: 'Bulgaria' },
+  { value: 'HR', label: 'Croatia' },
+  { value: 'CY', label: 'Cyprus' },
+  { value: 'CZ', label: 'Czech Republic' },
+  { value: 'DK', label: 'Denmark' },
+  { value: 'EE', label: 'Estonia' },
+  { value: 'FI', label: 'Finland' },
+  { value: 'FR', label: 'France' },
+  { value: 'DE', label: 'Germany' },
+  { value: 'GR', label: 'Greece' },
+  { value: 'HU', label: 'Hungary' },
+  { value: 'IE', label: 'Ireland' },
+  { value: 'IT', label: 'Italy' },
+  { value: 'LV', label: 'Latvia' },
+  { value: 'LT', label: 'Lithuania' },
+  { value: 'LU', label: 'Luxembourg' },
+  { value: 'MT', label: 'Malta' },
+  { value: 'NL', label: 'Netherlands' },
+  { value: 'PL', label: 'Poland' },
+  { value: 'PT', label: 'Portugal' },
+  { value: 'RO', label: 'Romania' },
+  { value: 'SK', label: 'Slovakia' },
+  { value: 'SI', label: 'Slovenia' },
+  { value: 'ES', label: 'Spain' },
+  { value: 'SE', label: 'Sweden' },
+];
+
+const STORAGE_KEY = 'dora-onboarding-draft';
+
 const STEPS = [
   { id: 'organization', title: 'Organization', icon: Building2 },
   { id: 'team', title: 'Team', icon: Users },
   { id: 'goals', title: 'Goals', icon: Target },
 ];
 
+interface DraftState {
+  step: number;
+  values: Partial<OnboardingInput>;
+  savedAt: number;
+}
+
+function loadDraft(): DraftState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return null;
+    const draft = JSON.parse(saved) as DraftState;
+    // Only restore drafts less than 24 hours old
+    if (Date.now() - draft.savedAt > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(step: number, values: Partial<OnboardingInput>) {
+  if (typeof window === 'undefined') return;
+  try {
+    const draft: DraftState = { step, values, savedAt: Date.now() };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function clearDraft() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function OnboardingForm() {
   const [currentStep, setCurrentStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
 
   const form = useForm<OnboardingInput>({
     resolver: zodResolver(onboardingSchema),
@@ -101,6 +177,28 @@ export function OnboardingForm() {
     },
   });
 
+  // Load draft on mount
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      form.reset({ ...form.getValues(), ...draft.values });
+      setCurrentStep(draft.step);
+      setDraftRestored(true);
+      // Clear the restored message after 5 seconds
+      setTimeout(() => setDraftRestored(false), 5000);
+    }
+  }, [form]);
+
+  // Save draft on form value changes
+  const watchedValues = form.watch();
+  useEffect(() => {
+    // Debounce save to avoid too many writes
+    const timeout = setTimeout(() => {
+      saveDraft(currentStep, watchedValues);
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [watchedValues, currentStep]);
+
   async function onSubmit(data: OnboardingInput) {
     setError(null);
     setIsLoading(true);
@@ -108,7 +206,10 @@ export function OnboardingForm() {
     try {
       const result = await completeOnboarding(data);
 
-      if (!result.success) {
+      if (result.success) {
+        // Clear draft on successful submission
+        clearDraft();
+      } else {
         setError(result.error?.message || 'An error occurred');
       }
       // On success, completeOnboarding redirects to dashboard
@@ -220,6 +321,14 @@ export function OnboardingForm() {
           </div>
           <Form {...form}>
             <form className="space-y-6">
+              {draftRestored && (
+                <Alert>
+                  <AlertDescription>
+                    Your previous progress has been restored. Continue where you left off.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -307,15 +416,26 @@ export function OnboardingForm() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Primary jurisdiction</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="EU"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          disabled={isLoading}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select jurisdiction" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {JURISDICTIONS.map((j) => (
+                              <SelectItem key={j.value} value={j.value}>
+                                {j.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormDescription>
-                          Main regulatory jurisdiction
+                          Main regulatory jurisdiction for DORA compliance
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

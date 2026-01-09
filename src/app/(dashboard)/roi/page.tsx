@@ -20,6 +20,7 @@ import { DeadlineCountdown } from './components/deadline-countdown';
 import { NextActionsPanel } from './components/next-actions-panel';
 import { AiPopulationWrapper } from './components/ai-population-wrapper';
 import { TemplateStatusTabs } from './components/template-status-tabs';
+import { OnboardingCompleteBanner } from './components/onboarding-complete-banner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -58,8 +59,17 @@ async function RoiDashboardContent() {
   const today = new Date();
   const daysUntilDeadline = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
+  // Find first incomplete template for onboarding banner
+  const firstIncomplete = templatesWithStatus.find(t => t.completeness < 100);
+  const firstIncompleteTemplate = firstIncomplete
+    ? { id: firstIncomplete.templateId, name: firstIncomplete.templateId }
+    : null;
+
   return (
     <div className="space-y-6">
+      {/* Onboarding Complete Banner - Shows after wizard completion */}
+      <OnboardingCompleteBanner firstIncompleteTemplate={firstIncompleteTemplate} />
+
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
