@@ -40,6 +40,7 @@ import {
 import { DeadlineBadgeStatic } from '@/components/incidents/deadline-badge';
 import { DeleteIncidentButton } from '@/components/incidents/delete-incident-button';
 import { IncidentExportButton } from '@/components/incidents/incident-export-button';
+import { IncidentLifecycle } from '@/components/incidents/incident-lifecycle';
 
 interface IncidentDetailPageProps {
   params: Promise<{ id: string }>;
@@ -266,6 +267,23 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Lifecycle Diagram */}
+      <Card>
+        <CardContent className="pt-6">
+          <IncidentLifecycle
+            classification={incident.classification}
+            detectionDatetime={detectionDate}
+            reports={reports.map(r => ({
+              report_type: r.report_type as 'initial' | 'intermediate' | 'final',
+              status: r.status as 'draft' | 'submitted' | 'acknowledged' | 'rejected',
+              deadline: new Date(r.deadline),
+              submitted_at: r.submitted_at,
+            }))}
+            incidentStatus={incident.status}
+          />
         </CardContent>
       </Card>
 
