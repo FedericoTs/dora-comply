@@ -3,7 +3,7 @@
 import { useState, useTransition, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Loader2, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +25,7 @@ import {
   VendorViewToggle,
   VendorEmptyState,
   VendorPagination,
+  VendorImportWizard,
 } from '@/components/vendors';
 import type { Vendor, VendorFilters, VendorSortOptions, ViewMode } from '@/lib/vendors/types';
 import { deleteVendor, updateVendorStatus, bulkDeleteVendors, fetchVendorsAction } from '@/lib/vendors/actions';
@@ -63,6 +64,9 @@ export function VendorListClient({
   // Delete confirmation state
   const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+
+  // Import wizard state
+  const [showImportWizard, setShowImportWizard] = useState(false);
 
   // Fetch vendors with current filters
   const fetchVendors = useCallback(
@@ -171,6 +175,11 @@ export function VendorListClient({
     }
   };
 
+  const handleImportComplete = (count: number) => {
+    toast.success(`Successfully imported ${count} vendors`);
+    fetchVendors();
+  };
+
   // If no vendors at all (first time)
   if (!hasVendors) {
     return <VendorEmptyState type="no-vendors" />;
@@ -210,6 +219,10 @@ export function VendorListClient({
             </Button>
           )}
           <VendorViewToggle value={viewMode} onChange={setViewMode} />
+          <Button variant="outline" onClick={() => setShowImportWizard(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import CSV
+          </Button>
           <Button asChild>
             <Link href="/vendors/new">
               <Plus className="mr-2 h-4 w-4" />
@@ -328,6 +341,13 @@ export function VendorListClient({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import Wizard */}
+      <VendorImportWizard
+        open={showImportWizard}
+        onOpenChange={setShowImportWizard}
+        onImportComplete={handleImportComplete}
+      />
     </div>
   );
 }

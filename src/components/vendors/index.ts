@@ -10,3 +10,4 @@ export { VendorSearch } from './vendor-search';
 export { VendorViewToggle } from './vendor-view-toggle';
 export { VendorEmptyState } from './vendor-empty-state';
 export { VendorPagination } from './vendor-pagination';
+export { VendorImportWizard } from './vendor-import-wizard';
