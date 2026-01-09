@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { RegionProvider } from "@/components/providers/region-provider";
+import { CookieConsentBanner } from "@/components/cookie-consent";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -34,6 +35,7 @@ export default function RootLayout({
           <RegionProvider>
             {children}
             <Toaster richColors position="top-right" />
+            <CookieConsentBanner />
           </RegionProvider>
         </ThemeProvider>
       </body>

@@ -1,6 +1,6 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import type { Metadata } from 'next';
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Shield,
@@ -8,7 +8,7 @@ import {
   FileText,
   AlertTriangle,
   Building2,
-  Network,
+  GitBranch,
   BarChart3,
   Clock,
   Check,
@@ -21,154 +21,115 @@ import {
   Play,
   Star,
   Quote,
+  Users,
   TrendingUp,
   CheckCircle2,
   XCircle,
+  Timer,
   FileCheck,
-  GitBranch,
+  Network,
   ShieldCheck,
   Server,
   Layers,
+  Target,
+  Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-export const metadata: Metadata = {
-  title: 'DORA Comply | AI-Powered DORA Compliance Platform',
-  description:
-    'Automate DORA compliance with AI. Parse SOC 2 and ISO 27001 reports in seconds, generate your Register of Information automatically, and meet all regulatory deadlines. Trusted by EU financial institutions.',
-  keywords: [
-    'DORA compliance',
-    'DORA regulation',
-    'Digital Operational Resilience Act',
-    'Register of Information',
-    'RoI generation',
-    'Third-party risk management',
-    'TPRM',
-    'EU financial regulation',
-    'ICT risk management',
-    'SOC 2 parsing',
-    'ISO 27001',
-    'Vendor risk assessment',
-    'Compliance automation',
-    'Financial services compliance',
-  ],
-  openGraph: {
-    type: 'website',
-    locale: 'en_EU',
-    url: 'https://doracomply.eu',
-    siteName: 'DORA Comply',
-    title: 'DORA Comply | AI-Powered DORA Compliance Platform',
-    description:
-      'Automate DORA compliance with AI. Generate your Register of Information in hours, not months.',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'DORA Comply - AI-Powered DORA Compliance Platform',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'DORA Comply | AI-Powered DORA Compliance',
-    description:
-      'Automate DORA compliance with AI. Generate your Register of Information in hours, not months.',
-    images: ['/twitter-card.png'],
-  },
-};
+// ============================================================================
+// Animation Hook
+// ============================================================================
 
-// Check authentication and redirect if logged in
-export default async function HomePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+function useIntersectionObserver(options?: IntersectionObserverInit) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
 
-  // If user is authenticated, redirect to dashboard
-  if (user) {
-    redirect('/dashboard');
-  }
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.1, ...options });
 
-  // Otherwise show the landing page
-  return <LandingPage />;
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, isVisible };
 }
 
 // ============================================================================
-// Landing Page Component (Server Component for SEO)
+// Countdown Component
 // ============================================================================
 
-function LandingPage() {
+function DeadlineCountdown() {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
+
+  useEffect(() => {
+    const deadline = new Date('2025-04-30T23:59:59');
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const diff = deadline.getTime() - now.getTime();
+
+      if (diff > 0) {
+        setTimeLeft({
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((diff / (1000 * 60)) % 60),
+        });
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-white">
-      <MarketingNav />
-      <HeroSection />
-      <SocialProofBar />
-      <ProblemSection />
-      <FeaturesGrid />
-      <AIParsingSection />
-      <RoISection />
-      <StatsSection />
-      <TestimonialsSection />
-      <PricingSection />
-      <SecuritySection />
-      <FinalCTA />
-      <Footer />
+    <div className="flex items-center gap-4 text-sm">
+      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10 text-warning border border-warning/20">
+        <Clock className="h-4 w-4" />
+        <span className="font-semibold">{timeLeft.days}</span>
+        <span className="text-warning/70">days</span>
+      </div>
+      <span className="text-muted-foreground">until first RoI submission deadline</span>
     </div>
   );
 }
 
 // ============================================================================
-// Navigation
+// Floating Cards Animation
 // ============================================================================
 
-const navigation = [
-  { name: 'Features', href: '#features' },
-  { name: 'How it Works', href: '#how-it-works' },
-  { name: 'Security', href: '#security' },
-];
-
-function MarketingNav() {
+function FloatingCard({
+  children,
+  className,
+  delay = 0
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}) {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border/50">
-      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white transition-transform group-hover:scale-105">
-              <Shield className="h-5 w-5" />
-            </div>
-            <span className="font-semibold text-lg tracking-tight">
-              DORA<span className="text-primary">Comply</span>
-            </span>
-          </Link>
-
-          <div className="hidden md:flex items-center gap-8">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {item.name}
-              </Link>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
-                Log in
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button size="sm" className="shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow">
-                Start Free Trial
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
-    </header>
+    <div
+      className={cn(
+        "absolute bg-white rounded-xl shadow-xl border border-border/50 p-3 animate-float",
+        className
+      )}
+      style={{
+        animationDelay: `${delay}s`,
+        animationDuration: '3s',
+      }}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -177,15 +138,27 @@ function MarketingNav() {
 // ============================================================================
 
 function HeroSection() {
+  const { ref, isVisible } = useIntersectionObserver();
+
   return (
     <section className="relative min-h-screen pt-16 overflow-hidden">
+      {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] via-white to-white" />
-      <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-primary/10 rounded-full blur-3xl opacity-50" />
-      <div className="absolute -bottom-40 -left-40 w-[600px] h-[600px] bg-info/5 rounded-full blur-3xl opacity-50" />
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20 pb-24">
+      {/* Animated Orbs */}
+      <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-primary/10 rounded-full blur-3xl animate-pulse-slow" />
+      <div className="absolute -bottom-40 -left-40 w-[600px] h-[600px] bg-info/5 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '2s' }} />
+
+      {/* Grid Pattern */}
+      <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] bg-center opacity-[0.02]" />
+
+      <div ref={ref} className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20 pb-24">
         <div className="text-center max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-warning/10 border border-primary/20 mb-8">
+          {/* Urgency Badge */}
+          <div className={cn(
+            "inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-warning/10 border border-primary/20 mb-8 transition-all duration-700",
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          )}>
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
@@ -194,7 +167,11 @@ function HeroSection() {
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
+          {/* Main Headline */}
+          <h1 className={cn(
+            "text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6 transition-all duration-700 delay-100",
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          )}>
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground to-foreground/70">
               DORA Compliance,
             </span>
@@ -204,21 +181,29 @@ function HeroSection() {
             </span>
           </h1>
 
-          <p className="text-xl sm:text-2xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
+          {/* Subheadline */}
+          <p className={cn(
+            "text-xl sm:text-2xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed transition-all duration-700 delay-200",
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          )}>
             Stop drowning in spreadsheets. Generate your{' '}
             <span className="text-foreground font-medium">Register of Information</span>{' '}
             in hours, not months. All 15 ESA templates, automated.
           </p>
 
-          <div className="flex items-center justify-center gap-4 text-sm mb-10">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10 text-warning border border-warning/20">
-              <Clock className="h-4 w-4" />
-              <span className="font-semibold">April 30, 2025</span>
-            </div>
-            <span className="text-muted-foreground">First RoI submission deadline</span>
+          {/* Countdown */}
+          <div className={cn(
+            "flex justify-center mb-10 transition-all duration-700 delay-300",
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          )}>
+            <DeadlineCountdown />
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+          {/* CTAs */}
+          <div className={cn(
+            "flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 transition-all duration-700 delay-400",
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          )}>
             <Link href="/register">
               <Button size="lg" className="h-14 px-8 text-lg shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 transition-all hover:-translate-y-0.5 group">
                 Start Free Trial
@@ -233,7 +218,11 @@ function HeroSection() {
             </Link>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
+          {/* Trust Signals */}
+          <div className={cn(
+            "flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground transition-all duration-700 delay-500",
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          )}>
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-success" />
               <span>No credit card required</span>
@@ -249,9 +238,14 @@ function HeroSection() {
           </div>
         </div>
 
-        {/* Product Screenshot */}
-        <div className="relative mt-16 max-w-5xl mx-auto">
+        {/* Product Screenshot with Floating Elements */}
+        <div className={cn(
+          "relative mt-16 max-w-5xl mx-auto transition-all duration-1000 delay-600",
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        )}>
+          {/* Browser Frame */}
           <div className="relative rounded-2xl bg-gradient-to-b from-slate-100 to-slate-50 p-1 shadow-2xl">
+            {/* Browser Chrome */}
             <div className="flex items-center gap-2 px-4 py-3 bg-white rounded-t-xl border-b">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-red-400" />
@@ -266,8 +260,10 @@ function HeroSection() {
               </div>
             </div>
 
+            {/* Dashboard Preview */}
             <div className="bg-slate-50 rounded-b-xl p-6 min-h-[400px]">
               <div className="grid grid-cols-3 gap-4">
+                {/* Stats Row */}
                 <div className="col-span-3 grid grid-cols-4 gap-4">
                   <div className="bg-white rounded-xl p-4 border shadow-sm">
                     <div className="text-sm text-muted-foreground mb-1">RoI Readiness</div>
@@ -295,6 +291,7 @@ function HeroSection() {
                   </div>
                 </div>
 
+                {/* Content Area */}
                 <div className="col-span-2 bg-white rounded-xl p-4 border shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <span className="font-medium">Recent Assessments</span>
@@ -333,6 +330,37 @@ function HeroSection() {
               </div>
             </div>
           </div>
+
+          {/* Floating Cards */}
+          <FloatingCard className="left-[-60px] top-32 hidden lg:flex items-center gap-2" delay={0}>
+            <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+              <Check className="h-4 w-4 text-success" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">SOC 2 Report</div>
+              <div className="text-sm font-medium">Parsed in 42s</div>
+            </div>
+          </FloatingCard>
+
+          <FloatingCard className="right-[-40px] top-48 hidden lg:flex items-center gap-2" delay={0.5}>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">AI Analysis</div>
+              <div className="text-sm font-medium">47 controls extracted</div>
+            </div>
+          </FloatingCard>
+
+          <FloatingCard className="left-[-30px] bottom-24 hidden lg:flex items-center gap-2" delay={1}>
+            <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-info" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">RoI Template</div>
+              <div className="text-sm font-medium">B_02.01 auto-filled</div>
+            </div>
+          </FloatingCard>
         </div>
       </div>
     </section>
@@ -340,22 +368,31 @@ function HeroSection() {
 }
 
 // ============================================================================
-// Social Proof Bar
+// Social Proof / Logo Bar
 // ============================================================================
 
 function SocialProofBar() {
+  const { ref, isVisible } = useIntersectionObserver();
+
   return (
-    <section className="py-16 border-y bg-slate-50/50">
+    <section ref={ref} className="py-16 border-y bg-slate-50/50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <p className="text-center text-sm text-muted-foreground mb-8">
+        <p className={cn(
+          "text-center text-sm text-muted-foreground mb-8 transition-all duration-500",
+          isVisible ? "opacity-100" : "opacity-0"
+        )}>
           Trusted by compliance teams at leading EU financial institutions
         </p>
 
-        <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
-          {['Deutsche Bank', 'ING', 'BNP Paribas', 'Rabobank', 'ABN AMRO', 'Santander'].map((company) => (
+        <div className={cn(
+          "flex flex-wrap items-center justify-center gap-x-12 gap-y-6 transition-all duration-700",
+          isVisible ? "opacity-100" : "opacity-0"
+        )}>
+          {['Deutsche Bank', 'ING', 'BNP Paribas', 'Rabobank', 'ABN AMRO', 'Santander'].map((company, i) => (
             <div
               key={company}
               className="text-xl font-semibold text-slate-300 hover:text-slate-500 transition-colors"
+              style={{ transitionDelay: `${i * 100}ms` }}
             >
               {company}
             </div>
@@ -367,10 +404,12 @@ function SocialProofBar() {
 }
 
 // ============================================================================
-// Problem Section
+// Problem Statement Section
 // ============================================================================
 
 function ProblemSection() {
+  const { ref, isVisible } = useIntersectionObserver();
+
   const problems = [
     { value: '300+', label: 'hours spent', sublabel: 'on manual RoI creation' },
     { value: '15', label: 'ESA templates', sublabel: 'required for submission' },
@@ -385,9 +424,13 @@ function ProblemSection() {
   ];
 
   return (
-    <section id="problem" className="py-24 bg-white">
+    <section id="problem" ref={ref} className="py-24 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        {/* Problem Stats */}
+        <div className={cn(
+          "text-center mb-16 transition-all duration-700",
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        )}>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
             DORA compliance shouldn&apos;t be this hard
           </h2>
@@ -396,9 +439,16 @@ function ProblemSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+        <div className={cn(
+          "grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 transition-all duration-700 delay-200",
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        )}>
           {problems.map((problem, i) => (
-            <div key={i} className="text-center p-8 rounded-2xl bg-slate-50 border">
+            <div
+              key={i}
+              className="text-center p-8 rounded-2xl bg-slate-50 border"
+              style={{ transitionDelay: `${i * 100}ms` }}
+            >
               <div className="text-5xl font-bold text-primary mb-2">{problem.value}</div>
               <div className="text-lg font-medium mb-1">{problem.label}</div>
               <div className="text-sm text-muted-foreground">{problem.sublabel}</div>
@@ -406,7 +456,11 @@ function ProblemSection() {
           ))}
         </div>
 
-        <div className="max-w-4xl mx-auto">
+        {/* Before/After Comparison */}
+        <div className={cn(
+          "max-w-4xl mx-auto transition-all duration-700 delay-300",
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        )}>
           <div className="grid md:grid-cols-2 gap-4 p-6 rounded-2xl border bg-gradient-to-r from-slate-50 to-primary/5">
             <div>
               <div className="flex items-center gap-2 mb-4">
@@ -448,10 +502,12 @@ function ProblemSection() {
 }
 
 // ============================================================================
-// Features Grid
+// Features Grid Section
 // ============================================================================
 
 function FeaturesGrid() {
+  const { ref, isVisible } = useIntersectionObserver();
+
   const features = [
     {
       icon: FileSearch,
@@ -493,7 +549,7 @@ function FeaturesGrid() {
       title: 'Risk Dashboard',
       description: 'Real-time risk scoring with trend analysis. Board-ready reports and concentration risk monitoring.',
       badge: 'Analytics',
-      color: 'violet',
+      color: 'chart-4',
     },
   ];
 
@@ -503,13 +559,16 @@ function FeaturesGrid() {
     warning: 'bg-warning/10 text-warning',
     purple: 'bg-purple-500/10 text-purple-500',
     success: 'bg-success/10 text-success',
-    violet: 'bg-violet-500/10 text-violet-500',
+    'chart-4': 'bg-violet-500/10 text-violet-500',
   };
 
   return (
-    <section id="features" className="py-24 bg-slate-50/50">
+    <section id="features" ref={ref} className="py-24 bg-slate-50/50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className={cn(
+          "text-center mb-16 transition-all duration-700",
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        )}>
           <Badge variant="secondary" className="mb-4">Complete Platform</Badge>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
             Everything you need for DORA compliance
@@ -525,7 +584,11 @@ function FeaturesGrid() {
             return (
               <div
                 key={i}
-                className="group relative p-8 rounded-2xl bg-white border hover:border-primary/30 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                className={cn(
+                  "group relative p-8 rounded-2xl bg-white border hover:border-primary/30 hover:shadow-xl transition-all duration-300 hover:-translate-y-1",
+                  isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+                )}
+                style={{ transitionDelay: `${i * 100}ms` }}
               >
                 <div className={cn(
                   "w-14 h-14 rounded-xl flex items-center justify-center mb-6",
@@ -540,6 +603,9 @@ function FeaturesGrid() {
                 <p className="text-muted-foreground leading-relaxed">
                   {feature.description}
                 </p>
+                <div className="mt-4 flex items-center text-primary font-medium text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                  Learn more <ArrowRight className="ml-1 h-4 w-4" />
+                </div>
               </div>
             );
           })}
@@ -550,10 +616,12 @@ function FeaturesGrid() {
 }
 
 // ============================================================================
-// AI Parsing Section
+// Feature Deep Dive - AI Parsing
 // ============================================================================
 
 function AIParsingSection() {
+  const { ref, isVisible } = useIntersectionObserver();
+
   const capabilities = [
     'Audit opinion extraction',
     'All control results mapped',
@@ -564,10 +632,14 @@ function AIParsingSection() {
   ];
 
   return (
-    <section id="how-it-works" className="py-24 bg-white">
+    <section id="how-it-works" ref={ref} className="py-24 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
+          {/* Content */}
+          <div className={cn(
+            "transition-all duration-700",
+            isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"
+          )}>
             <Badge variant="secondary" className="mb-4">AI-Powered</Badge>
             <h2 className="text-3xl sm:text-4xl font-bold mb-6">
               Intelligent Document Analysis
@@ -606,8 +678,13 @@ function AIParsingSection() {
             </div>
           </div>
 
-          <div className="relative">
+          {/* Visual */}
+          <div className={cn(
+            "relative transition-all duration-700 delay-300",
+            isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"
+          )}>
             <div className="relative bg-gradient-to-br from-slate-100 to-slate-50 rounded-2xl p-8 border">
+              {/* Upload Zone */}
               <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center mb-6 bg-white/50">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                   <FileSearch className="h-8 w-8 text-primary" />
@@ -616,19 +693,21 @@ function AIParsingSection() {
                 <div className="text-sm text-muted-foreground">or click to browse</div>
               </div>
 
+              {/* Processing Indicator */}
               <div className="flex items-center gap-3 p-3 bg-white rounded-lg border mb-4">
                 <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="h-4 w-4 text-primary" />
+                  <Sparkles className="h-4 w-4 text-primary animate-pulse" />
                 </div>
                 <div className="flex-1">
                   <div className="text-sm font-medium">Analyzing document...</div>
                   <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1">
-                    <div className="bg-primary h-1.5 rounded-full w-2/3" />
+                    <div className="bg-primary h-1.5 rounded-full animate-progress" style={{ width: '65%' }} />
                   </div>
                 </div>
                 <span className="text-sm text-muted-foreground">65%</span>
               </div>
 
+              {/* Results Preview */}
               <div className="space-y-2">
                 {[
                   { icon: CheckCircle2, label: 'Opinion: Unqualified', color: 'text-success' },
@@ -654,10 +733,12 @@ function AIParsingSection() {
 }
 
 // ============================================================================
-// RoI Section
+// Feature Deep Dive - RoI Generation
 // ============================================================================
 
 function RoISection() {
+  const { ref, isVisible } = useIntersectionObserver();
+
   const templates = [
     'B_01.01 - Entity Identification',
     'B_02.01 - ICT Providers',
@@ -668,36 +749,52 @@ function RoISection() {
   ];
 
   return (
-    <section className="py-24 bg-gradient-to-b from-slate-50/50 to-white">
+    <section ref={ref} className="py-24 bg-gradient-to-b from-slate-50/50 to-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="order-2 lg:order-1">
-            <div className="space-y-3">
-              {templates.map((template, i) => (
-                <div
-                  key={i}
-                  className="p-4 bg-white rounded-xl border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
-                  style={{ marginLeft: `${i * 8}px` }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <FileText className="h-4 w-4 text-primary" />
+          {/* Visual */}
+          <div className={cn(
+            "relative order-2 lg:order-1 transition-all duration-700",
+            isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"
+          )}>
+            <div className="relative">
+              {/* Stacked Templates */}
+              <div className="space-y-3">
+                {templates.map((template, i) => (
+                  <div
+                    key={i}
+                    className="p-4 bg-white rounded-xl border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
+                    style={{
+                      marginLeft: `${i * 8}px`,
+                      opacity: 1 - (i * 0.1),
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{template}</div>
+                        <div className="text-xs text-muted-foreground">Auto-populated</div>
+                      </div>
+                      <Badge variant="secondary" className="ml-auto text-xs">Ready</Badge>
                     </div>
-                    <div>
-                      <div className="font-medium text-sm">{template}</div>
-                      <div className="text-xs text-muted-foreground">Auto-populated</div>
-                    </div>
-                    <Badge variant="secondary" className="ml-auto text-xs">Ready</Badge>
                   </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 text-center text-sm text-muted-foreground">
-              + 9 more templates included
+                ))}
+              </div>
+
+              {/* More indicator */}
+              <div className="mt-4 text-center text-sm text-muted-foreground">
+                + 9 more templates included
+              </div>
             </div>
           </div>
 
-          <div className="order-1 lg:order-2">
+          {/* Content */}
+          <div className={cn(
+            "order-1 lg:order-2 transition-all duration-700 delay-200",
+            isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"
+          )}>
             <Badge variant="secondary" className="mb-4">DORA Article 28</Badge>
             <h2 className="text-3xl sm:text-4xl font-bold mb-6">
               Register of Information in One Click
@@ -740,10 +837,12 @@ function RoISection() {
 }
 
 // ============================================================================
-// Stats Section
+// Statistics Section
 // ============================================================================
 
 function StatsSection() {
+  const { ref, isVisible } = useIntersectionObserver();
+
   const stats = [
     { value: '45s', label: 'Average SOC 2 parsing time' },
     { value: '15', label: 'ESA templates supported' },
@@ -754,11 +853,18 @@ function StatsSection() {
   ];
 
   return (
-    <section className="py-24 bg-foreground text-white">
+    <section ref={ref} className="py-24 bg-foreground text-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
           {stats.map((stat, i) => (
-            <div key={i} className="text-center">
+            <div
+              key={i}
+              className={cn(
+                "text-center transition-all duration-500",
+                isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+              )}
+              style={{ transitionDelay: `${i * 100}ms` }}
+            >
               <div className="text-4xl font-bold text-primary mb-2">{stat.value}</div>
               <div className="text-sm text-slate-400">{stat.label}</div>
             </div>
@@ -774,31 +880,39 @@ function StatsSection() {
 // ============================================================================
 
 function TestimonialsSection() {
+  const { ref, isVisible } = useIntersectionObserver();
+
   const testimonials = [
     {
       quote: "DORA Comply reduced our vendor assessment time by 90%. What used to take weeks now takes hours. The AI parsing is remarkably accurate.",
       author: "Maria van der Berg",
       role: "Head of Third-Party Risk",
       company: "Major EU Bank",
+      rating: 5,
     },
     {
       quote: "Finally, a platform that understands EU regulations. The RoI export feature alone saved us 200+ hours of manual work.",
       author: "Thomas Weber",
       role: "Chief Compliance Officer",
       company: "Insurance Group",
+      rating: 5,
     },
     {
       quote: "The cross-framework mapping is invaluable. We can now see our DORA, NIS2, and ISO 27001 compliance in one view.",
       author: "Sophie Laurent",
       role: "VP of Risk Management",
       company: "Investment Firm",
+      rating: 5,
     },
   ];
 
   return (
-    <section className="py-24 bg-white">
+    <section ref={ref} className="py-24 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className={cn(
+          "text-center mb-16 transition-all duration-700",
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        )}>
           <Badge variant="secondary" className="mb-4">Testimonials</Badge>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
             Trusted by compliance leaders
@@ -810,16 +924,30 @@ function TestimonialsSection() {
 
         <div className="grid md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, i) => (
-            <div key={i} className="relative p-8 rounded-2xl bg-slate-50 border">
+            <div
+              key={i}
+              className={cn(
+                "relative p-8 rounded-2xl bg-slate-50 border transition-all duration-500",
+                isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+              )}
+              style={{ transitionDelay: `${i * 150}ms` }}
+            >
+              {/* Quote Icon */}
               <Quote className="h-8 w-8 text-primary/20 mb-4" />
+
+              {/* Rating */}
               <div className="flex gap-1 mb-4">
-                {Array.from({ length: 5 }).map((_, j) => (
-                  <Star key={j} className="h-4 w-4 fill-warning text-warning" />
+                {Array.from({ length: testimonial.rating }).map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-warning text-warning" />
                 ))}
               </div>
+
+              {/* Quote */}
               <p className="text-lg mb-6 leading-relaxed">
                 &ldquo;{testimonial.quote}&rdquo;
               </p>
+
+              {/* Author */}
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-semibold">
                   {testimonial.author.split(' ').map(n => n[0]).join('')}
@@ -839,100 +967,179 @@ function TestimonialsSection() {
 }
 
 // ============================================================================
-// Enterprise CTA Section (replaces Pricing)
+// Pricing Section
 // ============================================================================
 
 function PricingSection() {
-  const enterpriseFeatures = [
-    { icon: Building2, text: 'Unlimited vendors and documents' },
-    { icon: Sparkles, text: 'Unlimited AI document parsing' },
-    { icon: Network, text: 'Full cross-framework mapping' },
-    { icon: Shield, text: 'Dedicated security review' },
-    { icon: Clock, text: 'Priority 24/7 support' },
-    { icon: Lock, text: 'Custom SLA and compliance attestations' },
+  const { ref, isVisible } = useIntersectionObserver();
+  const [isAnnual, setIsAnnual] = useState(true);
+
+  const plans = [
+    {
+      name: 'Starter',
+      price: isAnnual ? '399' : '499',
+      period: '/mo',
+      description: 'Perfect for small financial entities starting their DORA journey',
+      features: [
+        'Up to 50 vendors',
+        '100 AI document parses/month',
+        '5 team members',
+        'All 15 RoI templates',
+        'Email support',
+        'EU data residency',
+      ],
+      cta: 'Start Free Trial',
+      highlighted: false,
+    },
+    {
+      name: 'Professional',
+      price: isAnnual ? '799' : '999',
+      period: '/mo',
+      description: 'For growing teams with complex compliance needs',
+      features: [
+        'Up to 250 vendors',
+        '500 AI document parses/month',
+        '20 team members',
+        'All 15 RoI templates',
+        'Priority support',
+        'API access',
+        'SSO integration',
+        'Custom workflows',
+      ],
+      cta: 'Start Free Trial',
+      highlighted: true,
+      badge: 'Most Popular',
+    },
+    {
+      name: 'Enterprise',
+      price: 'Custom',
+      period: '',
+      description: 'For large institutions with advanced requirements',
+      features: [
+        'Unlimited vendors',
+        'Unlimited AI parses',
+        'Unlimited team members',
+        'Dedicated success manager',
+        'Custom SLA',
+        'On-premise option',
+        'Advanced security controls',
+        'Custom integrations',
+      ],
+      cta: 'Contact Sales',
+      highlighted: false,
+    },
   ];
 
   return (
-    <section id="enterprise" className="py-24 bg-slate-50/50">
+    <section id="pricing" ref={ref} className="py-24 bg-slate-50/50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="relative p-8 md:p-12 rounded-3xl bg-gradient-to-br from-white via-white to-primary/5 border-2 border-primary/20 shadow-xl">
-            <div className="absolute -top-4 left-8">
-              <Badge className="shadow-lg text-sm px-4 py-1">Enterprise Solution</Badge>
-            </div>
+        <div className={cn(
+          "text-center mb-12 transition-all duration-700",
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        )}>
+          <Badge variant="secondary" className="mb-4">Pricing</Badge>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            Simple, transparent pricing
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+            Start free. Scale as you grow. No hidden fees.
+          </p>
 
-            <div className="grid lg:grid-cols-2 gap-10 items-center">
-              <div>
-                <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                  Built for Enterprise
-                </h2>
-                <p className="text-xl text-muted-foreground mb-6 leading-relaxed">
-                  DORA Comply is designed for financial institutions with complex compliance requirements.
-                  Get a tailored solution that fits your organization.
-                </p>
-
-                <div className="space-y-4">
-                  {enterpriseFeatures.map((feature, i) => {
-                    const Icon = feature.icon;
-                    return (
-                      <div key={i} className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <Icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <span className="text-sm font-medium">{feature.text}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="lg:pl-8">
-                <div className="p-8 rounded-2xl bg-foreground text-white">
-                  <h3 className="text-2xl font-bold mb-2">Let&apos;s Talk</h3>
-                  <p className="text-slate-300 mb-6">
-                    Get a personalized demo and custom pricing tailored to your institution&apos;s needs.
-                  </p>
-
-                  <div className="space-y-4 mb-6">
-                    <div className="flex items-center gap-3 text-sm">
-                      <CheckCircle2 className="h-5 w-5 text-success" />
-                      <span>Personalized product demo</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <CheckCircle2 className="h-5 w-5 text-success" />
-                      <span>Custom implementation plan</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <CheckCircle2 className="h-5 w-5 text-success" />
-                      <span>Volume-based pricing</span>
-                    </div>
-                  </div>
-
-                  <Link href="/contact">
-                    <Button size="lg" className="w-full h-14 text-lg shadow-xl shadow-primary/40 hover:shadow-2xl">
-                      Contact Sales
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </Link>
-
-                  <p className="text-center text-xs text-slate-400 mt-4">
-                    Response within 24 hours
-                  </p>
-                </div>
-              </div>
-            </div>
+          {/* Toggle */}
+          <div className="inline-flex items-center gap-3 p-1 rounded-full bg-white border">
+            <button
+              onClick={() => setIsAnnual(false)}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                !isAnnual ? "bg-primary text-white" : "text-muted-foreground"
+              )}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setIsAnnual(true)}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                isAnnual ? "bg-primary text-white" : "text-muted-foreground"
+              )}
+            >
+              Annual
+              <span className="ml-1.5 text-xs opacity-80">Save 20%</span>
+            </button>
           </div>
         </div>
+
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {plans.map((plan, i) => (
+            <div
+              key={i}
+              className={cn(
+                "relative p-8 rounded-2xl border-2 transition-all duration-500",
+                plan.highlighted
+                  ? "bg-white border-primary shadow-xl scale-105"
+                  : "bg-white border-border hover:border-primary/50",
+                isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+              )}
+              style={{ transitionDelay: `${i * 150}ms` }}
+            >
+              {plan.badge && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge className="shadow-lg">{plan.badge}</Badge>
+                </div>
+              )}
+
+              <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
+              <div className="mb-4">
+                <span className="text-4xl font-bold">
+                  {plan.price === 'Custom' ? '' : '€'}{plan.price}
+                </span>
+                <span className="text-muted-foreground">{plan.period}</span>
+              </div>
+              <p className="text-muted-foreground mb-6">{plan.description}</p>
+
+              <div className="border-t pt-6 mb-6">
+                <ul className="space-y-3">
+                  {plan.features.map((feature, j) => (
+                    <li key={j} className="flex items-start gap-3">
+                      <Check className="h-5 w-5 text-success shrink-0 mt-0.5" />
+                      <span className="text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <Link href={plan.name === 'Enterprise' ? '/contact' : '/register'}>
+                <Button
+                  className={cn(
+                    "w-full",
+                    plan.highlighted
+                      ? "shadow-lg shadow-primary/25"
+                      : "bg-slate-100 text-foreground hover:bg-slate-200"
+                  )}
+                  variant={plan.highlighted ? "default" : "secondary"}
+                >
+                  {plan.cta}
+                </Button>
+              </Link>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-center text-sm text-muted-foreground mt-8">
+          All plans include 14-day free trial. No credit card required.
+        </p>
       </div>
     </section>
   );
 }
 
 // ============================================================================
-// Security Section
+// Security & Trust Section
 // ============================================================================
 
 function SecuritySection() {
+  const { ref, isVisible } = useIntersectionObserver();
+
   const badges = [
     { icon: Globe, label: 'EU Data Residency', sublabel: 'Frankfurt data center' },
     { icon: ShieldCheck, label: 'SOC 2 Type II', sublabel: 'Certified compliant' },
@@ -941,9 +1148,12 @@ function SecuritySection() {
   ];
 
   return (
-    <section id="security" className="py-24 bg-white">
+    <section id="security" ref={ref} className="py-24 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className={cn(
+          "text-center mb-16 transition-all duration-700",
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        )}>
           <Badge variant="secondary" className="mb-4">Security First</Badge>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
             Built for enterprise security
@@ -957,7 +1167,14 @@ function SecuritySection() {
           {badges.map((badge, i) => {
             const Icon = badge.icon;
             return (
-              <div key={i} className="text-center p-8 rounded-2xl bg-slate-50 border hover:shadow-lg transition-all">
+              <div
+                key={i}
+                className={cn(
+                  "text-center p-8 rounded-2xl bg-slate-50 border transition-all duration-500 hover:shadow-lg",
+                  isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+                )}
+                style={{ transitionDelay: `${i * 100}ms` }}
+              >
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                   <Icon className="h-8 w-8 text-primary" />
                 </div>
@@ -973,40 +1190,47 @@ function SecuritySection() {
 }
 
 // ============================================================================
-// Final CTA
+// Final CTA Section
 // ============================================================================
 
 function FinalCTA() {
+  const { ref, isVisible } = useIntersectionObserver();
+
   return (
-    <section className="py-24 bg-gradient-to-br from-foreground via-foreground to-slate-800 text-white">
+    <section ref={ref} className="py-24 bg-gradient-to-br from-foreground via-foreground to-slate-800 text-white">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
-          Ready to simplify your
-          <br />
-          <span className="text-primary">DORA compliance?</span>
-        </h2>
-        <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">
-          Join leading EU financial institutions already using DORA Comply.
-          Start your free trial today.
-        </p>
+        <div className={cn(
+          "transition-all duration-700",
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        )}>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
+            Ready to simplify your
+            <br />
+            <span className="text-primary">DORA compliance?</span>
+          </h2>
+          <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">
+            Join leading EU financial institutions already using DORA Comply.
+            Start your free trial today and generate your first RoI in minutes.
+          </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/register">
-            <Button size="lg" className="h-14 px-8 text-lg shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/40 transition-all hover:-translate-y-0.5">
-              Start Free Trial
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
-          <Link href="/contact">
-            <Button size="lg" variant="outline" className="h-14 px-8 text-lg border-slate-600 text-white hover:bg-slate-800">
-              Talk to Sales
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link href="/register">
+              <Button size="lg" className="h-14 px-8 text-lg shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/40 transition-all hover:-translate-y-0.5">
+                Start Free Trial
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/contact">
+              <Button size="lg" variant="outline" className="h-14 px-8 text-lg border-slate-600 text-white hover:bg-slate-800">
+                Talk to Sales
+              </Button>
+            </Link>
+          </div>
+
+          <p className="text-sm text-slate-400 mt-6">
+            No credit card required. 14-day free trial. Cancel anytime.
+          </p>
         </div>
-
-        <p className="text-sm text-slate-400 mt-6">
-          No credit card required. 14-day free trial. Cancel anytime.
-        </p>
       </div>
     </section>
   );
@@ -1022,7 +1246,9 @@ function Footer() {
       title: 'Product',
       links: [
         { label: 'Features', href: '#features' },
+        { label: 'Pricing', href: '#pricing' },
         { label: 'Security', href: '#security' },
+        { label: 'Roadmap', href: '/roadmap' },
         { label: 'Changelog', href: '/changelog' },
       ],
     },
@@ -1030,8 +1256,10 @@ function Footer() {
       title: 'Resources',
       links: [
         { label: 'Documentation', href: '/docs' },
+        { label: 'API Reference', href: '/api' },
         { label: 'DORA Guide', href: '/guides/dora' },
         { label: 'Blog', href: '/blog' },
+        { label: 'Webinars', href: '/webinars' },
       ],
     },
     {
@@ -1040,6 +1268,8 @@ function Footer() {
         { label: 'About', href: '/about' },
         { label: 'Careers', href: '/careers' },
         { label: 'Contact', href: '/contact' },
+        { label: 'Partners', href: '/partners' },
+        { label: 'Press', href: '/press' },
       ],
     },
     {
@@ -1047,7 +1277,9 @@ function Footer() {
       links: [
         { label: 'Privacy', href: '/privacy' },
         { label: 'Terms', href: '/terms' },
-        { label: 'Cookies & GDPR', href: '/gdpr' },
+        { label: 'Security', href: '/security' },
+        { label: 'GDPR', href: '/gdpr' },
+        { label: 'Cookies', href: '/cookies' },
       ],
     },
   ];
@@ -1056,6 +1288,7 @@ function Footer() {
     <footer className="bg-slate-50 border-t">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+          {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white">
@@ -1074,6 +1307,7 @@ function Footer() {
             </div>
           </div>
 
+          {/* Link Columns */}
           {columns.map((column) => (
             <div key={column.title}>
               <h4 className="font-semibold mb-4">{column.title}</h4>
@@ -1097,21 +1331,75 @@ function Footer() {
           <p className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} DORA Comply. All rights reserved.
           </p>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <Link href="/privacy" className="hover:text-foreground transition-colors">
-              Privacy
+          <div className="flex items-center gap-4">
+            <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+              <span className="sr-only">LinkedIn</span>
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
             </Link>
-            <span>·</span>
-            <Link href="/terms" className="hover:text-foreground transition-colors">
-              Terms
-            </Link>
-            <span>·</span>
-            <Link href="/gdpr" className="hover:text-foreground transition-colors">
-              Cookie Settings
+            <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+              <span className="sr-only">Twitter</span>
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
             </Link>
           </div>
         </div>
       </div>
     </footer>
+  );
+}
+
+// ============================================================================
+// Main Page Component
+// ============================================================================
+
+export default function LandingPage() {
+  return (
+    <>
+      <HeroSection />
+      <SocialProofBar />
+      <ProblemSection />
+      <FeaturesGrid />
+      <AIParsingSection />
+      <RoISection />
+      <StatsSection />
+      <TestimonialsSection />
+      <PricingSection />
+      <SecuritySection />
+      <FinalCTA />
+      <Footer />
+
+      {/* Global Styles for Animations */}
+      <style jsx global>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.5; }
+        }
+
+        @keyframes progress {
+          0% { width: 0%; }
+          100% { width: 65%; }
+        }
+
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+
+        .animate-pulse-slow {
+          animation: pulse-slow 4s ease-in-out infinite;
+        }
+
+        .animate-progress {
+          animation: progress 2s ease-out forwards;
+        }
+      `}</style>
+    </>
   );
 }
