@@ -443,25 +443,44 @@ export default function IntegrationsSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Webhooks Section - Coming Soon */}
-      <Card className="border-dashed opacity-60">
+      {/* Webhooks Section */}
+      <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Webhook className="h-5 w-5" />
-            <CardTitle className="text-base">Webhooks</CardTitle>
-            <Badge variant="secondary" className="text-xs">
-              Coming Soon
-            </Badge>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Webhook className="h-5 w-5" />
+              <CardTitle className="text-base">Webhooks</CardTitle>
+            </div>
+            <Button size="sm" variant="outline" asChild>
+              <a href="/settings/integrations/webhooks">
+                <Plus className="h-4 w-4 mr-2" />
+                Configure
+              </a>
+            </Button>
           </div>
           <CardDescription>
             Receive real-time notifications when events occur in DORA Comply
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Configure webhook endpoints to receive notifications for vendor updates,
-            compliance alerts, and incident reports.
-          </p>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="p-3 border rounded-lg">
+              <div className="font-medium">Vendor Events</div>
+              <p className="text-xs text-muted-foreground">Created, updated, risk changes</p>
+            </div>
+            <div className="p-3 border rounded-lg">
+              <div className="font-medium">Incident Events</div>
+              <p className="text-xs text-muted-foreground">New incidents, classification, reports</p>
+            </div>
+            <div className="p-3 border rounded-lg">
+              <div className="font-medium">Compliance Events</div>
+              <p className="text-xs text-muted-foreground">Maturity changes, RoI exports</p>
+            </div>
+            <div className="p-3 border rounded-lg">
+              <div className="font-medium">Security Events</div>
+              <p className="text-xs text-muted-foreground">Logins, MFA, role changes</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
