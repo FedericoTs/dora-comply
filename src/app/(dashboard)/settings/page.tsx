@@ -34,7 +34,7 @@ const settingsSections = [
     description: 'Email preferences and alert settings',
     href: '/settings/notifications',
     icon: Bell,
-    status: 'coming_soon' as const,
+    status: 'active' as const,
   },
   {
     title: 'Security',
