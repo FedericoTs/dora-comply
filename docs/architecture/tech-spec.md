@@ -17,7 +17,7 @@
 
 ### Background
 
-EU financial institutions face a January 17, 2025 deadline for DORA (Digital Operational Resilience Act) compliance, with the first Register of Information (RoI) submission due April 30, 2025. Current TPRM tools are US-centric, require months of implementation, and rely on slow questionnaire-based assessments.
+EU financial institutions face a January 17, 2026 deadline for DORA (Digital Operational Resilience Act) compliance, with the first Register of Information (RoI) submission due April 30, 2026. Current TPRM tools are US-centric, require months of implementation, and rely on slow questionnaire-based assessments.
 
 We're building an AI-powered TPRM platform that:
 1. Eliminates questionnaires by parsing existing compliance documents (SOC 2, ISO 27001)

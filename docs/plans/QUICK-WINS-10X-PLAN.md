@@ -95,7 +95,7 @@ const DORA_ROLES = {
 // Notification types:
 - Document expiration (SOC2, certs) - 90/60/30/7 days
 - Incident deadline reminders - Auto based on classification
-- RoI submission reminders - Weekly until April 30, 2025
+- RoI submission reminders - Weekly until April 30, 2026
 - Vendor risk changes - Real-time
 - Compliance gaps detected - Daily digest
 ```

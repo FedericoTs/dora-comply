@@ -159,7 +159,7 @@ export default function ThemePage() {
               <StatCard
                 label="Days to Deadline"
                 value="42"
-                subtitle="April 30, 2025"
+                subtitle="April 30, 2026"
               />
             </div>
 

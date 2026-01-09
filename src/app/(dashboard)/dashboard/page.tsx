@@ -82,8 +82,8 @@ export default async function DashboardPage() {
     ? Math.round(templatesWithData.reduce((sum, s) => sum + s.completeness, 0) / templatesWithData.length)
     : 0;
 
-  // Calculate days to deadline (April 30, 2025 for first RoI submission)
-  const deadline = new Date('2025-04-30');
+  // Calculate days to deadline (April 30, 2026 for first RoI submission)
+  const deadline = new Date('2026-04-30');
   const today = new Date();
   const daysToDeadline = Math.max(0, Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
 
@@ -220,7 +220,7 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <p className="font-medium">RoI Submission Deadline</p>
-                <p className="text-sm text-muted-foreground">April 30, 2025</p>
+                <p className="text-sm text-muted-foreground">April 30, 2026</p>
               </div>
             </div>
             <div className="text-right">
@@ -438,7 +438,7 @@ export default async function DashboardPage() {
         <StatCard
           label="Days to Deadline"
           value={daysToDeadline}
-          description="April 30, 2025"
+          description="April 30, 2026"
           variant={daysToDeadline <= 30 ? 'warning' : 'default'}
           href="/roi/submissions"
           size="compact"

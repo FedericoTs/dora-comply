@@ -10,8 +10,8 @@
 
 ### What Do We Know To Be Absolutely True?
 
-1. **DORA is mandatory** - 22,000+ EU financial entities must comply by January 2025
-2. **RoI submission is non-negotiable** - First deadline: April 30, 2025
+1. **DORA is mandatory** - 22,000+ EU financial entities must comply by January 2026
+2. **RoI submission is non-negotiable** - First deadline: April 30, 2026
 3. **Third-party risk is exploding** - 35.5% of breaches originate from vendors
 4. **Manual processes don't scale** - Most teams have 1-2 TPRM employees managing 1,000+ vendors
 5. **AI can parse documents** - LLMs can extract structured data from unstructured documents
@@ -35,7 +35,7 @@
 ### Primary Job: Compliance Officer / CISO
 
 **Functional Job:** "Ensure we're DORA compliant before regulators ask"
-- Submit accurate RoI by April 30, 2025
+- Submit accurate RoI by April 30, 2026
 - Maintain updated register as vendors change
 - Document ICT risk management framework
 - Prepare for regulatory examination

@@ -32,8 +32,8 @@ Your role is to:
 4. Provide actionable recommendations
 
 Key DORA deadlines:
-- January 17, 2025: DORA became effective
-- April 30, 2025: First Register of Information (RoI) submission to national authorities
+- January 17, 2026: DORA became effective
+- April 30, 2026: First Register of Information (RoI) submission to national authorities
 - July 2025: ESAs classify Critical ICT Third-Party Providers (CTPPs)
 
 When answering questions:
@@ -308,7 +308,7 @@ export function getSuggestedQuestions(): string[] {
     "What's my DORA compliance status?",
     "Which vendors don't have valid SOC 2 reports?",
     "What's my biggest concentration risk?",
-    "Am I ready for the April 2025 deadline?",
+    "Am I ready for the April 2026 deadline?",
     "Which documents are expiring soon?",
     "How many critical vendors do I have?",
     "What compliance gaps should I address first?",

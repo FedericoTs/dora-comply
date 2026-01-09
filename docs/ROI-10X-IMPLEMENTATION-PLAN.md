@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-**Market Opportunity:** 93.5% of ESA dry run submissions failed. The DORA RoI deadline is April 30, 2025.
+**Market Opportunity:** 93.5% of ESA dry run submissions failed. The DORA RoI deadline is April 30, 2026.
 
 **Our 10X Advantage:** AI-powered contract analysis + one-click xBRL-CSV generation with real-time ESA validation.
 

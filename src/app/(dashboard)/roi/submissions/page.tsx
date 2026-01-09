@@ -61,7 +61,7 @@ async function SubmissionsContent() {
   );
 
   // Calculate deadline info
-  const deadline = new Date('2025-04-30');
+  const deadline = new Date('2026-04-30');
   const today = new Date();
   const daysUntilDeadline = Math.ceil(
     (deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
@@ -253,7 +253,7 @@ async function SubmissionsContent() {
                   <h3 className="font-medium text-sm">Submission Deadline</h3>
                   <p className="text-sm text-muted-foreground">
                     First RoI submission to your National Competent Authority is due by{' '}
-                    <strong>April 30, 2025</strong>.
+                    <strong>April 30, 2026</strong>.
                   </p>
                   <div className="flex items-center gap-2 pt-1">
                     <Badge variant="secondary" className="bg-blue-100 text-blue-700">

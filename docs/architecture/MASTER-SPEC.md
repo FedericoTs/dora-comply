@@ -55,8 +55,8 @@
 
 | Deadline | Date | Requirement |
 |----------|------|-------------|
-| **DORA Enforcement** | January 17, 2025 | Regulation goes live |
-| **RoI First Submission** | April 30, 2025 | First Register of Information due |
+| **DORA Enforcement** | January 17, 2026 | Regulation goes live |
+| **RoI First Submission** | April 30, 2026 | First Register of Information due |
 | **Platform GA** | Week 16 | Before RoI deadline |
 
 ---
@@ -1136,7 +1136,7 @@ Phase 5 addresses critical gaps identified through competitive analysis and regu
 
 | # | Feature | Effort | Impact | Deadline |
 |---|---------|--------|--------|----------|
-| 5.1.1 | **SOC2-to-RoI Auto-Population** | 3 weeks | 10X Differentiator | April 30, 2025 |
+| 5.1.1 | **SOC2-to-RoI Auto-Population** | 3 weeks | 10X Differentiator | April 30, 2026 |
 | 5.1.2 | **Incident Reporting Workflow** | 2 weeks | Critical | Active |
 | 5.1.3 | **Complete DORA Article Coverage** (Art. 33-44) | 1 week | High | Immediate |
 | 5.1.4 | **Entity Type Differentiation** | 1 week | High | Immediate |
@@ -1739,7 +1739,7 @@ export function SplitVerificationView({
 ```tsx
 // src/components/compliance/dora-deadline-widget.tsx
 export function DORADeadlineWidget() {
-  const roiDeadline = new Date('2025-04-30');
+  const roiDeadline = new Date('2026-04-30');
   const daysRemaining = differenceInDays(roiDeadline, new Date());
 
   return (
@@ -1752,7 +1752,7 @@ export function DORADeadlineWidget() {
         <div>
           <p className="text-sm text-muted-foreground">RoI Submission Deadline</p>
           <p className="text-2xl font-bold">{daysRemaining} days</p>
-          <p className="text-xs text-muted-foreground">April 30, 2025</p>
+          <p className="text-xs text-muted-foreground">April 30, 2026</p>
         </div>
       </div>
     </Card>

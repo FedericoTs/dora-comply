@@ -297,5 +297,5 @@ After implementing changes, monitor:
 
 ---
 
-*Audit completed: January 2025*
+*Audit completed: January 2026*
 *Platform version: Pre-DORA deadline*

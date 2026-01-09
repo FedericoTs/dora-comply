@@ -36,8 +36,8 @@ export async function GET() {
       : 0;
     const templatesWithData = stats.filter(s => s.hasData).length;
 
-    // Days until deadline (April 30, 2025)
-    const deadline = new Date('2025-04-30');
+    // Days until deadline (April 30, 2026)
+    const deadline = new Date('2026-04-30');
     const today = new Date();
     const daysUntilDeadline = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 

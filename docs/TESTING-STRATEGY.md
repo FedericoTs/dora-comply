@@ -367,11 +367,11 @@ function isValidLEI(lei: string): boolean {
 ### NCA Portals (by country)
 - **Germany (BaFin):** MVP Portal - April 14-28, 2025
 - **Netherlands (DNB):** MyDNB - April 23, 2025
-- **Luxembourg (CSSF):** eDesk - April 2025
+- **Luxembourg (CSSF):** eDesk - April 2026
 - **Ireland (CBI):** CBI Portal - April 23, 2025
 
 ---
 
 *Document Version: 1.0*
-*Last Updated: January 2025*
+*Last Updated: January 2026*
 *Review Cycle: Before each submission period*

@@ -29,8 +29,8 @@ This document defines the regulatory requirements that our AI-powered TPRM platf
 
 | Date | Requirement | Platform Feature Required |
 |------|-------------|--------------------------|
-| **January 17, 2025** | DORA fully applicable | Compliance readiness dashboard |
-| **April 30, 2025** | First RoI submission | RoI generation & export (xBRL-CSV) |
+| **January 17, 2026** | DORA fully applicable | Compliance readiness dashboard |
+| **April 30, 2026** | First RoI submission | RoI generation & export (xBRL-CSV) |
 | **Q1 2026** | TLPT cycle begins | Testing management module |
 | **October 2027** | DORA review report | Trend analytics & reporting |
 

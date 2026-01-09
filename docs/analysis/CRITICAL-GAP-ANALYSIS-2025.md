@@ -33,7 +33,7 @@ This critical review analyzes the DORA Comply platform's Document Analysis capab
 4. Verification checklist for human-in-the-loop validation
 
 **Critical Gaps:**
-1. **No Register of Information (RoI) Generator** - Deadline April 30, 2025
+1. **No Register of Information (RoI) Generator** - Deadline April 30, 2026
 2. **No Continuous Monitoring Integration** - Industry standard
 3. **No Incident Reporting Workflow** - DORA Articles 17-20
 4. **Incomplete DORA Article Coverage** - Only 22 of 64 articles mapped
@@ -138,7 +138,7 @@ const pillarWeights: Record<DORAPillar, number> = {
 3. **Cost Efficiency**: Gemini 2.0 vs expensive Anthropic/OpenAI
 
 **Where DORA Comply Lags:**
-1. **RoI Generation**: Critical gap - deadline April 30, 2025
+1. **RoI Generation**: Critical gap - deadline April 30, 2026
 2. **Continuous Monitoring**: No real-time risk ratings
 3. **Workflow Automation**: No rule-based triggers (OneTrust has "ActiveRules")
 4. **Concentration Risk**: No analytics or visualization
@@ -278,7 +278,7 @@ Based on competitor analysis, the **10X opportunity** is:
 
 | # | Feature | Effort | Impact | Deadline |
 |---|---------|--------|--------|----------|
-| 1.1 | **RoI Generator** - ESA xBRL-CSV export | 3 weeks | Critical | April 30, 2025 |
+| 1.1 | **RoI Generator** - ESA xBRL-CSV export | 3 weeks | Critical | April 30, 2026 |
 | 1.2 | **Incident Reporting Workflow** - 4h/72h/1m automation | 2 weeks | Critical | Jan 17, 2025 |
 | 1.3 | **Complete DORA Article Coverage** - Add Art. 33-44 | 1 week | High | Immediate |
 | 1.4 | **Entity Type Differentiation** - Significant vs non-significant | 1 week | High | Immediate |
@@ -356,7 +356,7 @@ Based on competitor analysis, the **10X opportunity** is:
    - Removed event handler props from server components
 
 2. **Add DORA Deadline Countdown**
-   - Simple widget: "X days until RoI deadline (April 30, 2025)"
+   - Simple widget: "X days until RoI deadline (April 30, 2026)"
 
 3. **Export Dashboard to PDF**
    - Add jsPDF export for DORA Compliance Dashboard
@@ -388,7 +388,7 @@ Based on competitor analysis, the **10X opportunity** is:
 |------|-----------|
 | Jan 17, 2025 | DORA becomes fully applicable |
 | April 1, 2025 | eDesk portal opens for RoI submission |
-| April 30, 2025 | **FIRST RoI SUBMISSION DEADLINE** |
+| April 30, 2026 | **FIRST RoI SUBMISSION DEADLINE** |
 | May 2025 | ESA validation checks round 2 |
 | 2025-2027 | First CTPP designations expected |
 

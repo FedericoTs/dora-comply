@@ -52,7 +52,7 @@ export async function fetchSubmissions(): Promise<Submission[]> {
     reportingPeriod: row.reporting_period || '2025-Q1',
     submissionDeadline: row.submission_deadline
       ? new Date(row.submission_deadline)
-      : new Date('2025-04-30'),
+      : new Date('2026-04-30'),
   }));
 }
 
@@ -92,7 +92,7 @@ export async function fetchSubmission(submissionId: string): Promise<Submission 
     reportingPeriod: data.reporting_period || '2025-Q1',
     submissionDeadline: data.submission_deadline
       ? new Date(data.submission_deadline)
-      : new Date('2025-04-30'),
+      : new Date('2026-04-30'),
   };
 }
 
@@ -113,7 +113,7 @@ export async function createSubmissionDraft(
       status: 'draft',
       created_by: userData.user.id,
       reporting_period: reportingPeriod,
-      submission_deadline: '2025-04-30',
+      submission_deadline: '2026-04-30',
       validation_errors: 0,
       validation_warnings: 0,
     })
@@ -137,7 +137,7 @@ export async function createSubmissionDraft(
     validationErrors: 0,
     validationWarnings: 0,
     reportingPeriod,
-    submissionDeadline: new Date('2025-04-30'),
+    submissionDeadline: new Date('2026-04-30'),
   };
 }
 

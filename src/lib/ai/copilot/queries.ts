@@ -281,8 +281,8 @@ export async function getRoiSummary(): Promise<RoiSummary> {
     .filter(t => t.critical && (tableCounts[t.id] || 0) === 0)
     .map(t => t.name);
 
-  // Days to deadline (April 30, 2025)
-  const deadline = new Date('2025-04-30');
+  // Days to deadline (April 30, 2026)
+  const deadline = new Date('2026-04-30');
   const daysToDeadline = Math.ceil((deadline.getTime() - new Date().getTime()) / (24 * 60 * 60 * 1000));
 
   return {

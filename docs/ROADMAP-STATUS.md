@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-DORA Comply has achieved **92% feature completion** for Phase 5 critical improvements. The platform is production-ready with all regulatory must-haves implemented before the April 30, 2025 RoI submission deadline. Historical maturity tracking with full audit trails is now complete.
+DORA Comply has achieved **92% feature completion** for Phase 5 critical improvements. The platform is production-ready with all regulatory must-haves implemented before the April 30, 2026 RoI submission deadline. Historical maturity tracking with full audit trails is now complete.
 
 ---
 

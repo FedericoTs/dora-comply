@@ -425,7 +425,7 @@ export function RoiPopulationTab({ documentId, vendorName, vendorId }: RoiPopula
             <p className="text-sm text-muted-foreground">
               <strong className="text-foreground">DORA Article 28 Compliance:</strong> Financial entities must maintain
               a Register of Information (RoI) documenting all ICT third-party providers and their supply chains.
-              <strong className="text-info"> First submission deadline: April 30, 2025.</strong>
+              <strong className="text-info"> First submission deadline: April 30, 2026.</strong>
             </p>
           </div>
         </CardContent>

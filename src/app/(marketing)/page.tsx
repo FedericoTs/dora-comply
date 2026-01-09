@@ -72,7 +72,7 @@ function DeadlineCountdown() {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
 
   useEffect(() => {
-    const deadline = new Date('2025-04-30T23:59:59');
+    const deadline = new Date('2026-04-30T23:59:59');
 
     const updateCountdown = () => {
       const now = new Date();

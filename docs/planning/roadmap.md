@@ -17,7 +17,7 @@
 ## Strategic Timeline
 
 ```
-2024-12-28                                                     2025-04-30
+2024-12-28                                                     2026-04-30
     │                                                               │
     │   PHASE 1        PHASE 2        PHASE 3        PHASE 4       │
     │   Foundation     AI Parsing     RoI Engine     Scale         │

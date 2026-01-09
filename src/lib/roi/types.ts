@@ -450,7 +450,7 @@ export interface RoiDashboardData {
     date: string;
     version: string;
   } | null;
-  deadline: string; // April 30, 2025
+  deadline: string; // April 30, 2026
   daysUntilDeadline: number;
 }
 

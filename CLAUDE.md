@@ -4,7 +4,7 @@
 
 **DORA Comply** is an AI-powered Third-Party Risk Management platform for EU financial institutions facing DORA (Digital Operational Resilience Act) compliance. The platform automates vendor assessments, generates the Register of Information (RoI), and manages ICT incident reporting.
 
-**Critical Deadline:** DORA enforcement January 17, 2025
+**Critical Deadline:** DORA enforcement January 17, 2026
 
 ## Tech Stack
 

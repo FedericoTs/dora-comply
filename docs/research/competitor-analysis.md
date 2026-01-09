@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The DORA compliance and TPRM market is experiencing rapid growth driven by the January 2025 DORA enforcement deadline. While numerous players exist, no single platform delivers a complete, AI-native solution specifically designed for EU financial institutions managing both vendor risk and DORA's Register of Information (RoI) requirements.
+The DORA compliance and TPRM market is experiencing rapid growth driven by the January 2026 DORA enforcement deadline. While numerous players exist, no single platform delivers a complete, AI-native solution specifically designed for EU financial institutions managing both vendor risk and DORA's Register of Information (RoI) requirements.
 
 **Key Market Opportunity:** The gap between generic TPRM tools and DORA-specific requirements creates a significant opportunity for a purpose-built, AI-powered platform.
 
@@ -23,8 +23,8 @@ The DORA compliance and TPRM market is experiencing rapid growth driven by the J
 - 60%+ of companies experienced a third-party security incident in the past year
 
 ### Regulatory Drivers
-- **DORA effective:** January 17, 2025
-- **RoI submission deadline:** April 30, 2025
+- **DORA effective:** January 17, 2026
+- **RoI submission deadline:** April 30, 2026
 - **NIS2 organizational compliance:** October 2025
 - Increased regulatory scrutiny on third-party risk management
 

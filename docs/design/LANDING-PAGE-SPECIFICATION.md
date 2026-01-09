@@ -215,7 +215,7 @@
 │         ┌──────────────────────────────────────────────────────────┐       │
 │         │                                                          │       │
 │         │      ┌─────────────────────────────────────────────┐    │       │
-│         │      │  🏷️ DORA Deadline: January 17, 2025        │    │       │
+│         │      │  🏷️ DORA Deadline: January 17, 2026        │    │       │
 │         │      └─────────────────────────────────────────────┘    │       │
 │         │                                                          │       │
 │         │      The AI-Powered DORA                                │       │
@@ -912,7 +912,7 @@ function trackEvent(event: keyof typeof LANDING_EVENTS, properties?: object) {
 | **Professional** | "Automate your compliance workflow" | "Compliance is like, super easy now" |
 | **Confident** | "Reduce assessment time by 90%" | "We think you might save time" |
 | **Clear** | "Parse SOC 2 reports in 60 seconds" | "Leverage AI synergies for optimization" |
-| **Urgent** | "DORA deadline: January 17, 2025" | "Whenever you're ready" |
+| **Urgent** | "DORA deadline: January 17, 2026" | "Whenever you're ready" |
 | **Trustworthy** | "EU data residency in Frankfurt" | "Your data is probably safe" |
 
 ### 9.2 Key Messages

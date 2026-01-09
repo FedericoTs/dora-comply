@@ -14,7 +14,7 @@
 
 ## Executive Summary
 
-The DORA Compliance Platform (DCP) is an AI-powered Third-Party Risk Management (TPRM) solution purpose-built for EU financial institutions facing the January 2025 DORA (Digital Operational Resilience Act) enforcement deadline.
+The DORA Compliance Platform (DCP) is an AI-powered Third-Party Risk Management (TPRM) solution purpose-built for EU financial institutions facing the January 2026 DORA (Digital Operational Resilience Act) enforcement deadline.
 
 Unlike existing TPRM tools that bolt on DORA features as an afterthought, DCP is designed DORA-native from day one, with AI document parsing at its core. The platform eliminates the traditional questionnaire-driven vendor assessment model by intelligently extracting compliance data from existing documents (SOC 2 reports, ISO 27001 certificates, penetration test results) and automatically generating the mandatory Register of Information (RoI) for regulatory submission.
 
@@ -23,7 +23,7 @@ Unlike existing TPRM tools that bolt on DORA features as an afterthought, DCP is
 2. **Zero questionnaire fatigue**: For vendors with existing audits, no questionnaires required
 3. **Automated RoI generation**: ESA-compliant xBRL-CSV export with data quality validation
 4. **EU-first architecture**: True data residency with EU-hosted infrastructure
-5. **10-day deployment**: Live and compliant before the April 30, 2025 RoI deadline
+5. **10-day deployment**: Live and compliant before the April 30, 2026 RoI deadline
 
 ---
 
@@ -305,7 +305,7 @@ The ideal state is a platform where:
 
 **As a** Compliance Officer
 **I want** to generate an ESA-compliant RoI export
-**So that** I can submit to regulators by April 30, 2025
+**So that** I can submit to regulators by April 30, 2026
 
 **Acceptance Criteria:**
 - [ ] Export includes all ESA template sheets
@@ -575,10 +575,10 @@ interface RoIEntry {
 | | API ecosystem | Week 24 | Customer demand | Not Started |
 | | Trust Exchange (network) | Week 30 | Critical mass | Not Started |
 
-### Critical Path to April 30, 2025 RoI Deadline
+### Critical Path to April 30, 2026 RoI Deadline
 
 ```
-Now ──────────────────────────────────────────────► April 30, 2025
+Now ──────────────────────────────────────────────► April 30, 2026
  │                                                        │
  │   Week 4: Vendor Inventory                             │
  │   Week 6: SOC 2 Parsing                                │
