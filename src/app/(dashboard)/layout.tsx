@@ -10,7 +10,6 @@ import {
   Settings,
   LogOut,
   Search,
-  Bell,
   Network,
   FlaskConical,
   BarChart3,
@@ -19,6 +18,7 @@ import {
 import { ThemeToggleSimple } from '@/components/ui/theme-toggle';
 import { NavigationProviders } from '@/components/navigation';
 import { CopilotChat } from '@/components/copilot';
+import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 import { checkAuthStatus, logout } from '@/lib/auth';
 
 const navigation = [
@@ -139,10 +139,7 @@ export default async function DashboardLayout({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button className="icon-btn relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
-              </button>
+              <NotificationDropdown />
               <ThemeToggleSimple />
             </div>
           </header>
