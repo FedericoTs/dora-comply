@@ -314,12 +314,12 @@ export function AddVendorWizard() {
                               {isSearchingLei ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                'Verify'
+                                'Lookup'
                               )}
                             </Button>
                           </div>
                           <FormDescription>
-                            Enter the LEI to auto-fill vendor details from GLEIF
+                            Know the LEI? Enter it to auto-fill details. Don&apos;t have it? No problem — just continue.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
