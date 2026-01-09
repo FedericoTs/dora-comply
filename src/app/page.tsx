@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Shield,
   FileSearch,
@@ -186,13 +186,8 @@ function MarketingNav() {
 // ============================================================================
 
 function HeroSection() {
-  const { scrollY } = useScroll();
-  const opacity = useTransform(scrollY, [0, 400], [1, 0]);
-  const scale = useTransform(scrollY, [0, 400], [1, 0.95]);
-  const y = useTransform(scrollY, [0, 400], [0, 100]);
-
   return (
-    <section className="relative min-h-screen pt-[72px] overflow-hidden">
+    <section className="relative pt-[72px] pb-20 overflow-hidden">
       {/* Gradient Mesh Background */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[#FAFAFA]" />
@@ -203,7 +198,7 @@ function HeroSection() {
         <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
       </div>
 
-      <motion.div style={{ opacity, scale, y }} className="relative mx-auto max-w-7xl px-6 lg:px-8 pt-24 lg:pt-32 pb-20">
+      <div className="relative mx-auto max-w-7xl px-6 lg:px-8 pt-24 lg:pt-32">
         <div className="max-w-4xl">
           {/* Exclusive Badge */}
           <BlurIn delay={0.1}>
@@ -413,7 +408,7 @@ function HeroSection() {
             </motion.div>
           </div>
         </ScaleIn>
-      </motion.div>
+      </div>
     </section>
   );
 }
