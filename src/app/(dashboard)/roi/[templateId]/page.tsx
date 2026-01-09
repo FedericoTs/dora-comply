@@ -22,7 +22,17 @@ import { TemplateNavigation, TemplateProgressBar } from './components/template-n
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, FileSpreadsheet, Edit3 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import {
+  ChevronLeft,
+  FileSpreadsheet,
+  Edit3,
+  Wand2,
+  Upload,
+  PlusCircle,
+  ArrowRight,
+} from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ templateId: string }>;
@@ -149,61 +159,114 @@ async function TemplateDetailContent({ templateId }: { templateId: RoiTemplateId
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-6 text-xs text-muted-foreground border rounded-lg px-4 py-2 bg-muted/30">
-        <span className="font-medium">Legend:</span>
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-amber-50 border border-amber-200" />
-          <span>Required field</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="inline-flex items-center gap-0.5 text-amber-700 font-medium">
-            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-            </svg>
-            Missing
-          </span>
-          <span>Required value missing</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-red-100 border border-red-200" />
-          <span>Validation error</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-muted/60 border border-muted-foreground/30" />
-          <span>Computed (read-only)</span>
-        </div>
-        <div className="flex items-center gap-1.5 ml-auto">
-          <Edit3 className="h-3 w-3" />
-          <span className="font-medium">Inline editing enabled</span>
-        </div>
-      </div>
+      {/* Empty State for templates with no data */}
+      {count === 0 ? (
+        <Card className="card-premium">
+          <CardContent className="pt-6">
+            <EmptyState
+              icon={FileSpreadsheet}
+              title={`No data in ${templateId} yet`}
+              description={`This template is empty. Populate it using AI from uploaded documents, import from a CSV, or add records manually.`}
+            />
+            <div className="mt-6 grid gap-4 sm:grid-cols-3 max-w-2xl mx-auto">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer group">
+                <Link href="/roi">
+                  <CardContent className="pt-4 pb-4 text-center">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-primary/20 transition-colors">
+                      <Wand2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <p className="font-medium text-sm">AI Population</p>
+                    <p className="text-xs text-muted-foreground mt-1">Extract from documents</p>
+                  </CardContent>
+                </Link>
+              </Card>
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer group">
+                <Link href="/documents">
+                  <CardContent className="pt-4 pb-4 text-center">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-primary/20 transition-colors">
+                      <Upload className="h-5 w-5 text-primary" />
+                    </div>
+                    <p className="font-medium text-sm">Upload Documents</p>
+                    <p className="text-xs text-muted-foreground mt-1">Contracts, certs, etc.</p>
+                  </CardContent>
+                </Link>
+              </Card>
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer group">
+                <CardContent className="pt-4 pb-4 text-center">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-primary/20 transition-colors">
+                    <PlusCircle className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="font-medium text-sm">Add Manually</p>
+                  <p className="text-xs text-muted-foreground mt-1">Enter data directly</p>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="mt-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                This template has {columns.length} columns, {columns.filter(c => c.required).length} required fields
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Legend */}
+          <div className="flex flex-wrap items-center gap-6 text-xs text-muted-foreground border rounded-lg px-4 py-2 bg-muted/30">
+            <span className="font-medium">Legend:</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 rounded bg-amber-50 border border-amber-200" />
+              <span>Required field</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-0.5 text-amber-700 font-medium">
+                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+                Missing
+              </span>
+              <span>Required value missing</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 rounded bg-red-100 border border-red-200" />
+              <span>Validation error</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 rounded bg-muted/60 border border-muted-foreground/30" />
+              <span>Computed (read-only)</span>
+            </div>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <Edit3 className="h-3 w-3" />
+              <span className="font-medium">Inline editing enabled</span>
+            </div>
+          </div>
 
-      {/* Validation Panel */}
-      <ValidationPanel
-        errors={validation.errors}
-        isValid={validation.isValid}
-      />
-
-      {/* Main content grid */}
-      <div className="grid gap-6 lg:grid-cols-4">
-        {/* Data table - takes 3 columns */}
-        <div className="lg:col-span-3 space-y-4">
-          <h2 className="text-lg font-medium">Template Data</h2>
-          <EditableTableWrapper
-            templateId={templateId}
-            initialData={data}
-            columns={columns}
-            validationErrors={errorMap}
+          {/* Validation Panel */}
+          <ValidationPanel
+            errors={validation.errors}
+            isValid={validation.isValid}
           />
-        </div>
 
-        {/* Sidebar - field mapping */}
-        <div className="lg:col-span-1 space-y-4">
-          <h2 className="text-lg font-medium">ESA Mapping</h2>
-          <FieldMapper columns={columns} />
-        </div>
-      </div>
+          {/* Main content grid */}
+          <div className="grid gap-6 lg:grid-cols-4">
+            {/* Data table - takes 3 columns */}
+            <div className="lg:col-span-3 space-y-4">
+              <h2 className="text-lg font-medium">Template Data</h2>
+              <EditableTableWrapper
+                templateId={templateId}
+                initialData={data}
+                columns={columns}
+                validationErrors={errorMap}
+              />
+            </div>
+
+            {/* Sidebar - field mapping */}
+            <div className="lg:col-span-1 space-y-4">
+              <h2 className="text-lg font-medium">ESA Mapping</h2>
+              <FieldMapper columns={columns} />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Template Navigation */}
       <TemplateNavigation

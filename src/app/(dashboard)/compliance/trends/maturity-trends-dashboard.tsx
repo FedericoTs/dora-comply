@@ -15,9 +15,11 @@ import {
   History,
   BarChart3,
 } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Select,
   SelectContent,
@@ -153,6 +155,95 @@ export function MaturityTrendsDashboard() {
         <Button onClick={() => fetchData()} variant="outline">
           Try Again
         </Button>
+      </div>
+    );
+  }
+
+  // Empty state when no snapshots exist
+  if (snapshots.length === 0) {
+    return (
+      <div className="space-y-6">
+        {/* Header - Always show */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+              <BarChart3 className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">Compliance Trends</h1>
+              <p className="text-sm text-muted-foreground">
+                Track DORA maturity progression and compliance journey over time
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Empty State Card */}
+        <Card className="card-premium">
+          <CardContent className="pt-6">
+            <EmptyState
+              icon={Camera}
+              title="No compliance snapshots yet"
+              description="Take your first compliance snapshot to start tracking maturity progress over time. Snapshots capture your current DORA readiness state and help visualize improvement trends."
+              action={{
+                label: 'Take First Snapshot',
+                onClick: handleCreateSnapshot,
+              }}
+              secondaryAction={{
+                label: 'Run Assessment First',
+                href: '/maturity',
+                variant: 'outline',
+              }}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Getting Started Guide */}
+        <Card className="card-premium">
+          <CardHeader>
+            <CardTitle className="text-base">How Compliance Tracking Works</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="flex gap-3">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-semibold text-primary">1</span>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Complete Assessment</p>
+                  <p className="text-xs text-muted-foreground">Run a maturity assessment to evaluate your DORA readiness</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-semibold text-primary">2</span>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Take Snapshots</p>
+                  <p className="text-xs text-muted-foreground">Capture your maturity state periodically (manual or automatic)</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-semibold text-primary">3</span>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Track Progress</p>
+                  <p className="text-xs text-muted-foreground">Visualize trends and projected compliance dates</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 pt-4 border-t">
+              <Link
+                href="/maturity"
+                className="text-sm text-primary font-medium hover:underline inline-flex items-center gap-1"
+              >
+                Go to Maturity Assessment
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
