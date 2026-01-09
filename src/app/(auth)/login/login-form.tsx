@@ -64,9 +64,9 @@ export function LoginForm() {
       description="Sign in to your account to continue"
       footer={
         <p>
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="font-medium text-primary hover:underline">
-            Create one
+          Need access?{' '}
+          <Link href="/contact" className="font-medium text-primary hover:underline">
+            Request access
           </Link>
         </p>
       }

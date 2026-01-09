@@ -48,9 +48,9 @@ export function VerifyContent({ email }: VerifyContentProps) {
       description="We've sent you a verification link"
       footer={
         <p>
-          Wrong email?{' '}
-          <Link href="/register" className="font-medium text-primary hover:underline">
-            Go back
+          Need help?{' '}
+          <Link href="/contact" className="font-medium text-primary hover:underline">
+            Contact support
           </Link>
         </p>
       }

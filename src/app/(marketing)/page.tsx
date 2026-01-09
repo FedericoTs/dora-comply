@@ -204,9 +204,9 @@ function HeroSection() {
             "flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 transition-all duration-700 delay-400",
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           )}>
-            <Link href="/register">
+            <Link href="/contact">
               <Button size="lg" className="h-14 px-8 text-lg shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 transition-all hover:-translate-y-0.5 group">
-                Start Free Trial
+                Request Access
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
@@ -823,7 +823,7 @@ function RoISection() {
               })}
             </div>
 
-            <Link href="/register">
+            <Link href="/contact">
               <Button size="lg" className="shadow-lg shadow-primary/25">
                 Generate Your RoI
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -988,7 +988,7 @@ function PricingSection() {
         'Email support',
         'EU data residency',
       ],
-      cta: 'Start Free Trial',
+      cta: 'Request Access',
       highlighted: false,
     },
     {
@@ -1006,7 +1006,7 @@ function PricingSection() {
         'SSO integration',
         'Custom workflows',
       ],
-      cta: 'Start Free Trial',
+      cta: 'Request Access',
       highlighted: true,
       badge: 'Most Popular',
     },
@@ -1214,9 +1214,9 @@ function FinalCTA() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/register">
+            <Link href="/contact">
               <Button size="lg" className="h-14 px-8 text-lg shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/40 transition-all hover:-translate-y-0.5">
-                Start Free Trial
+                Request Access
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>

@@ -50,9 +50,9 @@ export function MarketingNav() {
                 Log in
               </Button>
             </Link>
-            <Link href="/register">
+            <Link href="/contact">
               <Button size="sm" className="shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow">
-                Start Free Trial
+                Request Access
               </Button>
             </Link>
           </div>
@@ -97,9 +97,9 @@ export function MarketingNav() {
                 Log in
               </Button>
             </Link>
-            <Link href="/register" className="block" onClick={() => setMobileMenuOpen(false)}>
+            <Link href="/contact" className="block" onClick={() => setMobileMenuOpen(false)}>
               <Button className="w-full shadow-lg shadow-primary/25">
-                Start Free Trial
+                Request Access
               </Button>
             </Link>
           </div>
