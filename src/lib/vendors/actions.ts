@@ -23,6 +23,13 @@ import type {
   GLEIFEnrichedEntity,
 } from './types';
 import { lookupLEIEnriched } from '@/lib/external/gleif';
+import {
+  calculateVendorRiskScore,
+  calculateBatchRiskScores,
+  getRiskDistribution,
+  type RiskScoreInput,
+  type RiskScoreResult,
+} from './risk-scoring';
 
 // ============================================================================
 // Types
@@ -821,6 +828,323 @@ export async function refreshVendorGLEIF(vendorId: string): Promise<ActionResult
   return {
     success: true,
     data: mapVendorFromDatabase(vendor),
+  };
+}
+
+// ============================================================================
+// Calculate & Update Vendor Risk Score
+// ============================================================================
+
+/**
+ * Calculate risk score for a single vendor and save to database
+ */
+export async function calculateAndSaveRiskScore(
+  vendorId: string
+): Promise<ActionResult<RiskScoreResult>> {
+  const supabase = await createClient();
+
+  const organizationId = await getCurrentUserOrganization();
+  if (!organizationId) {
+    return {
+      success: false,
+      error: createVendorError('UNAUTHORIZED', 'You must be logged in'),
+    };
+  }
+
+  // Fetch vendor with all data needed for risk calculation
+  const { data: vendor, error: vendorError } = await supabase
+    .from('vendors')
+    .select('*')
+    .eq('id', vendorId)
+    .eq('organization_id', organizationId)
+    .is('deleted_at', null)
+    .single();
+
+  if (vendorError || !vendor) {
+    return {
+      success: false,
+      error: createVendorError('NOT_FOUND', 'Vendor not found'),
+    };
+  }
+
+  // Fetch additional data for risk calculation
+  const [doraComplianceResult, documentsResult, concentrationResult] = await Promise.all([
+    // DORA compliance data
+    supabase
+      .from('vendor_dora_compliance')
+      .select('overall_maturity_level, overall_percentage')
+      .eq('vendor_id', vendorId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    // Documents (SOC2 reports)
+    supabase
+      .from('documents')
+      .select('id, type, metadata')
+      .eq('vendor_id', vendorId)
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null),
+    // Concentration alerts
+    supabase
+      .from('concentration_alerts')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .contains('affected_vendors', [vendorId]),
+  ]);
+
+  // Prepare input for risk calculation
+  const hasSOC2 = documentsResult.data?.some(d => d.type === 'soc2') ?? false;
+  const soc2Doc = documentsResult.data?.find(d => d.type === 'soc2');
+  const soc2Metadata = soc2Doc?.metadata as { opinion?: string; exception_count?: number } | null;
+
+  // Check if vendor is SPOF (simplified check - full check would query concentration analysis)
+  const isSPOF = vendor.supports_critical_function &&
+    vendor.substitutability_assessment === 'not_substitutable';
+
+  const input: RiskScoreInput = {
+    vendor: mapVendorFromDatabase(vendor),
+    doraMaturityLevel: doraComplianceResult.data?.overall_maturity_level ?? null,
+    doraCompliancePercentage: doraComplianceResult.data?.overall_percentage ?? null,
+    hasSOC2Report: hasSOC2,
+    soc2Opinion: soc2Metadata?.opinion as RiskScoreInput['soc2Opinion'],
+    soc2ExceptionCount: soc2Metadata?.exception_count,
+    concentrationAlertCount: concentrationResult.data?.length ?? 0,
+    isSinglePointOfFailure: isSPOF,
+  };
+
+  // Calculate risk score
+  const result = calculateVendorRiskScore(input);
+
+  // Update vendor with new risk score
+  const { error: updateError } = await supabase
+    .from('vendors')
+    .update({
+      risk_score: result.totalScore,
+      last_assessment_date: new Date().toISOString(),
+      metadata: {
+        ...vendor.metadata,
+        risk_breakdown: result.components,
+        risk_recommendations: result.recommendations,
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', vendorId);
+
+  if (updateError) {
+    console.error('Update risk score error:', updateError);
+    return {
+      success: false,
+      error: mapDatabaseError(updateError),
+    };
+  }
+
+  // Log activity
+  await supabase.from('activity_log').insert({
+    organization_id: organizationId,
+    action: 'risk_score_calculated',
+    entity_type: 'vendor',
+    entity_id: vendorId,
+    entity_name: vendor.name,
+    details: {
+      previous_score: vendor.risk_score,
+      new_score: result.totalScore,
+      risk_level: result.riskLevel,
+    },
+  });
+
+  revalidatePath('/vendors');
+  revalidatePath(`/vendors/${vendorId}`);
+  revalidatePath('/dashboard');
+
+  return {
+    success: true,
+    data: result,
+  };
+}
+
+/**
+ * Calculate risk scores for all vendors in organization
+ */
+export async function calculateAllVendorRiskScores(): Promise<ActionResult<{
+  updated: number;
+  distribution: ReturnType<typeof getRiskDistribution>;
+}>> {
+  const supabase = await createClient();
+
+  const organizationId = await getCurrentUserOrganization();
+  if (!organizationId) {
+    return {
+      success: false,
+      error: createVendorError('UNAUTHORIZED', 'You must be logged in'),
+    };
+  }
+
+  // Fetch all active vendors
+  const { data: vendors, error: vendorsError } = await supabase
+    .from('vendors')
+    .select('*')
+    .eq('organization_id', organizationId)
+    .is('deleted_at', null);
+
+  if (vendorsError || !vendors) {
+    return {
+      success: false,
+      error: mapDatabaseError(vendorsError || { message: 'Failed to fetch vendors' }),
+    };
+  }
+
+  if (vendors.length === 0) {
+    return {
+      success: true,
+      data: {
+        updated: 0,
+        distribution: { low: 0, medium: 0, high: 0, critical: 0, average: 0 },
+      },
+    };
+  }
+
+  // Fetch additional data in batch
+  const vendorIds = vendors.map(v => v.id);
+
+  const [doraResults, docsResults] = await Promise.all([
+    supabase
+      .from('vendor_dora_compliance')
+      .select('vendor_id, overall_maturity_level, overall_percentage')
+      .in('vendor_id', vendorIds),
+    supabase
+      .from('documents')
+      .select('vendor_id, type, metadata')
+      .in('vendor_id', vendorIds)
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null),
+  ]);
+
+  // Build additional data map
+  const additionalData = new Map<string, Partial<Omit<RiskScoreInput, 'vendor'>>>();
+
+  for (const vendor of vendors) {
+    const doraData = doraResults.data?.find(d => d.vendor_id === vendor.id);
+    const vendorDocs = docsResults.data?.filter(d => d.vendor_id === vendor.id) || [];
+    const soc2Doc = vendorDocs.find(d => d.type === 'soc2');
+    const soc2Metadata = soc2Doc?.metadata as { opinion?: string; exception_count?: number } | null;
+
+    additionalData.set(vendor.id, {
+      doraMaturityLevel: doraData?.overall_maturity_level ?? null,
+      doraCompliancePercentage: doraData?.overall_percentage ?? null,
+      hasSOC2Report: vendorDocs.some(d => d.type === 'soc2'),
+      soc2Opinion: soc2Metadata?.opinion as RiskScoreInput['soc2Opinion'],
+      soc2ExceptionCount: soc2Metadata?.exception_count,
+    });
+  }
+
+  // Calculate all scores
+  const mappedVendors = vendors.map(mapVendorFromDatabase);
+  const results = calculateBatchRiskScores(mappedVendors, additionalData);
+  const distribution = getRiskDistribution(results);
+
+  // Update all vendors in database
+  let updated = 0;
+  for (const vendor of vendors) {
+    const result = results.get(vendor.id);
+    if (!result) continue;
+
+    const { error } = await supabase
+      .from('vendors')
+      .update({
+        risk_score: result.totalScore,
+        last_assessment_date: new Date().toISOString(),
+        metadata: {
+          ...vendor.metadata,
+          risk_breakdown: result.components,
+          risk_recommendations: result.recommendations,
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', vendor.id);
+
+    if (!error) updated++;
+  }
+
+  // Log activity
+  await supabase.from('activity_log').insert({
+    organization_id: organizationId,
+    action: 'bulk_risk_score_calculated',
+    entity_type: 'vendor',
+    entity_id: null,
+    entity_name: 'All vendors',
+    details: {
+      vendors_updated: updated,
+      distribution,
+    },
+  });
+
+  revalidatePath('/vendors');
+  revalidatePath('/dashboard');
+
+  return {
+    success: true,
+    data: { updated, distribution },
+  };
+}
+
+/**
+ * Get risk score breakdown for a vendor (without recalculating)
+ */
+export async function getVendorRiskBreakdown(
+  vendorId: string
+): Promise<ActionResult<RiskScoreResult | null>> {
+  const supabase = await createClient();
+
+  const organizationId = await getCurrentUserOrganization();
+  if (!organizationId) {
+    return {
+      success: false,
+      error: createVendorError('UNAUTHORIZED', 'You must be logged in'),
+    };
+  }
+
+  const { data: vendor, error } = await supabase
+    .from('vendors')
+    .select('risk_score, last_assessment_date, metadata')
+    .eq('id', vendorId)
+    .eq('organization_id', organizationId)
+    .is('deleted_at', null)
+    .single();
+
+  if (error || !vendor) {
+    return {
+      success: false,
+      error: createVendorError('NOT_FOUND', 'Vendor not found'),
+    };
+  }
+
+  // Extract cached breakdown from metadata
+  const metadata = vendor.metadata as {
+    risk_breakdown?: RiskScoreResult['components'];
+    risk_recommendations?: string[];
+  } | null;
+
+  if (!metadata?.risk_breakdown || vendor.risk_score === null) {
+    return {
+      success: true,
+      data: null, // No cached breakdown, need to calculate
+    };
+  }
+
+  // Reconstruct result from cached data
+  const riskLevel = vendor.risk_score <= 30 ? 'low' :
+    vendor.risk_score <= 60 ? 'medium' :
+    vendor.risk_score <= 80 ? 'high' : 'critical';
+
+  return {
+    success: true,
+    data: {
+      totalScore: vendor.risk_score,
+      riskLevel,
+      components: metadata.risk_breakdown,
+      recommendations: metadata.risk_recommendations || [],
+      lastCalculated: vendor.last_assessment_date || new Date().toISOString(),
+    },
   };
 }
 

@@ -637,17 +637,19 @@ function ActivityItem({
   title: string;
   description: string;
   time: string;
-  type: 'success' | 'warning' | 'info';
+  type: 'success' | 'warning' | 'info' | 'security';
 }) {
   const icons = {
     success: CheckCircle2,
     warning: AlertCircle,
     info: FileText,
+    security: Shield,
   };
   const colors = {
     success: 'text-success',
     warning: 'text-warning',
     info: 'text-info',
+    security: 'text-primary',
   };
   const Icon = icons[type];
 

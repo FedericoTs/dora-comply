@@ -11,6 +11,7 @@ import {
   FlaskConical,
   Settings,
   Inbox,
+  Shield,
 } from 'lucide-react';
 import {
   getRecentActivity,
@@ -82,6 +83,7 @@ function ActivityRow({ activity }: { activity: ActivityLogEntry }) {
     success: { icon: CheckCircle2, class: 'text-success bg-success/10' },
     warning: { icon: AlertCircle, class: 'text-warning bg-warning/10' },
     info: { icon: FileText, class: 'text-info bg-info/10' },
+    security: { icon: Shield, class: 'text-primary bg-primary/10' },
   };
 
   const entityIconMap: Record<string, typeof Building2> = {
@@ -91,6 +93,10 @@ function ActivityRow({ activity }: { activity: ActivityLogEntry }) {
     roi: BookOpen,
     testing: FlaskConical,
     user: Settings,
+    auth: Shield,
+    compliance: BookOpen,
+    organization: Building2,
+    contract: FileText,
   };
 
   const EntityIcon = entityIconMap[activity.entity_type] || FileText;

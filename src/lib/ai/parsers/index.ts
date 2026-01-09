@@ -40,5 +40,50 @@ export type {
   DocumentSection,
 } from './soc2-structure-analyzer';
 
+// SOC 2 Parser Simple (Gemini-based, within timeout)
+export {
+  parseSOC2Simple,
+  PARSER_VERSION_SIMPLE as SOC2_PARSER_VERSION_SIMPLE,
+} from './soc2-parser-simple';
+
+export type {
+  SimpleParseOptions as SOC2SimpleParseOptions,
+  SimpleParseResult as SOC2SimpleParseResult,
+} from './soc2-parser-simple';
+
+// ISO 27001 Parser
+export {
+  parseISO27001,
+  ISO27001_PARSER_VERSION,
+} from './iso27001-parser';
+
+export type {
+  ISO27001ParseOptions,
+  ISO27001ParseResult,
+  ParsedISO27001Certificate,
+  ISO27001Control,
+  ISO27001DatabaseRecord,
+} from './iso27001-parser';
+
+// Penetration Test Report Parser
+export {
+  parsePentestReport,
+  PENTEST_PARSER_VERSION,
+  getSeverityColor,
+  getSeverityWeight,
+  calculatePentestRiskScore,
+} from './pentest-parser';
+
+export type {
+  PentestParseOptions,
+  PentestParseResult,
+  ParsedPentestReport,
+  PentestVulnerability,
+  PentestDatabaseRecord,
+  VulnerabilitySeverity,
+  VulnerabilityStatus,
+  TestType,
+} from './pentest-parser';
+
 // Types
 export * from './types';

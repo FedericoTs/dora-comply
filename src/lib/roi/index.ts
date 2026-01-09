@@ -71,8 +71,9 @@ export {
   type CrossFieldRule,
 } from './validation';
 
-// Export
+// Export (CSV + XML formats)
 export {
+  // CSV Export (primary format)
   generateCsv,
   generateAllCsvFiles,
   parseCsv,
@@ -84,11 +85,19 @@ export {
   getDefaultParameters,
   parseParametersCsv,
   validateParameters,
+  // XML Export (alternative format)
+  generateXbrlInstance,
+  generateXbrlPackage,
+  validateXbrlStructure,
+  // Types
   type CsvGeneratorOptions,
   type CsvGeneratorResult,
   type BuildPackageOptions,
   type PackageFile,
   type StreamingExportOptions,
+  type XmlGeneratorOptions,
+  type XmlGeneratorResult,
+  type XmlPackageResult,
 } from './export';
 
 // Onboarding Types (client-safe)
@@ -167,3 +176,15 @@ export {
   addSubmissionComment,
   generateSubmissionChecklist,
 } from './submissions';
+
+// Export Actions (server-only)
+export {
+  exportRoi,
+  exportRoiAsCsv,
+  exportRoiAsXml,
+  getExportPreview,
+  validateExportReadiness,
+  type ExportFormat,
+  type ExportOptions,
+  type ExportResult,
+} from './export-actions';

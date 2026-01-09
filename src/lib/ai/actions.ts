@@ -10,6 +10,10 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { analyzeContract, EXTRACTION_MODEL, EXTRACTION_VERSION } from './contract-analyzer';
+import { parseSOC2Simple } from './parsers/soc2-parser-simple';
+import { parseISO27001 } from './parsers/iso27001-parser';
+import { parsePentestReport } from './parsers/pentest-parser';
+import type { DocumentType } from '@/lib/documents/types';
 import type {
   ContractAnalysisResult,
   ParsedContractRecord,
@@ -821,5 +825,318 @@ export async function getAnalysisSignOffStatus(
     reviewerName: data.reviewer_name,
     reviewedAt: data.reviewed_at,
     reviewNotes: data.review_notes,
+  };
+}
+
+// ============================================================================
+// Unified Document Parsing
+// ============================================================================
+
+export interface DocumentParseResult {
+  success: boolean;
+  documentType: DocumentType;
+  parserVersion: string;
+  processingTimeMs: number;
+  data?: unknown;
+  error?: string;
+}
+
+/**
+ * Parse any document type using the appropriate AI parser
+ * Dispatches to SOC2, ISO 27001, Pentest, or Contract parser based on type
+ */
+export async function parseDocument(
+  documentId: string
+): Promise<AnalysisActionResult<DocumentParseResult>> {
+  const supabase = await createClient();
+
+  // Verify authentication
+  const organizationId = await getCurrentUserOrganization();
+  if (!organizationId) {
+    return {
+      success: false,
+      error: createError('UNAUTHORIZED', 'You must be logged in to parse documents'),
+    };
+  }
+
+  // Get document
+  const { data: document, error: docError } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('id', documentId)
+    .eq('organization_id', organizationId)
+    .single();
+
+  if (docError || !document) {
+    return {
+      success: false,
+      error: createError('DOCUMENT_NOT_FOUND', 'Document not found'),
+    };
+  }
+
+  // Validate document type
+  if (document.mime_type !== 'application/pdf') {
+    return {
+      success: false,
+      error: createError('INVALID_DOCUMENT_TYPE', 'Only PDF documents can be parsed'),
+    };
+  }
+
+  // Download PDF from storage using service role client
+  const serviceClient = createServiceRoleClient();
+  const { data: fileData, error: downloadError } = await serviceClient.storage
+    .from('documents')
+    .download(document.storage_path);
+
+  if (downloadError || !fileData) {
+    return {
+      success: false,
+      error: createError('EXTRACTION_FAILED', `Failed to download document: ${downloadError?.message}`),
+    };
+  }
+
+  // Convert blob to buffer
+  const arrayBuffer = await fileData.arrayBuffer();
+  const pdfBuffer = Buffer.from(arrayBuffer);
+
+  // Update document status to processing
+  await supabase
+    .from('documents')
+    .update({
+      parsing_status: 'processing',
+      parsing_error: null,
+    })
+    .eq('id', documentId);
+
+  try {
+    let result: DocumentParseResult;
+    const docType = document.type as DocumentType;
+
+    switch (docType) {
+      case 'soc2': {
+        const parseResult = await parseSOC2Simple({
+          pdfBuffer,
+          documentId,
+        });
+
+        if (!parseResult.success) {
+          throw new Error(parseResult.error || 'SOC2 parsing failed');
+        }
+
+        // Save to parsed_soc2 table
+        if (parseResult.databaseRecord) {
+          await supabase
+            .from('parsed_soc2')
+            .upsert({
+              ...parseResult.databaseRecord,
+              organization_id: organizationId,
+            }, {
+              onConflict: 'document_id',
+            });
+        }
+
+        result = {
+          success: true,
+          documentType: 'soc2',
+          parserVersion: parseResult.data?.parserVersion || '2.1.0',
+          processingTimeMs: parseResult.processingTimeMs,
+          data: parseResult.data,
+        };
+        break;
+      }
+
+      case 'iso27001': {
+        const parseResult = await parseISO27001({
+          pdfBuffer,
+          documentId,
+        });
+
+        if (!parseResult.success) {
+          throw new Error(parseResult.error || 'ISO 27001 parsing failed');
+        }
+
+        // Save to parsed_iso27001 table (or metadata for now)
+        // Note: May need to create a parsed_iso27001 table via migration
+        const metadata = {
+          ...document.metadata,
+          parsed_iso27001: parseResult.databaseRecord,
+          certification_body: parseResult.data?.certificationBody,
+          certificate_number: parseResult.data?.certificateNumber,
+          valid_from: parseResult.data?.issueDate,
+          valid_until: parseResult.data?.expiryDate,
+          expiry_date: parseResult.data?.expiryDate,
+          dora_coverage: parseResult.data?.doraCoverage,
+        };
+
+        await supabase
+          .from('documents')
+          .update({ metadata })
+          .eq('id', documentId);
+
+        result = {
+          success: true,
+          documentType: 'iso27001',
+          parserVersion: parseResult.data?.parserVersion || '1.0.0',
+          processingTimeMs: parseResult.processingTimeMs,
+          data: parseResult.data,
+        };
+        break;
+      }
+
+      case 'pentest': {
+        const parseResult = await parsePentestReport({
+          pdfBuffer,
+          documentId,
+        });
+
+        if (!parseResult.success) {
+          throw new Error(parseResult.error || 'Pentest report parsing failed');
+        }
+
+        // Save to metadata (or create parsed_pentest table)
+        const metadata = {
+          ...document.metadata,
+          parsed_pentest: parseResult.databaseRecord,
+          tester_company: parseResult.data?.testerCompany,
+          test_date: parseResult.data?.testStartDate,
+          findings_count: parseResult.data?.totalFindings,
+          critical_findings: parseResult.data?.findingsBySeverity.critical,
+          high_findings: parseResult.data?.findingsBySeverity.high,
+          overall_risk: parseResult.data?.overallRiskRating,
+          dora_testing_coverage: parseResult.data?.doraTestingCoverage,
+        };
+
+        await supabase
+          .from('documents')
+          .update({ metadata })
+          .eq('id', documentId);
+
+        result = {
+          success: true,
+          documentType: 'pentest',
+          parserVersion: parseResult.data?.parserVersion || '1.0.0',
+          processingTimeMs: parseResult.processingTimeMs,
+          data: parseResult.data,
+        };
+        break;
+      }
+
+      case 'contract': {
+        // Use existing contract analyzer
+        const contractResult = await analyzeContractDocument(documentId);
+        if (!contractResult.success) {
+          throw new Error(contractResult.error?.message || 'Contract analysis failed');
+        }
+
+        result = {
+          success: true,
+          documentType: 'contract',
+          parserVersion: EXTRACTION_VERSION,
+          processingTimeMs: contractResult.data?.processing_time_ms || 0,
+          data: contractResult.data,
+        };
+        break;
+      }
+
+      default: {
+        // For 'other' type, try contract analysis as fallback
+        const otherResult = await analyzeContractDocument(documentId);
+        if (!otherResult.success) {
+          throw new Error(otherResult.error?.message || 'Document analysis failed');
+        }
+
+        result = {
+          success: true,
+          documentType: 'other',
+          parserVersion: EXTRACTION_VERSION,
+          processingTimeMs: otherResult.data?.processing_time_ms || 0,
+          data: otherResult.data,
+        };
+      }
+    }
+
+    // Update document with success status
+    await supabase
+      .from('documents')
+      .update({
+        parsing_status: 'completed',
+        parsed_at: new Date().toISOString(),
+        parsing_confidence: 0.9,
+        parsing_error: null,
+      })
+      .eq('id', documentId);
+
+    // Log activity
+    await supabase.from('activity_log').insert({
+      organization_id: organizationId,
+      action: 'parsed',
+      entity_type: 'document',
+      entity_id: documentId,
+      entity_name: document.filename,
+      details: {
+        document_type: docType,
+        parser_version: result.parserVersion,
+        processing_time_ms: result.processingTimeMs,
+      },
+    });
+
+    revalidatePath('/documents');
+    revalidatePath(`/documents/${documentId}`);
+    if (document.vendor_id) {
+      revalidatePath(`/vendors/${document.vendor_id}`);
+    }
+
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    // Update document with error status
+    await supabase
+      .from('documents')
+      .update({
+        parsing_status: 'failed',
+        parsing_error: errorMessage,
+      })
+      .eq('id', documentId);
+
+    console.error(`Document parsing failed for ${documentId}:`, error);
+
+    return {
+      success: false,
+      error: createError('EXTRACTION_FAILED', errorMessage),
+    };
+  }
+}
+
+/**
+ * Batch parse multiple documents
+ */
+export async function parseDocuments(
+  documentIds: string[]
+): Promise<AnalysisActionResult<{
+  successful: string[];
+  failed: Array<{ id: string; error: string }>;
+}>> {
+  const successful: string[] = [];
+  const failed: Array<{ id: string; error: string }> = [];
+
+  for (const documentId of documentIds) {
+    const result = await parseDocument(documentId);
+    if (result.success) {
+      successful.push(documentId);
+    } else {
+      failed.push({
+        id: documentId,
+        error: result.error?.message || 'Unknown error',
+      });
+    }
+  }
+
+  return {
+    success: failed.length === 0,
+    data: { successful, failed },
   };
 }
