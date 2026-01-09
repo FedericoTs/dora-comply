@@ -83,6 +83,19 @@ export async function login(formData: LoginInput): Promise<ActionResult<{ redire
     };
   }
 
+  // Check if MFA is required
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+  // If MFA is enrolled (nextLevel is aal2) but not verified (currentLevel is not aal2)
+  if (aal?.nextLevel === 'aal2' && aal?.currentLevel !== 'aal2') {
+    return {
+      success: true,
+      data: {
+        redirectTo: '/mfa/verify',
+      },
+    };
+  }
+
   // Check if user has completed onboarding (has organization)
   const { data: userData } = await supabase
     .from('users')

@@ -49,6 +49,14 @@ export interface Organization {
   jurisdiction: string;
   dataRegion: 'eu' | 'us';
   settings: OrganizationSettings;
+  // Entity classification for DORA proportionality
+  isSignificant: boolean;
+  significanceRationale: string | null;
+  simplifiedFrameworkEligible: boolean;
+  // Size metrics for significance thresholds
+  totalAssetsEur: number | null;
+  annualGrossPremiumEur: number | null;
+  employeeCount: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -169,4 +177,57 @@ export interface SessionInfo {
   userAgent: string;
   ipAddress: string;
   isCurrent: boolean;
+}
+
+// ============================================================================
+// MFA Types
+// ============================================================================
+
+export type MFAFactorType = 'totp' | 'phone';
+
+export type MFAFactorStatus = 'unverified' | 'verified';
+
+export interface MFAFactor {
+  id: string;
+  type: MFAFactorType;
+  status: MFAFactorStatus;
+  friendly_name?: string;
+  created_at: string;
+  updated_at: string;
+  last_challenged_at?: string;
+}
+
+export interface MFAEnrollment {
+  id: string;
+  type: MFAFactorType;
+  totp: {
+    qr_code: string; // Data URI for QR code image
+    secret: string; // Base32 secret for manual entry
+    uri: string; // otpauth:// URI
+  };
+}
+
+export interface AuthenticatorAssuranceLevel {
+  currentLevel: 'aal1' | 'aal2' | null;
+  nextLevel: 'aal1' | 'aal2' | null;
+  currentAuthenticationMethods: Array<{
+    method: string;
+    timestamp?: number;
+  }> | string[];
+}
+
+export interface MFAVerifyResult {
+  factorId: string;
+  challengeId: string;
+  verified: boolean;
+}
+
+export interface MFAFormData {
+  code: string;
+}
+
+export interface MFAChallengeResult {
+  id: string;
+  factorId: string;
+  expiresAt: number;
 }

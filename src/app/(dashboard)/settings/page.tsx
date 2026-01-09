@@ -41,7 +41,7 @@ const settingsSections = [
     description: 'MFA, sessions, and audit log',
     href: '/settings/security',
     icon: Shield,
-    status: 'coming_soon' as const,
+    status: 'active' as const,
   },
   {
     title: 'API & Integrations',
