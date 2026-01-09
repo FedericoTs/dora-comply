@@ -65,9 +65,9 @@ export function ErrorList({ errors, groupBy = 'template' }: ErrorListProps) {
 
   if (errors.length === 0) {
     return (
-      <Card className="border-green-200 bg-green-50">
+      <Card className="border-success/30 bg-success/10">
         <CardContent className="pt-6">
-          <div className="flex items-center gap-3 text-green-800">
+          <div className="flex items-center gap-3 text-success">
             <Info className="h-5 w-5" />
             <p>All templates pass ESA validation. Ready for export!</p>
           </div>
@@ -86,8 +86,8 @@ export function ErrorList({ errors, groupBy = 'template' }: ErrorListProps) {
         return (
           <Card key={groupKey} className={cn(
             'overflow-hidden',
-            errorCount > 0 && 'border-red-200',
-            errorCount === 0 && warningCount > 0 && 'border-yellow-200'
+            errorCount > 0 && 'border-error/30',
+            errorCount === 0 && warningCount > 0 && 'border-warning/30'
           )}>
             <CardHeader
               className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors"
@@ -118,7 +118,7 @@ export function ErrorList({ errors, groupBy = 'template' }: ErrorListProps) {
                     </Badge>
                   )}
                   {warningCount > 0 && (
-                    <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 gap-1">
+                    <Badge className="bg-warning/20 text-warning hover:bg-warning/20 gap-1">
                       <AlertTriangle className="h-3 w-3" />
                       {warningCount}
                     </Badge>
@@ -164,9 +164,9 @@ function ErrorItem({ error, showTemplate = false }: ErrorItemProps) {
   }[error.severity];
 
   const severityColors = {
-    error: 'text-red-600',
-    warning: 'text-yellow-600',
-    info: 'text-blue-600',
+    error: 'text-error',
+    warning: 'text-warning',
+    info: 'text-info',
   };
 
   return (

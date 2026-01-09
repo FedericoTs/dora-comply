@@ -196,11 +196,11 @@ export function validatePassword(
  */
 export function getStrengthColor(score: PasswordStrength['score']): string {
   const colors: Record<number, string> = {
-    0: 'bg-red-500',
+    0: 'bg-error',
     1: 'bg-orange-500',
-    2: 'bg-yellow-500',
-    3: 'bg-green-500',
-    4: 'bg-emerald-500',
+    2: 'bg-warning',
+    3: 'bg-success',
+    4: 'bg-primary',
   };
   return colors[score];
 }
@@ -210,11 +210,11 @@ export function getStrengthColor(score: PasswordStrength['score']): string {
  */
 export function getStrengthTextColor(score: PasswordStrength['score']): string {
   const colors: Record<number, string> = {
-    0: 'text-red-600',
-    1: 'text-orange-600',
-    2: 'text-yellow-600',
-    3: 'text-green-600',
-    4: 'text-emerald-600',
+    0: 'text-error',
+    1: 'text-orange-500',
+    2: 'text-warning',
+    3: 'text-success',
+    4: 'text-primary',
   };
   return colors[score];
 }

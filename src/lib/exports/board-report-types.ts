@@ -108,10 +108,10 @@ export interface ActionItem {
   owner?: string;
 }
 
-// Color palette for exports
+// Color palette for exports - Emerald Theme
 export const COLORS = {
-  primary: [224, 122, 95] as [number, number, number], // #E07A5F
-  primaryHex: '#E07A5F',
+  primary: [5, 150, 105] as [number, number, number], // #059669 (emerald-600)
+  primaryHex: '#059669',
   success: [16, 185, 129] as [number, number, number], // #10B981
   successHex: '#10B981',
   warning: [245, 158, 11] as [number, number, number], // #F59E0B

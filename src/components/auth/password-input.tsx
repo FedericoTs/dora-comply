@@ -87,7 +87,7 @@ export function PasswordInput({
             </span>
           </div>
           {strength.feedback.warning && (
-            <p className="text-xs text-amber-600">{strength.feedback.warning}</p>
+            <p className="text-xs text-warning">{strength.feedback.warning}</p>
           )}
         </div>
       )}
@@ -99,7 +99,7 @@ export function PasswordInput({
               key={req.id}
               className={cn(
                 'flex items-center gap-2 text-xs',
-                req.met ? 'text-green-600' : 'text-muted-foreground'
+                req.met ? 'text-success' : 'text-muted-foreground'
               )}
             >
               {req.met ? (

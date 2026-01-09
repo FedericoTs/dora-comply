@@ -316,7 +316,7 @@ function HeroSection() {
                       <svg className="w-full h-full transform -rotate-90">
                         <circle cx="48" cy="48" r="40" fill="none" stroke="#e2e8f0" strokeWidth="8" />
                         <circle
-                          cx="48" cy="48" r="40" fill="none" stroke="#E07A5F" strokeWidth="8"
+                          cx="48" cy="48" r="40" fill="none" stroke="#059669" strokeWidth="8"
                           strokeDasharray={`${0.87 * 251.2} 251.2`}
                           strokeLinecap="round"
                         />

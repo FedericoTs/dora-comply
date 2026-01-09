@@ -321,7 +321,7 @@ export default function ThemePage() {
                     <ColorSwatch
                       name="Primary"
                       color="bg-primary"
-                      value="#E07A5F"
+                      value="#059669"
                     />
                     <ColorSwatch
                       name="Success"

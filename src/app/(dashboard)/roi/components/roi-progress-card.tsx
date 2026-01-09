@@ -21,8 +21,8 @@ const variantStyles = {
     value: '', // Calculated dynamically
   },
   warning: {
-    card: 'border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10',
-    value: 'text-amber-600 dark:text-amber-500',
+    card: 'border-warning/30 bg-warning/10',
+    value: 'text-warning',
   },
   highlight: {
     card: 'border-primary/30 bg-primary/5',
@@ -38,9 +38,9 @@ export function RoiProgressCard({
   variant = 'default',
 }: RoiProgressCardProps) {
   const getProgressColor = (val: number) => {
-    if (val >= 80) return 'text-green-600 dark:text-green-500';
-    if (val >= 50) return 'text-yellow-600 dark:text-yellow-500';
-    return 'text-red-600 dark:text-red-500';
+    if (val >= 80) return 'text-success';
+    if (val >= 50) return 'text-warning';
+    return 'text-error';
   };
 
   const styles = variantStyles[variant];
@@ -61,9 +61,9 @@ export function RoiProgressCard({
             <div
               className={cn(
                 'h-full rounded-full transition-all',
-                value >= 80 ? 'bg-green-600' :
-                value >= 50 ? 'bg-yellow-600' :
-                'bg-red-600'
+                value >= 80 ? 'bg-success' :
+                value >= 50 ? 'bg-warning' :
+                'bg-error'
               )}
               style={{ width: `${Math.min(value, 100)}%` }}
             />

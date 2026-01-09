@@ -65,11 +65,11 @@ export function DeadlineBadge({
   const urgency = getUrgencyLevel(hours, isOverdue);
 
   const urgencyStyles = {
-    overdue: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-400',
-    critical: 'bg-red-50 text-red-700 border-red-200 animate-pulse dark:bg-red-900/20 dark:text-red-400',
-    urgent: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400',
-    warning: 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400',
-    normal: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400',
+    overdue: 'bg-error/20 text-error border-error/30',
+    critical: 'bg-error/10 text-error border-error/20 animate-pulse',
+    urgent: 'bg-warning/20 text-warning border-warning/30',
+    warning: 'bg-warning/10 text-warning border-warning/20',
+    normal: 'bg-success/10 text-success border-success/20',
   };
 
   return (
@@ -121,11 +121,11 @@ export function DeadlineBadgeStatic({
   const urgency = getUrgencyLevel(hours, isOverdue);
 
   const urgencyStyles = {
-    overdue: 'bg-red-100 text-red-800 border-red-300',
-    critical: 'bg-red-50 text-red-700 border-red-200',
-    urgent: 'bg-amber-100 text-amber-800 border-amber-300',
-    warning: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    normal: 'bg-green-50 text-green-700 border-green-200',
+    overdue: 'bg-error/20 text-error border-error/30',
+    critical: 'bg-error/10 text-error border-error/20',
+    urgent: 'bg-warning/20 text-warning border-warning/30',
+    warning: 'bg-warning/10 text-warning border-warning/20',
+    normal: 'bg-success/10 text-success border-success/20',
   };
 
   return (

@@ -10,9 +10,9 @@ import pptxgen from 'pptxgenjs';
 import type { BoardReportData } from './board-report-types';
 import { MATURITY_LABELS, PILLAR_LABELS } from './board-report-types';
 
-// PPTX Color format (hex without #)
+// PPTX Color format (hex without #) - Emerald Theme
 const PPTX_COLORS = {
-  primary: 'E07A5F',
+  primary: '059669', // emerald-600
   success: '10B981',
   warning: 'F59E0B',
   error: 'EF4444',

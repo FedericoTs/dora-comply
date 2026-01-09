@@ -42,10 +42,10 @@ export function PaceAnalysisCard({ analysis, history, className }: PaceAnalysisP
 
   const getTrendBadge = () => {
     const config = {
-      accelerating: { icon: TrendingUp, label: 'Accelerating', class: 'bg-green-100 text-green-700' },
-      steady: { icon: Minus, label: 'Steady', class: 'bg-blue-100 text-blue-700' },
-      slowing: { icon: TrendingDown, label: 'Slowing', class: 'bg-amber-100 text-amber-700' },
-      stalled: { icon: AlertTriangle, label: 'Stalled', class: 'bg-red-100 text-red-700' },
+      accelerating: { icon: TrendingUp, label: 'Accelerating', class: 'bg-success/20 text-success' },
+      steady: { icon: Minus, label: 'Steady', class: 'bg-info/20 text-info' },
+      slowing: { icon: TrendingDown, label: 'Slowing', class: 'bg-warning/20 text-warning' },
+      stalled: { icon: AlertTriangle, label: 'Stalled', class: 'bg-error/20 text-error' },
     };
 
     const { icon: Icon, label, class: className } = config[analysis.trend];
@@ -113,8 +113,8 @@ export function PaceAnalysisCard({ analysis, history, className }: PaceAnalysisP
                 <p className={cn(
                   'text-2xl font-bold',
                   analysis.currentPace >= analysis.requiredPace
-                    ? 'text-green-600'
-                    : 'text-amber-600'
+                    ? 'text-success'
+                    : 'text-warning'
                 )}>
                   {analysis.requiredPace.toFixed(1)}
                 </p>
@@ -194,24 +194,24 @@ export function PaceAnalysisCard({ analysis, history, className }: PaceAnalysisP
             <ul className="text-xs text-muted-foreground space-y-1">
               {analysis.onTrack ? (
                 <li className="flex items-center gap-1.5">
-                  <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-success" />
                   You&apos;re on track to meet the deadline
                 </li>
               ) : (
                 <li className="flex items-center gap-1.5">
-                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-warning" />
                   Increase pace by {(analysis.requiredPace - analysis.currentPace).toFixed(1)} fields/day
                 </li>
               )}
               {analysis.trend === 'accelerating' && (
                 <li className="flex items-center gap-1.5">
-                  <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-success" />
                   Your completion rate is increasing
                 </li>
               )}
               {analysis.trend === 'slowing' && (
                 <li className="flex items-center gap-1.5">
-                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-warning" />
                   Your completion rate is decreasing
                 </li>
               )}

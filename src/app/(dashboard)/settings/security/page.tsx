@@ -185,7 +185,7 @@ export default function SecuritySettingsPage() {
               <Shield className="h-5 w-5" />
               <CardTitle className="text-base">Two-Factor Authentication</CardTitle>
             </div>
-            <Badge variant={hasMFA ? 'default' : 'secondary'} className={hasMFA ? 'bg-green-100 text-green-700 border-green-300' : ''}>
+            <Badge variant={hasMFA ? 'default' : 'secondary'} className={hasMFA ? 'bg-success/20 text-success border-success/30' : ''}>
               {hasMFA ? 'Enabled' : 'Disabled'}
             </Badge>
           </div>
@@ -228,7 +228,7 @@ export default function SecuritySettingsPage() {
                         </p>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <Check className="h-3 w-3 text-green-500" />
+                            <Check className="h-3 w-3 text-success" />
                             Added {formatDate(factor.created_at)}
                           </span>
                           {factor.last_challenged_at && (

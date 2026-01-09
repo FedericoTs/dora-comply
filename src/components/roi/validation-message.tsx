@@ -34,15 +34,15 @@ const severityConfig: Record<ValidationSeverity, {
   },
   warning: {
     icon: AlertTriangle,
-    bgClass: 'bg-amber-500/5',
-    textClass: 'text-amber-600',
-    borderClass: 'border-amber-500/20',
+    bgClass: 'bg-warning/10',
+    textClass: 'text-warning',
+    borderClass: 'border-warning/20',
   },
   info: {
     icon: Info,
-    bgClass: 'bg-blue-500/5',
-    textClass: 'text-blue-600',
-    borderClass: 'border-blue-500/20',
+    bgClass: 'bg-info/10',
+    textClass: 'text-info',
+    borderClass: 'border-info/20',
   },
 };
 
@@ -105,7 +105,7 @@ export function ValidationIndicator({
   if (isValid) {
     return (
       <CheckCircle2
-        className={cn('h-4 w-4 text-green-500 shrink-0', className)}
+        className={cn('h-4 w-4 text-success shrink-0', className)}
       />
     );
   }
@@ -128,7 +128,7 @@ interface ValidationSummaryProps {
 export function ValidationSummary({ errors, warnings, className }: ValidationSummaryProps) {
   if (errors === 0 && warnings === 0) {
     return (
-      <div className={cn('flex items-center gap-1.5 text-green-600', className)}>
+      <div className={cn('flex items-center gap-1.5 text-success', className)}>
         <CheckCircle2 className="h-4 w-4" />
         <span className="text-sm font-medium">All fields valid</span>
       </div>
@@ -146,7 +146,7 @@ export function ValidationSummary({ errors, warnings, className }: ValidationSum
         </div>
       )}
       {warnings > 0 && (
-        <div className="flex items-center gap-1.5 text-amber-600">
+        <div className="flex items-center gap-1.5 text-warning">
           <AlertTriangle className="h-4 w-4" />
           <span className="text-sm font-medium">
             {warnings} warning{warnings !== 1 ? 's' : ''}

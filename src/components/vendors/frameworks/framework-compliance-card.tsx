@@ -25,15 +25,15 @@ export function FrameworkComplianceCard({ framework, result }: FrameworkComplian
   const statusStyle = STATUS_STYLES[result.status];
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-emerald-600';
-    if (score >= 60) return 'text-amber-600';
-    return 'text-red-600';
+    if (score >= 80) return 'text-success';
+    if (score >= 60) return 'text-warning';
+    return 'text-error';
   };
 
   const getScoreRingColor = (score: number) => {
-    if (score >= 80) return 'stroke-emerald-500';
-    if (score >= 60) return 'stroke-amber-500';
-    return 'stroke-red-500';
+    if (score >= 80) return 'stroke-success';
+    if (score >= 60) return 'stroke-warning';
+    return 'stroke-error';
   };
 
   // Calculate stroke dash for circular progress
@@ -96,7 +96,7 @@ export function FrameworkComplianceCard({ framework, result }: FrameworkComplian
           <div className="flex-1 space-y-2">
             {/* Requirements Progress */}
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <CheckCircle2 className="h-4 w-4 text-success" />
               <span className="text-sm">
                 <span className="font-semibold">{result.requirements_met}</span>
                 <span className="text-muted-foreground"> of {result.requirements_total} requirements met</span>
@@ -106,9 +106,9 @@ export function FrameworkComplianceCard({ framework, result }: FrameworkComplian
             {/* Critical Gaps */}
             {result.critical_gaps.length > 0 && (
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <AlertTriangle className="h-4 w-4 text-warning" />
                 <span className="text-sm">
-                  <span className="font-semibold text-amber-600">{result.critical_gaps.length}</span>
+                  <span className="font-semibold text-warning">{result.critical_gaps.length}</span>
                   <span className="text-muted-foreground"> critical gaps</span>
                 </span>
               </div>
@@ -130,14 +130,14 @@ export function FrameworkComplianceCard({ framework, result }: FrameworkComplian
         <div className="grid grid-cols-3 gap-3 rounded-lg bg-muted/30 p-3">
           <div className="text-center">
             <div className="flex items-center justify-center gap-1">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <CheckCircle2 className="h-4 w-4 text-success" />
               <span className="font-semibold">{result.requirements_met}</span>
             </div>
             <p className="text-xs text-muted-foreground">Compliant</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <AlertTriangle className="h-4 w-4 text-warning" />
               <span className="font-semibold">
                 {result.requirements_total - result.requirements_met - result.critical_gaps.length}
               </span>
@@ -146,7 +146,7 @@ export function FrameworkComplianceCard({ framework, result }: FrameworkComplian
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1">
-              <XCircle className="h-4 w-4 text-red-500" />
+              <XCircle className="h-4 w-4 text-error" />
               <span className="font-semibold">{result.critical_gaps.length}</span>
             </div>
             <p className="text-xs text-muted-foreground">Gaps</p>
