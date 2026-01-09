@@ -18,6 +18,7 @@ import { EditableTableWrapper } from './components/editable-table-wrapper';
 import { ValidationPanel } from './components/validation-panel';
 import { FieldMapper } from './components/field-mapper';
 import { ExportButton } from './components/export-button';
+import { TemplateNavigation, TemplateProgressBar } from './components/template-navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -119,6 +120,9 @@ async function TemplateDetailContent({ templateId }: { templateId: RoiTemplateId
         </div>
       </div>
 
+      {/* Template Progress Bar - shows position in workflow */}
+      <TemplateProgressBar currentTemplateId={templateId} />
+
       {/* Stats row */}
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <div className="flex items-center gap-2">
@@ -200,6 +204,12 @@ async function TemplateDetailContent({ templateId }: { templateId: RoiTemplateId
           <FieldMapper columns={columns} />
         </div>
       </div>
+
+      {/* Template Navigation */}
+      <TemplateNavigation
+        currentTemplateId={templateId}
+        className="mt-8"
+      />
     </div>
   );
 }
