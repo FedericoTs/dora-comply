@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useTransition, useCallback } from 'react';
+import { useState, useTransition, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Loader2, Trash2, Upload } from 'lucide-react';
+import { useUrlFilters } from '@/hooks/use-url-filters';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,21 +46,71 @@ export function VendorListClient({
 }: VendorListClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { getParam, getArrayParam, getBoolParam, getNumberParam, setParams, clearParams } = useUrlFilters();
+
+  // Initialize state from URL params
+  const initialPage = getNumberParam('page', 1) ?? 1;
+  const initialLimit = getNumberParam('limit', 20) ?? 20;
+  const initialSearch = getParam('q') ?? '';
+  const initialView = (getParam('view') as ViewMode) || 'cards';
+  const initialTier = getArrayParam('tier');
+  const initialStatus = getArrayParam('status');
+  const initialProviderType = getArrayParam('provider_type');
+  const initialHasLei = getBoolParam('has_lei');
+  const initialCritical = getBoolParam('critical');
+  const initialSortField = getParam('sort') ?? 'created_at';
+  const initialSortDir = (getParam('dir') as 'asc' | 'desc') || 'desc';
 
   // State
   const [vendors, setVendors] = useState<Vendor[]>(initialVendors);
   const [total, setTotal] = useState(initialTotal);
   const [totalPages, setTotalPages] = useState(initialTotalPages);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
-  const [viewMode, setViewMode] = useState<ViewMode>('cards');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<VendorFilters>({});
+  const [page, setPage] = useState(initialPage);
+  const [limit, setLimit] = useState(initialLimit);
+  const [viewMode, setViewMode] = useState<ViewMode>(initialView);
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [filters, setFilters] = useState<VendorFilters>({
+    tier: initialTier.length > 0 ? initialTier as VendorFilters['tier'] : undefined,
+    status: initialStatus.length > 0 ? initialStatus as VendorFilters['status'] : undefined,
+    provider_type: initialProviderType.length > 0 ? initialProviderType as VendorFilters['provider_type'] : undefined,
+    has_lei: initialHasLei,
+    supports_critical_function: initialCritical,
+  });
   const [sortOptions, setSortOptions] = useState<VendorSortOptions>({
-    field: 'created_at',
-    direction: 'desc',
+    field: initialSortField as VendorSortOptions['field'],
+    direction: initialSortDir,
   });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Sync URL when filters change
+  const syncUrl = useCallback((updates: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    view?: ViewMode;
+    filters?: VendorFilters;
+    sort?: VendorSortOptions;
+  }) => {
+    const urlUpdates: Record<string, string | number | boolean | string[] | null | undefined> = {};
+
+    if (updates.page !== undefined) urlUpdates.page = updates.page > 1 ? updates.page : null;
+    if (updates.limit !== undefined) urlUpdates.limit = updates.limit !== 20 ? updates.limit : null;
+    if (updates.search !== undefined) urlUpdates.q = updates.search || null;
+    if (updates.view !== undefined) urlUpdates.view = updates.view !== 'cards' ? updates.view : null;
+    if (updates.sort !== undefined) {
+      urlUpdates.sort = updates.sort.field !== 'created_at' ? updates.sort.field : null;
+      urlUpdates.dir = updates.sort.direction !== 'desc' ? updates.sort.direction : null;
+    }
+    if (updates.filters !== undefined) {
+      urlUpdates.tier = updates.filters.tier;
+      urlUpdates.status = updates.filters.status;
+      urlUpdates.provider_type = updates.filters.provider_type;
+      urlUpdates.has_lei = updates.filters.has_lei;
+      urlUpdates.critical = updates.filters.supports_critical_function;
+    }
+
+    setParams(urlUpdates);
+  }, [setParams]);
 
   // Delete confirmation state
   const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null);
@@ -99,39 +150,50 @@ export function VendorListClient({
     [page, limit, filters, sortOptions, searchQuery]
   );
 
-  // Handlers
+  // Handlers - sync to URL for shareable/bookmarkable state
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     setPage(1);
+    syncUrl({ search: value, page: 1 });
     fetchVendors(1, undefined, undefined, undefined, value);
   };
 
   const handleFiltersChange = (newFilters: VendorFilters) => {
     setFilters(newFilters);
     setPage(1);
+    syncUrl({ filters: newFilters, page: 1 });
     fetchVendors(1, undefined, newFilters);
   };
 
   const handleSortChange = (newSort: VendorSortOptions) => {
     setSortOptions(newSort);
+    syncUrl({ sort: newSort });
     fetchVendors(undefined, undefined, undefined, newSort);
   };
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
+    syncUrl({ page: newPage });
     fetchVendors(newPage);
   };
 
   const handleLimitChange = (newLimit: number) => {
     setLimit(newLimit);
     setPage(1);
+    syncUrl({ limit: newLimit, page: 1 });
     fetchVendors(1, newLimit);
+  };
+
+  const handleViewModeChange = (newView: ViewMode) => {
+    setViewMode(newView);
+    syncUrl({ view: newView });
   };
 
   const handleClearFilters = () => {
     setFilters({});
     setSearchQuery('');
     setPage(1);
+    clearParams();
     fetchVendors(1, undefined, {}, undefined, '');
   };
 
@@ -218,7 +280,7 @@ export function VendorListClient({
               Delete ({selectedIds.length})
             </Button>
           )}
-          <VendorViewToggle value={viewMode} onChange={setViewMode} />
+          <VendorViewToggle value={viewMode} onChange={handleViewModeChange} />
           <Button variant="outline" onClick={() => setShowImportWizard(true)}>
             <Upload className="mr-2 h-4 w-4" />
             Import CSV
