@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2, MapPin, AlertTriangle, CheckCircle2, Clock, MoreVertical, Shield } from 'lucide-react';
+import { Building2, MapPin, AlertTriangle, CheckCircle2, Clock, MoreVertical, Shield, FileText, ClipboardCheck, Pencil } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -199,6 +199,43 @@ export function VendorCard({ vendor, onEdit, onDelete, onStatusChange }: VendorC
             )}
           </div>
         )}
+
+        {/* Quick Actions - visible on hover */}
+        <div className="mt-4 pt-3 border-t border-border flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 h-9"
+            asChild
+          >
+            <Link href={`/vendors/${vendor.id}`}>
+              <ClipboardCheck className="h-3.5 w-3.5 mr-1.5" />
+              Assess
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 h-9"
+            asChild
+          >
+            <Link href={`/documents?vendor=${vendor.id}`}>
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
+              Docs
+            </Link>
+          </Button>
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 w-9 p-0"
+              onClick={() => onEdit(vendor)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span className="sr-only">Edit</span>
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
