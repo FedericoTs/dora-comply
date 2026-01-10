@@ -24,3 +24,5 @@ export {
 } from './dora-compliance-dashboard';
 
 export { VerificationChecklist } from './verification-checklist';
+
+export { DORAGapRemediation } from './dora-gap-remediation';

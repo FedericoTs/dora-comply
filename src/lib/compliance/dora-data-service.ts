@@ -195,6 +195,37 @@ export interface DORAQuickStats {
 }
 
 /**
+ * Extract SOC 2 coverage by requirement ID from DORA compliance result
+ * Used by the Gap Remediation component to show which requirements have SOC 2 evidence
+ */
+export function getSOC2CoverageByRequirement(
+  doraCompliance: DORAComplianceResult
+): Record<string, 'full' | 'partial' | 'none'> {
+  const coverageMap: Record<string, 'full' | 'partial' | 'none'> = {};
+
+  // Iterate through all pillars and their gaps
+  for (const [, pillarScore] of Object.entries(doraCompliance.pillars)) {
+    // Requirements with gaps have partial or no coverage
+    for (const gap of pillarScore.gaps) {
+      coverageMap[gap.requirementId] = gap.soc2Coverage;
+    }
+  }
+
+  // For requirements not in gaps, assume full coverage
+  // We need to get all requirement IDs and mark covered ones
+  // This requires importing DORA_REQUIREMENTS
+  const { DORA_REQUIREMENTS } = require('./dora-requirements-data');
+  for (const req of DORA_REQUIREMENTS) {
+    if (!(req.id in coverageMap)) {
+      // If not in gaps, it's covered
+      coverageMap[req.id] = 'full';
+    }
+  }
+
+  return coverageMap;
+}
+
+/**
  * Get quick statistics from parsed SOC2 data without full DORA calculation
  */
 export function getQuickStats(dbParsedSOC2: DBParsedSOC2): DORAQuickStats {

@@ -22,8 +22,8 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
-import { calculateDORAFromDB, type DBParsedSOC2 } from '@/lib/compliance/dora-data-service';
-import { DORAComplianceDashboard } from '@/components/compliance';
+import { calculateDORAFromDB, getSOC2CoverageByRequirement, type DBParsedSOC2 } from '@/lib/compliance/dora-data-service';
+import { DORAComplianceDashboard, DORAGapRemediation } from '@/components/compliance';
 import type { DORAComplianceResult } from '@/lib/compliance/dora-types';
 
 interface VendorDocument {
@@ -256,6 +256,15 @@ export function VendorDORADashboard({ vendorId, vendorName }: VendorDORADashboar
       {/* DORA Compliance Dashboard */}
       {doraCompliance && (
         <DORAComplianceDashboard compliance={doraCompliance} />
+      )}
+
+      {/* Gap Remediation - Add evidence for uncovered requirements */}
+      {doraCompliance && (
+        <DORAGapRemediation
+          vendorId={vendorId}
+          vendorName={vendorName}
+          soc2CoverageByRequirement={getSOC2CoverageByRequirement(doraCompliance)}
+        />
       )}
 
       {/* Link to full SOC 2 analysis */}
