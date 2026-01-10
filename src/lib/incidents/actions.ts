@@ -9,6 +9,7 @@ import {
   submitIncidentReport,
   addIncidentEvent,
 } from './queries';
+import { createNotification } from '@/lib/notifications/actions';
 import {
   createIncidentSchema,
   updateIncidentSchema,
@@ -45,6 +46,30 @@ export async function createIncidentAction(
     const { data: incident, error } = await createIncident(validationResult.data);
     if (error || !incident) {
       return { success: false, error: error || 'Failed to create incident' };
+    }
+
+    // Create notification for the team
+    const classificationLabel = {
+      major: 'Major',
+      significant: 'Significant',
+      minor: 'Minor',
+    }[incident.classification] || 'New';
+
+    await createNotification({
+      type: 'incident',
+      title: `${classificationLabel} Incident Reported`,
+      message: incident.title,
+      href: `/incidents/${incident.id}`,
+    });
+
+    // For major incidents, also notify about the 4-hour DORA deadline
+    if (incident.classification === 'major') {
+      await createNotification({
+        type: 'compliance',
+        title: 'DORA 4-Hour Deadline',
+        message: `Initial report for "${incident.title}" due within 4 hours`,
+        href: `/incidents/${incident.id}`,
+      });
     }
 
     revalidatePath('/incidents');
