@@ -55,12 +55,30 @@ class ControlExtraction(BaseModel):
     confidence: float = Field(0.9, ge=0.0, le=1.0, description="Extraction confidence score")
 
 
+class ExceptionType(str, Enum):
+    """Type of exception/deficiency."""
+    DESIGN_DEFICIENCY = "design_deficiency"
+    OPERATING_DEFICIENCY = "operating_deficiency"
+    POPULATION_DEVIATION = "population_deviation"
+
+
+class ExceptionImpact(str, Enum):
+    """Impact severity of exception."""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
 class ExceptionExtraction(BaseModel):
     """Exception/deviation extracted from SOC 2 report."""
     control_id: str = Field(..., description="Control ID with exception")
     control_area: Optional[str] = Field(None, description="Control area/category")
     description: str = Field(..., description="Exception description")
+    exception_type: Optional[ExceptionType] = Field(None, description="Type of deficiency")
+    impact: ExceptionImpact = Field(ExceptionImpact.MEDIUM, description="Impact severity: low, medium, high")
     management_response: Optional[str] = Field(None, description="Management's response")
+    remediation_date: Optional[date] = Field(None, description="Expected or actual remediation date")
+    remediation_verified: Optional[bool] = Field(None, description="Whether remediation was verified")
     page_ref: Optional[int] = Field(None, description="Page number")
 
 
@@ -221,7 +239,11 @@ class ParseResult:
                     "controlId": e.control_id,
                     "controlArea": e.control_area,
                     "exceptionDescription": e.description,
+                    "exceptionType": e.exception_type.value if e.exception_type else None,
+                    "impact": e.impact.value,
                     "managementResponse": e.management_response,
+                    "remediationDate": e.remediation_date.isoformat() if e.remediation_date else None,
+                    "remediationVerified": e.remediation_verified,
                     "pageRef": e.page_ref,
                 }
                 for e in self.data.exceptions

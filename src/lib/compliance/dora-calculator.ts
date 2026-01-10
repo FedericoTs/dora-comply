@@ -35,6 +35,17 @@ interface ParsedSOC2Control {
   pageRef?: number;
 }
 
+// Exception with severity information for accurate DORA scoring
+interface ParsedSOC2Exception {
+  controlId: string;
+  description: string;
+  exceptionType?: 'design_deficiency' | 'operating_deficiency' | 'population_deviation';
+  impact?: 'low' | 'medium' | 'high';
+  managementResponse?: string;
+  remediationDate?: string;
+  remediationVerified?: boolean;
+}
+
 interface ParsedSOC2Data {
   id: string;
   document_id: string;
@@ -44,7 +55,7 @@ interface ParsedSOC2Data {
   period_start: string;
   period_end: string;
   controls: ParsedSOC2Control[];
-  exceptions: Array<{ controlId: string; description: string }>;
+  exceptions: ParsedSOC2Exception[];
   cuecs: Array<{ id: string; description: string }>;
   subservice_orgs: Array<{ name: string; services: string }>;
   confidence_score: number;
@@ -95,13 +106,14 @@ export function calculateDORACompliance(
   const allGaps = gatherAllGaps(requirements, evidenceByRequirement, mappings);
   const criticalGaps = allGaps.filter(g => g.priority === 'critical');
 
-  // Evidence summary
+  // Evidence summary - using L3_WELL_DEFINED as minimum for "sufficient"
   const evidenceArray = Array.from(evidenceByRequirement.values());
   const evidenceSummary = {
     total: evidenceArray.length,
     sufficient: evidenceArray.filter(e => e.maturity_level !== null && e.maturity_level >= ML.L3_WELL_DEFINED).length,
-    partial: evidenceArray.filter(e => e.maturity_level !== null && e.maturity_level === ML.L2_PLANNED).length,
-    insufficient: evidenceArray.filter(e => e.maturity_level === null || e.maturity_level < ML.L2_PLANNED).length,
+    partial: evidenceArray.filter(e => e.maturity_level !== null &&
+      (e.maturity_level === ML.L2_PLANNED || e.maturity_level === ML.L1_INFORMAL)).length,
+    insufficient: evidenceArray.filter(e => e.maturity_level === null || e.maturity_level === ML.L0_NOT_PERFORMED).length,
   };
 
   // Estimate remediation time based on gaps
@@ -251,38 +263,119 @@ function createMissingEvidence(
 }
 
 /**
+ * Calculate exception severity score
+ * Lower score = more severe (worse for compliance)
+ *
+ * Design deficiencies are most severe as they indicate missing controls
+ * High impact exceptions significantly reduce the score
+ * Remediated exceptions have less impact
+ */
+function calculateExceptionSeverityScore(exception: ParsedSOC2Exception): number {
+  // Type scoring (design is worst)
+  const typeScore: Record<string, number> = {
+    'design_deficiency': 0.3,      // Missing control - very bad
+    'operating_deficiency': 0.5,   // Control exists but didn't work
+    'population_deviation': 0.7,   // Minor testing deviation
+  };
+
+  // Impact scoring
+  const impactScore: Record<string, number> = {
+    'high': 0.4,
+    'medium': 0.6,
+    'low': 0.8,
+  };
+
+  const baseTypeScore = typeScore[exception.exceptionType || 'operating_deficiency'] || 0.5;
+  const baseImpactScore = impactScore[exception.impact || 'medium'] || 0.6;
+
+  // If remediated and verified, exception has less impact
+  let remediationBonus = 0;
+  if (exception.remediationVerified) {
+    remediationBonus = 0.3; // Verified remediation significantly reduces impact
+  } else if (exception.remediationDate) {
+    const remediationDate = new Date(exception.remediationDate);
+    if (remediationDate < new Date()) {
+      remediationBonus = 0.15; // Past remediation date, unverified
+    }
+  }
+
+  return Math.min(1.0, baseTypeScore * baseImpactScore + remediationBonus);
+}
+
+/**
  * Calculate maturity level from evidence quality
+ *
+ * CRITICAL: This function now properly factors in exception SEVERITY:
+ * - Exception type (design_deficiency is worse than operating_deficiency)
+ * - Exception impact (high/medium/low)
+ * - Remediation status (verified remediation reduces impact)
  */
 function calculateMaturityFromEvidence(
   sources: EvidenceSource[],
   coveragePercentage: number,
   allControls: ParsedSOC2Control[],
-  exceptions: Array<{ controlId: string }>
+  exceptions: ParsedSOC2Exception[]
 ): MaturityLevel {
   if (sources.length === 0) {
     return ML.L0_NOT_PERFORMED;
   }
 
-  // Check if any evidence sources have exceptions
-  const hasExceptions = sources.some(s =>
-    exceptions.some(e => e.controlId === s.controlId)
+  // Find exceptions that affect our evidence sources
+  const relevantExceptions = exceptions.filter(e =>
+    sources.some(s => s.controlId === e.controlId)
   );
 
-  // Calculate based on coverage and effectiveness
-  if (coveragePercentage >= 85 && !hasExceptions) {
-    // Check if controls are well-documented
-    const wellDocumented = sources.every(s => {
-      const control = allControls.find(c => c.id === s.controlId);
-      return control?.description && control.description.length > 100;
-    });
+  // Calculate exception impact on maturity
+  let exceptionPenalty = 0;
+  let hasSevereException = false;
+
+  for (const exception of relevantExceptions) {
+    const severityScore = calculateExceptionSeverityScore(exception);
+
+    // Severe exceptions (design deficiency + high impact) drop maturity significantly
+    if (severityScore < 0.3) {
+      hasSevereException = true;
+    }
+
+    // Each exception reduces the effective score
+    // Low severity = small penalty, high severity = large penalty
+    exceptionPenalty += (1 - severityScore) * 15; // Up to 15% penalty per exception
+  }
+
+  // Cap total penalty at 50%
+  exceptionPenalty = Math.min(50, exceptionPenalty);
+
+  // Calculate effective coverage after exception penalty
+  const effectiveCoverage = coveragePercentage * ((100 - exceptionPenalty) / 100);
+
+  // Check documentation quality
+  const wellDocumented = sources.every(s => {
+    const control = allControls.find(c => c.id === s.controlId);
+    return control?.description && control.description.length > 100;
+  });
+
+  // If there's a severe exception, cap at L2 regardless of coverage
+  if (hasSevereException) {
+    if (effectiveCoverage >= 50) {
+      return ML.L2_PLANNED;
+    }
+    return ML.L1_INFORMAL;
+  }
+
+  // Calculate maturity based on effective coverage
+  if (effectiveCoverage >= 85 && relevantExceptions.length === 0) {
+    return wellDocumented ? ML.L4_QUANTITATIVE : ML.L3_WELL_DEFINED;
+  }
+
+  if (effectiveCoverage >= 70) {
     return wellDocumented ? ML.L3_WELL_DEFINED : ML.L2_PLANNED;
   }
 
-  if (coveragePercentage >= 60 && !hasExceptions) {
+  if (effectiveCoverage >= 50) {
     return ML.L2_PLANNED;
   }
 
-  if (coveragePercentage >= 30 || sources.length > 0) {
+  if (effectiveCoverage >= 25 || sources.length > 0) {
     return ML.L1_INFORMAL;
   }
 
@@ -291,24 +384,49 @@ function calculateMaturityFromEvidence(
 
 /**
  * Determine operating effectiveness status
+ *
+ * Now considers exception severity:
+ * - High impact or design deficiency = 'missing' (severe gap)
+ * - Medium impact = 'partial'
+ * - Low impact with remediation = 'partial' (close to validated)
  */
 function determineOperatingStatus(
   sources: EvidenceSource[],
-  exceptions: Array<{ controlId: string }>
+  exceptions: ParsedSOC2Exception[]
 ): 'validated' | 'partial' | 'missing' | 'not_tested' {
   if (sources.length === 0) {
     return 'not_tested';
   }
 
-  const hasExceptions = sources.some(s =>
-    exceptions.some(e => e.controlId === s.controlId)
+  // Find exceptions affecting our sources
+  const relevantExceptions = exceptions.filter(e =>
+    sources.some(s => s.controlId === e.controlId)
   );
 
-  if (hasExceptions) {
-    return 'partial';
+  if (relevantExceptions.length === 0) {
+    return 'validated';
   }
 
-  return 'validated';
+  // Check for severe exceptions
+  const hasSevereException = relevantExceptions.some(e =>
+    e.exceptionType === 'design_deficiency' ||
+    e.impact === 'high'
+  );
+
+  if (hasSevereException) {
+    return 'missing'; // Severe exception = effectively missing control
+  }
+
+  // Check if all exceptions are low impact and remediated
+  const allLowAndRemediated = relevantExceptions.every(e =>
+    e.impact === 'low' && (e.remediationVerified || e.remediationDate)
+  );
+
+  if (allLowAndRemediated) {
+    return 'partial'; // Low severity, being addressed
+  }
+
+  return 'partial';
 }
 
 /**
@@ -361,8 +479,12 @@ function calculatePillarScores(
       const maturity = evidence?.maturity_level ?? 0;
       weightedScore += (maturity / 4) * weight * 100;
 
-      // Add to gaps if below threshold
-      if (maturity < ML.L2_PLANNED) {
+      // Add to gaps if below L3 threshold (DORA minimum)
+      // Also flag if there are operational gaps (exceptions)
+      const hasOperationalGap = evidence?.operating_status === 'partial' ||
+        evidence?.operating_status === 'missing';
+
+      if (maturity < ML.L3_WELL_DEFINED || hasOperationalGap) {
         const mapping = SOC2_TO_DORA_MAPPINGS.find(m => m.dora_requirement_id === req.id);
         gaps.push({
           requirementId: req.id,
@@ -380,7 +502,8 @@ function calculatePillarScores(
 
     const percentageScore = totalWeight > 0 ? Math.round(weightedScore / totalWeight) : 0;
     const maturityLevel = scoreToMaturity(percentageScore);
-    const requirementsMet = pillarEvidence.filter(e => e && e.maturity_level !== null && e.maturity_level >= ML.L2_PLANNED).length;
+    // Requirements are only "met" at L3 or above (DORA minimum)
+    const requirementsMet = pillarEvidence.filter(e => e && e.maturity_level !== null && e.maturity_level >= ML.L3_WELL_DEFINED).length;
 
     result[pillar] = {
       pillar,
@@ -470,6 +593,10 @@ function determineOverallStatus(maturity: MaturityLevel): 'compliant' | 'partial
 
 /**
  * Gather all gaps across requirements
+ *
+ * CRITICAL FIX: Threshold lowered from L2_PLANNED to L3_WELL_DEFINED
+ * For DORA compliance, L3 (Well-Defined) is the minimum acceptable level.
+ * Requirements at L2 or below should be flagged as gaps.
  */
 function gatherAllGaps(
   requirements: DORARequirement[],
@@ -480,8 +607,28 @@ function gatherAllGaps(
 
   for (const req of requirements) {
     const evidence = evidenceMap.get(req.id);
-    if (!evidence || evidence.maturity_level === null || evidence.maturity_level < ML.L2_PLANNED) {
+
+    // Flag as gap if maturity is below L3 (Well-Defined)
+    // This ensures requirements at L2_PLANNED or below are visible as gaps
+    const isBelowThreshold = !evidence ||
+      evidence.maturity_level === null ||
+      evidence.maturity_level < ML.L3_WELL_DEFINED;
+
+    // Also check for operational gaps (exceptions) even at higher maturity
+    const hasOperationalGap = evidence?.operating_status === 'partial' ||
+      evidence?.operating_status === 'missing';
+
+    if (isBelowThreshold || hasOperationalGap) {
       const mapping = mappings.find(m => m.dora_requirement_id === req.id);
+
+      // Determine gap severity for prioritization
+      let adjustedPriority = req.priority;
+      if (evidence?.maturity_level === ML.L0_NOT_PERFORMED) {
+        // No coverage at all - escalate priority
+        adjustedPriority = req.priority === 'low' ? 'medium' :
+                          req.priority === 'medium' ? 'high' : 'critical';
+      }
+
       gaps.push({
         requirementId: req.id,
         articleNumber: req.article_number,
@@ -489,7 +636,7 @@ function gatherAllGaps(
         gapType: evidence?.gap_type || 'both',
         gapDescription: evidence?.gap_description || mapping?.gap_description || 'Gap not specified',
         remediationGuidance: mapping?.remediation_guidance || 'Remediation guidance not available',
-        priority: req.priority,
+        priority: adjustedPriority,
         estimatedEffort: estimateEffortForRequirement(req),
         soc2Coverage: mapping?.mapping_strength || 'none',
       });

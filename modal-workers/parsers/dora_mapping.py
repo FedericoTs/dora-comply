@@ -160,9 +160,12 @@ def map_controls_to_dora(controls: list[ControlExtraction]) -> list[DORAMapping]
     Map SOC 2 controls to DORA articles based on TSC categories.
 
     Returns a list of mappings with coverage levels:
-    - full: Multiple controls fully address the DORA article
-    - partial: Some controls partially address the DORA article
+    - full: Multiple EFFECTIVE controls fully address the DORA article
+    - partial: Some controls partially address the DORA article OR have exceptions
     - none: No controls address the DORA article
+
+    CRITICAL: Coverage considers control EFFECTIVENESS, not just count.
+    Controls with exceptions reduce coverage level.
     """
     mappings = []
 
@@ -176,7 +179,7 @@ def map_controls_to_dora(controls: list[ControlExtraction]) -> list[DORAMapping]
 
     # Map each DORA article
     for article, info in DORA_TO_TSC_MAPPING.items():
-        article_controls = []
+        article_controls: list[ControlExtraction] = []
         for tsc_cat in info["tsc_categories"]:
             if tsc_cat in controls_by_category:
                 article_controls.extend(controls_by_category[tsc_cat])
@@ -185,18 +188,61 @@ def map_controls_to_dora(controls: list[ControlExtraction]) -> list[DORAMapping]
             coverage_level = "none"
             confidence = 0.0
             best_control = ""
-        elif len(article_controls) >= len(info["tsc_categories"]) * 2:
-            coverage_level = "full"
-            confidence = 0.95
-            best_control = article_controls[0].control_id
-        elif len(article_controls) >= len(info["tsc_categories"]):
-            coverage_level = "full"
-            confidence = 0.85
-            best_control = article_controls[0].control_id
         else:
-            coverage_level = "partial"
-            confidence = 0.6 + (len(article_controls) / len(info["tsc_categories"])) * 0.25
-            best_control = article_controls[0].control_id if article_controls else ""
+            # CRITICAL FIX: Factor in test results, not just control count
+            # Count controls by effectiveness
+            effective_controls = [c for c in article_controls
+                                  if c.test_result.value == "operating_effectively"]
+            exception_controls = [c for c in article_controls
+                                  if c.test_result.value == "exception"]
+            not_tested_controls = [c for c in article_controls
+                                   if c.test_result.value == "not_tested"]
+
+            total_required = len(info["tsc_categories"])
+            effective_count = len(effective_controls)
+            exception_count = len(exception_controls)
+            not_tested_count = len(not_tested_controls)
+
+            # Calculate effective coverage ratio
+            # - Effective controls count as 1.0
+            # - Exception controls count as 0.3 (still exist but have issues)
+            # - Not tested controls count as 0.1 (exist but unvalidated)
+            effective_score = (
+                effective_count * 1.0 +
+                exception_count * 0.3 +
+                not_tested_count * 0.1
+            )
+            coverage_ratio = effective_score / max(total_required, 1)
+
+            # Determine coverage level based on effective ratio
+            if coverage_ratio >= 1.5 and exception_count == 0:
+                coverage_level = "full"
+                confidence = 0.95
+            elif coverage_ratio >= 1.0 and exception_count == 0:
+                coverage_level = "full"
+                confidence = 0.85
+            elif coverage_ratio >= 0.7:
+                # Has exceptions OR partial coverage - still "partial"
+                coverage_level = "partial"
+                # Reduce confidence based on exception ratio
+                exception_penalty = (exception_count / max(len(article_controls), 1)) * 0.2
+                confidence = 0.7 - exception_penalty
+            elif coverage_ratio >= 0.3:
+                coverage_level = "partial"
+                confidence = 0.5
+            else:
+                coverage_level = "none"
+                confidence = 0.2
+
+            # Select best control (prefer effective over exception over not_tested)
+            if effective_controls:
+                best_control = effective_controls[0].control_id
+            elif exception_controls:
+                best_control = exception_controls[0].control_id
+            elif article_controls:
+                best_control = article_controls[0].control_id
+            else:
+                best_control = ""
 
         mappings.append(DORAMapping(
             dora_article=article,
