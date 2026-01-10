@@ -130,9 +130,9 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
         </Alert>
       )}
 
-      {/* Step 0: Basic Info Section */}
+      {/* Step 0: Incident Details */}
       <div className="space-y-3">
-        <SectionHeader title="Basic Information" step={0} onEdit={goToStep} />
+        <SectionHeader title="Incident Details" step={0} onEdit={goToStep} />
         <div className="rounded-lg border p-4 space-y-1">
           <InfoRow label="Title" value={data.title} />
           <InfoRow
@@ -149,6 +149,7 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
               value={new Date(data.occurrence_datetime).toLocaleString('en-GB')}
             />
           )}
+          <InfoRow label="Related Vendor" value={data.vendor_id ? 'Selected' : 'None'} />
           {data.description && (
             <div className="pt-2 border-t mt-2">
               <p className="text-sm text-muted-foreground mb-1">Description</p>
@@ -160,16 +161,28 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
 
       <Separator />
 
-      {/* Step 1: Impact Section */}
+      {/* Step 1: Impact & Classification */}
       <div className="space-y-3">
-        <SectionHeader title="Impact Assessment" step={1} onEdit={goToStep} />
-        <div className="rounded-lg border p-4 space-y-1">
-          {data.services_affected.length > 0 && (
-            <InfoRow
-              label="Services Affected"
-              value={`${data.services_affected.length} service(s)`}
-            />
-          )}
+        <SectionHeader title="Impact & Classification" step={1} onEdit={goToStep} />
+        <div className="rounded-lg border p-4 space-y-2">
+          {/* Classification Summary */}
+          <div className="flex items-center justify-between pb-2 border-b">
+            <span className="text-sm font-medium">DORA Classification</span>
+            <Badge
+              className={cn(
+                data.classification === 'major'
+                  ? 'bg-destructive'
+                  : data.classification === 'significant'
+                  ? 'bg-warning text-warning-foreground'
+                  : 'bg-secondary'
+              )}
+            >
+              {getClassificationLabel(data.classification)}
+              {isOverride && ' (Override)'}
+            </Badge>
+          </div>
+
+          {/* Impact Details */}
           {data.critical_functions_affected.length > 0 && (
             <InfoRow
               label="Critical Functions"
@@ -180,17 +193,7 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
             label="Clients Affected"
             value={
               data.clients_affected_percentage !== undefined && data.clients_affected_percentage > 0
-                ? `${data.clients_affected_percentage}% (${data.clients_affected_count?.toLocaleString() ?? 'unknown'} clients)`
-                : data.clients_affected_count
-                  ? `${data.clients_affected_count.toLocaleString()} client(s)`
-                  : undefined
-            }
-          />
-          <InfoRow
-            label="Transactions Affected"
-            value={
-              data.transactions_affected_count
-                ? data.transactions_affected_count.toLocaleString()
+                ? `${data.clients_affected_percentage}%`
                 : undefined
             }
           />
@@ -198,15 +201,7 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
             label="Transaction Value"
             value={
               data.transactions_value_affected
-                ? `€${data.transactions_value_affected.toLocaleString()}`
-                : undefined
-            }
-          />
-          <InfoRow
-            label="Economic Impact"
-            value={
-              data.economic_impact
-                ? `€${data.economic_impact.toLocaleString()}`
+                ? `EUR ${data.transactions_value_affected.toLocaleString()}`
                 : undefined
             }
           />
@@ -224,50 +219,13 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
               value={data.geographic_spread.join(', ')}
             />
           )}
-          <InfoRow label="Reputational Impact" value={data.reputational_impact} />
-        </div>
-      </div>
 
-      <Separator />
-
-      {/* Step 2: Classification Section */}
-      <div className="space-y-3">
-        <SectionHeader title="DORA Classification" step={2} onEdit={goToStep} />
-        <div className="rounded-lg border p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Final Classification</span>
-            <Badge
-              className={cn(
-                data.classification === 'major'
-                  ? 'bg-destructive'
-                  : data.classification === 'significant'
-                  ? 'bg-warning text-warning-foreground'
-                  : 'bg-secondary'
-              )}
-            >
-              {getClassificationLabel(data.classification)}
-            </Badge>
-          </div>
-          {data.classification_calculated && (
-            <InfoRow
-              label="Auto-Calculated"
-              value={getClassificationLabel(data.classification_calculated)}
-            />
-          )}
-          <InfoRow
-            label="Override"
-            value={isOverride ? 'Yes' : 'No'}
-          />
           {isOverride && data.classification_override_justification && (
             <div className="pt-2 border-t mt-2">
               <p className="text-sm text-muted-foreground mb-1">Override Justification</p>
-              <p className="text-sm">{data.classification_override_justification}</p>
+              <p className="text-sm text-xs">{data.classification_override_justification}</p>
             </div>
           )}
-          <InfoRow
-            label="Requires Reporting"
-            value={requiresReporting ? 'Yes' : 'No'}
-          />
         </div>
 
         {/* DORA Reporting Deadlines */}
@@ -314,33 +272,6 @@ export function StepReview({ data, goToStep }: StepReviewProps) {
             </div>
           </div>
         )}
-      </div>
-
-      <Separator />
-
-      {/* Step 3: Details Section */}
-      <div className="space-y-3">
-        <SectionHeader title="Additional Details" step={3} onEdit={goToStep} />
-        <div className="rounded-lg border p-4 space-y-3">
-          <InfoRow label="Related Vendor" value={data.vendor_id ? 'Selected' : 'None'} />
-          {data.root_cause && (
-            <div className="space-y-1 pt-2 border-t">
-              <p className="text-sm text-muted-foreground">Root Cause</p>
-              <p className="text-sm">{data.root_cause}</p>
-            </div>
-          )}
-          {data.remediation_actions && (
-            <div className="space-y-1 pt-2 border-t">
-              <p className="text-sm text-muted-foreground">Remediation Actions</p>
-              <p className="text-sm">{data.remediation_actions}</p>
-            </div>
-          )}
-          {!data.vendor_id && !data.root_cause && !data.remediation_actions && (
-            <p className="text-sm text-muted-foreground italic">
-              No additional details provided. These can be added after incident creation.
-            </p>
-          )}
-        </div>
       </div>
 
       {/* Confirmation */}

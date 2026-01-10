@@ -102,6 +102,7 @@ import {
 } from '@/lib/documents/actions';
 import { fetchVendorsAction } from '@/lib/vendors/actions';
 import { DocumentParsingStatus, ProcessingIndicator } from '@/components/documents/document-parsing-status';
+import { SmartImportDialog } from '@/components/documents/smart-import-dialog';
 
 // ============================================================================
 // Types
@@ -262,6 +263,7 @@ export function DocumentsClient({ initialData, initialVendors = [] }: DocumentsC
 
   // Dialog state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isSmartImportOpen, setIsSmartImportOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentWithVendor | null>(null);
@@ -1049,6 +1051,10 @@ export function DocumentsClient({ initialData, initialVendors = [] }: DocumentsC
                   </Button>
                 </div>
 
+                <Button variant="outline" onClick={() => setIsSmartImportOpen(true)}>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Smart Import
+                </Button>
                 <Button onClick={() => setIsUploadOpen(true)}>
                   <Upload className="mr-2 h-4 w-4" />
                   Upload
@@ -1463,6 +1469,12 @@ export function DocumentsClient({ initialData, initialVendors = [] }: DocumentsC
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Smart Import Dialog */}
+      <SmartImportDialog
+        open={isSmartImportOpen}
+        onOpenChange={setIsSmartImportOpen}
+      />
     </>
   );
 }

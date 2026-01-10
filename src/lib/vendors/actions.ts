@@ -53,6 +53,8 @@ export interface ActionResult<T = void> {
   success: boolean;
   data?: T;
   error?: VendorError;
+  /** Indicates vendor was auto-added to RoI B_05.01 (ICT Providers) */
+  roiPopulated?: boolean;
 }
 
 // ============================================================================
@@ -227,6 +229,8 @@ export async function createVendor(
     is_intra_group: data.is_intra_group || false,
     primary_contact: data.primary_contact || {},
     notes: data.notes || null,
+    // Default expense_currency to EUR for RoI B_05.01 completeness
+    expense_currency: 'EUR',
     metadata: {},
     // GLEIF enrichment fields
     registration_number: gleifEnrichment.registration_number || null,
@@ -279,10 +283,15 @@ export async function createVendor(
 
   revalidatePath('/vendors');
   revalidatePath('/dashboard');
+  revalidatePath('/roi'); // RoI dashboard will show updated vendor count
+
+  // Vendor with LEI and headquarters_country will appear in RoI B_05.01
+  const roiPopulated = !!(vendor.lei && vendor.headquarters_country);
 
   return {
     success: true,
     data: mapVendorFromDatabase(vendor),
+    roiPopulated,
   };
 }
 

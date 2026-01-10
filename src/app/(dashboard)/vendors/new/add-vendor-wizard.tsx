@@ -154,6 +154,20 @@ export function AddVendorWizard() {
 
     if (result.success && result.data) {
       toast.success(`${result.data.name} has been added`);
+
+      // Show RoI auto-population notification if vendor has required fields
+      if (result.roiPopulated) {
+        setTimeout(() => {
+          toast.info('Vendor added to RoI Register of ICT Providers (B_05.01)', {
+            description: 'View in Register of Information dashboard',
+            action: {
+              label: 'View RoI',
+              onClick: () => router.push('/roi'),
+            },
+          });
+        }, 500);
+      }
+
       router.push(`/vendors/${result.data.id}`);
     } else {
       toast.error(result.error?.message || 'Failed to create vendor');

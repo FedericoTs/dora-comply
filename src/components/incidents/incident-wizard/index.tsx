@@ -8,31 +8,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils';
 import { createIncidentAction } from '@/lib/incidents/actions';
 import type { CreateIncidentInput, IncidentClassification, IncidentType, ImpactLevel } from '@/lib/incidents/types';
-import { StepBasicInfo } from './step-basic-info';
-import { StepImpact } from './step-impact';
-import { StepClassification } from './step-classification';
-import { StepDetails } from './step-details';
+import { StepIncidentDetails } from './step-incident-details';
+import { StepImpactClassification } from './step-impact-classification';
 import { StepReview } from './step-review';
 import { toast } from 'sonner';
 
 /**
- * New wizard flow designed for DORA compliance:
- * 1. Basic Info - Type, title, detection time (what happened and when)
- * 2. Impact - Assess business impact (determines classification)
- * 3. Classification - Auto-calculated from impact with override option
- * 4. Details - Additional context (vendor, root cause, remediation)
- * 5. Review - Confirm and submit
+ * Simplified 3-step wizard flow for DORA compliance:
+ * 1. Incident Details - Type, title, detection time, vendor (what happened, when, who's involved)
+ * 2. Impact & Classification - Assess business impact + auto-calculated DORA classification
+ * 3. Review - Confirm and submit
+ *
+ * Note: Root cause and remediation can be added after creation.
  */
 const STEPS = [
-  { id: 'basic-info', title: 'Basic Info', description: 'What happened and when', time: '2 min' },
-  { id: 'impact', title: 'Impact', description: 'Business and client impact', time: '3 min' },
-  { id: 'classification', title: 'Classification', description: 'DORA severity assessment', time: '1 min' },
-  { id: 'details', title: 'Details', description: 'Context and remediation', time: '2 min' },
+  { id: 'details', title: 'Incident Details', description: 'What happened and when', time: '2 min' },
+  { id: 'impact', title: 'Impact & Classification', description: 'Business impact and DORA severity', time: '3 min' },
   { id: 'review', title: 'Review', description: 'Confirm and submit', time: '1 min' },
 ];
 
 // Total estimated time and DORA deadline reminder
-const TOTAL_TIME = '~9 min';
+const TOTAL_TIME = '~6 min';
 const DORA_DEADLINE_NOTICE = '4-hour initial report deadline under DORA';
 
 export interface WizardData {
@@ -113,7 +109,7 @@ export function IncidentWizard({
     const errors: Record<string, string[]> = {};
 
     switch (step) {
-      case 0: // Basic Info
+      case 0: // Incident Details (what, when, who)
         if (!data.incident_type) {
           errors.incident_type = ['Incident type is required'];
         }
@@ -124,10 +120,7 @@ export function IncidentWizard({
           errors.detection_datetime = ['Detection time is required'];
         }
         break;
-      case 1: // Impact
-        // No required fields - impact data is optional but affects classification
-        break;
-      case 2: // Classification
+      case 1: // Impact & Classification
         // Validate override justification if override is enabled
         if (data.classification_override) {
           if (!data.classification_override_justification ||
@@ -138,10 +131,7 @@ export function IncidentWizard({
           }
         }
         break;
-      case 3: // Details
-        // No required fields - vendor, root cause, remediation are optional
-        break;
-      case 4: // Review
+      case 2: // Review
         // Final validation - check all required fields
         if (!data.title) errors.title = ['Title is required'];
         if (!data.detection_datetime) errors.detection_datetime = ['Detection time is required'];
@@ -235,17 +225,18 @@ export function IncidentWizard({
 
   const renderStep = () => {
     switch (currentStep) {
-      case 0: // Basic Info
+      case 0: // Incident Details (combined basic info + vendor)
         return (
-          <StepBasicInfo
+          <StepIncidentDetails
             data={data}
             updateData={updateData}
             errors={stepErrors}
+            vendors={vendors}
           />
         );
-      case 1: // Impact Assessment
+      case 1: // Impact & Classification (combined)
         return (
-          <StepImpact
+          <StepImpactClassification
             data={data}
             updateData={updateData}
             errors={stepErrors}
@@ -253,24 +244,7 @@ export function IncidentWizard({
             criticalFunctions={criticalFunctions}
           />
         );
-      case 2: // Classification (auto-calculated)
-        return (
-          <StepClassification
-            data={data}
-            updateData={updateData}
-            errors={stepErrors}
-          />
-        );
-      case 3: // Details
-        return (
-          <StepDetails
-            data={data}
-            updateData={updateData}
-            errors={stepErrors}
-            vendors={vendors}
-          />
-        );
-      case 4: // Review
+      case 2: // Review
         return (
           <StepReview
             data={data}
