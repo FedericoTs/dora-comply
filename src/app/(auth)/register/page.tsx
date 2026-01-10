@@ -1,19 +1,22 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { checkAuthStatus } from '@/lib/auth';
-import { RegisterForm } from './register-form';
 
 export const metadata: Metadata = {
-  title: 'Create Account | DORA Comply',
-  description: 'Create your DORA Comply account to start your compliance journey',
+  title: 'Get Started | DORA Comply',
+  description: 'Contact our team to discuss DORA compliance solutions for your organization',
 };
 
+/**
+ * Registration is handled through sales.
+ *
+ * DORA Comply is a premium enterprise solution for EU financial institutions.
+ * Customers must contact sales to discuss requirements, pricing, and contract
+ * terms before receiving access credentials.
+ *
+ * After contract signing, admins create accounts for their team via the
+ * /settings/team invite flow.
+ */
 export default async function RegisterPage() {
-  const { isAuthenticated, needsOnboarding } = await checkAuthStatus();
-
-  if (isAuthenticated) {
-    redirect(needsOnboarding ? '/onboarding' : '/dashboard');
-  }
-
-  return <RegisterForm />;
+  // Redirect to contact page with context
+  redirect('/contact?source=register');
 }
