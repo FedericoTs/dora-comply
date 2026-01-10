@@ -33,23 +33,6 @@ export interface VendorUpdateData {
 }
 
 /**
- * @deprecated Use VendorUpdateData instead. Vendors should be registered before SOC2 parsing.
- */
-export interface ExtractedVendorData {
-  name: string;
-  description?: string;
-  headquarters_country?: string;
-  source_type: 'soc2_extraction';
-  source_document_id: string;
-  last_soc2_audit_firm?: string;
-  last_soc2_audit_date?: string;
-  soc2_report_type?: SOC2ReportType;
-  soc2_opinion?: SOC2Opinion;
-  suggested_lei?: string;
-  confidence: number;
-}
-
-/**
  * Result of extracting ICT service data from SOC2
  */
 export interface ExtractedServiceData {

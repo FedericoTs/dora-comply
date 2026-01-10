@@ -90,7 +90,6 @@ export function VendorDORADashboard({ vendorId, vendorName }: VendorDORADashboar
         }
 
         if (!data || data.length === 0) {
-          console.log('[VendorDORADashboard] No documents found for vendor:', vendorId);
           setDocuments([]);
           setLoading(false);
           return;
@@ -104,8 +103,6 @@ export function VendorDORADashboard({ vendorId, vendorName }: VendorDORADashboar
             doc.parsed_soc2.length > 0
         ) as VendorDocument[];
 
-        console.log('[VendorDORADashboard] Documents with SOC2:', docsWithSoc2.length);
-
         setDocuments(docsWithSoc2);
 
         if (docsWithSoc2.length > 0) {
@@ -115,14 +112,6 @@ export function VendorDORADashboard({ vendorId, vendorName }: VendorDORADashboar
 
           // Use the centralized DORA calculator with proper field mapping
           const dbParsedData = latestDoc.parsed_soc2![0];
-
-          console.log('[VendorDORADashboard] Calculating DORA for:', {
-            vendorId,
-            vendorName,
-            documentId: latestDoc.id,
-            controlCount: dbParsedData.controls?.length || 0,
-            exceptionCount: dbParsedData.exceptions?.length || 0,
-          });
 
           try {
             const compliance = calculateDORAFromDB(
