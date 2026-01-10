@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  ArrowLeft,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -36,16 +35,8 @@ export function VendorHero({ vendor, onRefreshGleif, isRefreshing }: VendorHeroP
 
   return (
     <div className="space-y-4">
-      {/* Top Navigation */}
-      <div className="flex items-center justify-between">
-        <Link
-          href="/vendors"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Vendors
-        </Link>
-
+      {/* Actions */}
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/vendors/${vendor.id}/edit`}>
