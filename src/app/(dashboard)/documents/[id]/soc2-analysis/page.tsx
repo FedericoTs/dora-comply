@@ -257,84 +257,6 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
   const totalControls = controls.length;
   const effectivenessRate = totalControls > 0 ? Math.round((controlsEffective / totalControls) * 100) : 0;
 
-  // Calculate DORA coverage from controls (simplified version - full calculation in client)
-  const calculateDORACoverage = () => {
-    const coverageByPillar = {
-      ICT_RISK: 0,
-      INCIDENT: 0,
-      TESTING: 0,  // Fixed: was 'RESILIENCE', should match DORAPillar type
-      TPRM: 0,
-      SHARING: 0,
-    };
-
-    // Normalize TSC category names from database format to standard TSC codes
-    const normalizeTscCategory = (category: string): string => {
-      const upper = category.toUpperCase();
-      // Map full names to abbreviations
-      const nameMapping: Record<string, string> = {
-        'AVAILABILITY': 'A',
-        'CONFIDENTIALITY': 'C',
-        'PROCESSING_INTEGRITY': 'PI',
-        'PRIVACY': 'P',
-      };
-      if (nameMapping[upper]) return nameMapping[upper];
-      // For CC categories, keep the full code (CC1, CC6, etc.)
-      if (upper.startsWith('CC')) return upper;
-      return upper;
-    };
-
-    // Count controls per TSC category (keeping full category codes)
-    const categoryCount: Record<string, { total: number; effective: number }> = {};
-    for (const control of controls) {
-      const cat = normalizeTscCategory(control.tscCategory);
-      if (!categoryCount[cat]) categoryCount[cat] = { total: 0, effective: 0 };
-      categoryCount[cat].total++;
-      if (control.testResult === 'operating_effectively') {
-        categoryCount[cat].effective++;
-      }
-    }
-
-    // Map to DORA pillars - each pillar maps to specific TSC categories
-    const pillarMapping: Record<string, string[]> = {
-      ICT_RISK: ['CC1', 'CC3', 'CC4', 'CC5', 'CC6', 'CC7', 'CC8'],
-      INCIDENT: ['CC7'],
-      TESTING: ['A', 'CC7', 'CC9'],  // Fixed: was 'RESILIENCE', should match DORAPillar type
-      TPRM: ['CC9', 'C'],
-      SHARING: ['CC2', 'CC5'], // Communication & monitoring activities support information sharing
-    };
-
-    for (const [pillar, categories] of Object.entries(pillarMapping)) {
-      if (categories.length === 0) continue;
-      let pillarScore = 0;
-      let catCount = 0;
-      for (const cat of categories) {
-        // Check for exact match or prefix match (e.g., "CC6" matches category count for "CC6")
-        const matchingCats = Object.keys(categoryCount).filter(
-          k => k === cat || k.startsWith(cat)
-        );
-        for (const matchCat of matchingCats) {
-          if (categoryCount[matchCat]) {
-            const catScore = categoryCount[matchCat].total > 0
-              ? (categoryCount[matchCat].effective / categoryCount[matchCat].total) * 100
-              : 0;
-            pillarScore += catScore;
-            catCount++;
-          }
-        }
-      }
-      coverageByPillar[pillar as keyof typeof coverageByPillar] = catCount > 0 ? Math.round(pillarScore / catCount) : 0;
-    }
-
-    const overall = Object.values(coverageByPillar).reduce((a, b) => a + b, 0) / 5;
-    const gaps = Object.entries(coverageByPillar)
-      .filter(([_, score]) => score < 50)
-      .map(([pillar]) => pillar);
-
-    return { overall: Math.round(overall), byPillar: coverageByPillar, gaps };
-  };
-
-  const doraCoverage = calculateDORACoverage();
-
   // Calculate DORA compliance using the centralized data service
   // This ensures consistency with vendor DORA dashboard calculations
   const doraCompliance: DORAComplianceResult = calculateDORAFromDB(
@@ -343,6 +265,22 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
     analysis as unknown as DBParsedSOC2,
     { id, name: document.filename, type: 'soc2' }
   );
+
+  // Transform doraCompliance to format expected by DORACoverageChart
+  // This uses the proper maturity-based calculation instead of simple percentages
+  const doraCoverage = {
+    overall: doraCompliance.overallPercentage,
+    byPillar: {
+      ICT_RISK: doraCompliance.pillars.ICT_RISK.percentageScore,
+      INCIDENT: doraCompliance.pillars.INCIDENT.percentageScore,
+      TESTING: doraCompliance.pillars.TESTING.percentageScore,
+      TPRM: doraCompliance.pillars.TPRM.percentageScore,
+      SHARING: doraCompliance.pillars.SHARING.percentageScore,
+    },
+    gaps: Object.entries(doraCompliance.pillars)
+      .filter(([, pillar]) => pillar.status !== 'compliant')
+      .map(([key]) => key),
+  };
 
   // Group controls by TSC category
   const controlsByCategory = controls.reduce<Record<string, ParsedControl[]>>((acc, control) => {

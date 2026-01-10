@@ -116,22 +116,36 @@ export function VendorDORADashboard({ vendorId, vendorName }: VendorDORADashboar
           // Use the centralized DORA calculator with proper field mapping
           const dbParsedData = latestDoc.parsed_soc2![0];
 
-          const compliance = calculateDORAFromDB(
+          console.log('[VendorDORADashboard] Calculating DORA for:', {
             vendorId,
             vendorName,
-            dbParsedData,
-            {
-              id: latestDoc.id,
-              name: latestDoc.filename,
-              type: latestDoc.type || 'soc2',
-            }
-          );
+            documentId: latestDoc.id,
+            controlCount: dbParsedData.controls?.length || 0,
+            exceptionCount: dbParsedData.exceptions?.length || 0,
+          });
 
-          setDoraCompliance(compliance);
+          try {
+            const compliance = calculateDORAFromDB(
+              vendorId,
+              vendorName,
+              dbParsedData,
+              {
+                id: latestDoc.id,
+                name: latestDoc.filename,
+                type: latestDoc.type || 'soc2',
+              }
+            );
+            setDoraCompliance(compliance);
+          } catch (calcError) {
+            console.error('[VendorDORADashboard] DORA calculation error:', calcError);
+            setError(`Calculation error: ${calcError instanceof Error ? calcError.message : 'Unknown'}`);
+            setLoading(false);
+            return;
+          }
         }
       } catch (err) {
         console.error('[VendorDORADashboard] Unexpected error:', err);
-        setError('An unexpected error occurred');
+        setError(`Unexpected error: ${err instanceof Error ? err.message : 'Unknown'}`);
       }
 
       setLoading(false);
