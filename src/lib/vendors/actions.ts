@@ -594,17 +594,11 @@ export async function bulkDeleteVendors(
     };
   }
 
-  // Soft delete all matching vendors
-  const { data: deletedVendors, error } = await supabase
-    .from('vendors')
-    .update({
-      deleted_at: new Date().toISOString(),
-      status: 'inactive',
-    })
-    .eq('organization_id', organizationId)
-    .in('id', vendorIds)
-    .is('deleted_at', null)
-    .select('id, name');
+  // Use the SECURITY DEFINER function to perform bulk soft delete
+  // This bypasses RLS issues while maintaining authorization checks
+  const { data, error } = await supabase.rpc('bulk_soft_delete_vendors', {
+    p_vendor_ids: vendorIds,
+  });
 
   if (error) {
     console.error('Bulk delete error:', error);
@@ -614,7 +608,16 @@ export async function bulkDeleteVendors(
     };
   }
 
-  const deletedCount = deletedVendors?.length || 0;
+  // Check the function result
+  const result = data as { success: boolean; error?: string; deleted: number; deleted_ids: string[]; failed: number };
+  if (!result.success) {
+    return {
+      success: false,
+      error: createVendorError('UNAUTHORIZED', result.error || 'Failed to delete vendors'),
+    };
+  }
+
+  const deletedCount = result.deleted || 0;
 
   // Log activity
   if (deletedCount > 0) {
@@ -624,7 +627,7 @@ export async function bulkDeleteVendors(
       entity_type: 'vendor',
       details: {
         count: deletedCount,
-        vendor_ids: deletedVendors?.map(v => v.id),
+        vendor_ids: result.deleted_ids,
       },
     });
   }
@@ -636,7 +639,7 @@ export async function bulkDeleteVendors(
     success: true,
     data: {
       deleted: deletedCount,
-      failed: vendorIds.length - deletedCount,
+      failed: result.failed || 0,
     },
   };
 }
