@@ -21,6 +21,7 @@ import { NextActionsPanel } from './components/next-actions-panel';
 import { AiPopulationWrapper } from './components/ai-population-wrapper';
 import { TemplateStatusTabs } from './components/template-status-tabs';
 import { OnboardingCompleteBanner } from './components/onboarding-complete-banner';
+import { DORAGapsSummary } from './components/dora-gaps-summary';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -143,6 +144,9 @@ async function RoiDashboardContent({ populateDocId }: RoiDashboardContentProps) 
         initialDocuments={populatableDocs}
         highlightDocumentId={populateDocId}
       />
+
+      {/* DORA Gaps Summary - Quick access to gap remediation */}
+      <DORAGapsSummary />
 
       {/* Two Column Layout: Actions + Stats */}
       <div className="grid gap-6 lg:grid-cols-5">

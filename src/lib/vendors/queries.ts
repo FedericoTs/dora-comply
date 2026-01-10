@@ -290,6 +290,12 @@ export async function getVendorWithRelations(
         .from('ict_services')
         .select('id', { count: 'exact', head: true })
         .eq('vendor_id', vendorId),
+      // Check if any document has parsed SOC 2 data
+      supabase
+        .from('documents')
+        .select('id, parsed_soc2!inner(id)')
+        .eq('vendor_id', vendorId)
+        .limit(1),
     ]),
   ]);
 
@@ -344,6 +350,7 @@ export async function getVendorWithRelations(
     documents_count: countsResult[0].count || 0,
     contracts_count: countsResult[1].count || 0,
     services_count: countsResult[2].count || 0,
+    has_parsed_soc2: (countsResult[3].data?.length || 0) > 0,
   };
 }
 

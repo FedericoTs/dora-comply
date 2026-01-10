@@ -232,6 +232,7 @@ export interface VendorWithRelations extends Vendor {
   documents_count?: number;
   contracts_count?: number;
   services_count?: number;
+  has_parsed_soc2?: boolean;
 }
 
 export interface VendorStats {

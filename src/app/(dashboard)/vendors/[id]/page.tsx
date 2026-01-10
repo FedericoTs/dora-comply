@@ -28,6 +28,7 @@ import {
   VendorEnrichmentTab,
   CTTPOversightPanel,
 } from '@/components/vendors/detail';
+import { AssessmentProgress } from '@/components/vendors/assessment-progress';
 import { VendorMonitoringTab } from '@/components/vendors/monitoring';
 import { SimpleBreadcrumb } from '@/components/navigation';
 import { VendorDocuments } from './vendor-documents';
@@ -140,6 +141,20 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
           </CardContent>
         </Card>
       </div>
+
+      {/* Assessment Progress */}
+      <AssessmentProgress
+        vendorId={vendor.id}
+        vendorName={vendor.name}
+        hasContacts={(vendor.contacts?.length || 0) > 0}
+        hasDocuments={(vendor.documents_count || 0) > 0}
+        hasContracts={(vendor.contracts_count || 0) > 0}
+        hasParsedSoc2={vendor.has_parsed_soc2 || false}
+        hasLei={!!vendor.lei}
+        leiVerified={!!vendor.lei_verified_at}
+        hasMonitoring={vendor.monitoring_enabled || false}
+        isCritical={vendor.tier === 'critical'}
+      />
 
       {/* GLEIF Data Status */}
       {vendor.lei && (
