@@ -133,8 +133,24 @@ export function AddVendorWizard() {
     setLeiSuggestions([]);
   };
 
-  // Navigation
-  const nextStep = () => {
+  // Navigation with validation
+  const nextStep = async () => {
+    // Define fields to validate for each step
+    const stepFields: Record<number, (keyof CreateVendorFormInput)[]> = {
+      1: ['name'],  // Step 1: name is required
+      2: ['tier'],  // Step 2: tier is required
+      3: [],        // Step 3: no required fields
+    };
+
+    // Trigger validation for current step fields
+    const fieldsToValidate = stepFields[currentStep] || [];
+    const isValid = await form.trigger(fieldsToValidate);
+
+    if (!isValid) {
+      toast.error('Please complete required fields before continuing');
+      return;
+    }
+
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }

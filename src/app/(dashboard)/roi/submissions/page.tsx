@@ -8,7 +8,6 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
-  Plus,
   Send,
   Calendar,
   Clock,
@@ -35,6 +34,7 @@ import {
   SubmissionChecklistCard,
   MiniChecklist,
 } from './components/submission-checklist';
+import { NewSubmissionButton } from './components/new-submission-button';
 
 export const metadata = {
   title: 'RoI Submissions | DORA Comply',
@@ -94,10 +94,7 @@ async function SubmissionsContent() {
             </p>
           </div>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          New Submission
-        </Button>
+        <NewSubmissionButton />
       </div>
 
       {/* Stats Cards */}

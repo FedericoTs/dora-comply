@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,18 +12,31 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   MoreHorizontal,
   Pencil,
   Trash2,
   RefreshCw,
   ExternalLink,
-  Shield
+  Shield,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { VendorLEIStatus } from './vendor-lei-status';
 import { VendorRiskGauge } from './vendor-risk-gauge';
 import type { Vendor } from '@/lib/vendors/types';
 import { getRiskLevel } from '@/lib/vendors/types';
+import { deleteVendor } from '@/lib/vendors/actions';
 
 interface VendorHeroProps {
   vendor: Vendor;
@@ -30,8 +45,37 @@ interface VendorHeroProps {
 }
 
 export function VendorHero({ vendor, onRefreshGleif, isRefreshing }: VendorHeroProps) {
+  const router = useRouter();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const isCritical = vendor.supports_critical_function;
   const riskLevel = getRiskLevel(vendor.risk_score ?? null);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteVendor(vendor.id);
+      if (result.success) {
+        toast.success('Vendor deleted', {
+          description: `${vendor.name} has been removed from your vendor list.`,
+        });
+        router.push('/vendors');
+        router.refresh();
+      } else {
+        toast.error('Failed to delete vendor', {
+          description: result.error?.message || 'An error occurred',
+        });
+      }
+    } catch (error) {
+      toast.error('Failed to delete vendor', {
+        description: error instanceof Error ? error.message : 'An error occurred',
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -68,7 +112,10 @@ export function VendorHero({ vendor, onRefreshGleif, isRefreshing }: VendorHeroP
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => setShowDeleteDialog(true)}
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete Vendor
               </DropdownMenuItem>
@@ -76,6 +123,39 @@ export function VendorHero({ vendor, onRefreshGleif, isRefreshing }: VendorHeroP
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {vendor.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the vendor and all associated data including documents,
+              contracts, and compliance records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Vendor
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Main Hero Section */}
       <div className="card-premium p-6">
