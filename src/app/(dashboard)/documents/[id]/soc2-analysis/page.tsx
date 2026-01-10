@@ -384,15 +384,19 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
                 <div className="text-xs text-muted-foreground mt-1">DORA Readiness</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-success">{effectivenessRate}%</div>
-                <div className="text-xs text-muted-foreground">SOC 2 Effective</div>
+                <div className={cn('text-3xl font-bold', doraCompliance.overallPercentage >= 70 ? 'text-success' : doraCompliance.overallPercentage >= 40 ? 'text-warning' : 'text-destructive')}>
+                  {doraCompliance.overallPercentage}%
+                </div>
+                <div className="text-xs text-muted-foreground">DORA Coverage</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold">{totalControls}</div>
-                <div className="text-xs text-muted-foreground">Controls</div>
+                <div className={cn('text-3xl font-bold', doraCompliance.criticalGaps.length > 0 ? 'text-destructive' : 'text-success')}>
+                  {doraCompliance.criticalGaps.length}
+                </div>
+                <div className="text-xs text-muted-foreground">Critical Gaps</div>
               </div>
               <div className="text-center">
-                <div className={cn('text-3xl font-bold', controlsWithException > 0 ? 'text-warning' : 'text-success')}>
+                <div className={cn('text-3xl font-bold', controlsWithException > 0 ? 'text-warning' : 'text-muted-foreground')}>
                   {controlsWithException}
                 </div>
                 <div className="text-xs text-muted-foreground">Exceptions</div>
