@@ -441,30 +441,11 @@ export async function deleteVendor(vendorId: string): Promise<ActionResult> {
     };
   }
 
-  // Check vendor exists
-  const { data: existingVendor, error: fetchError } = await supabase
-    .from('vendors')
-    .select('id, name')
-    .eq('id', vendorId)
-    .eq('organization_id', organizationId)
-    .is('deleted_at', null)
-    .single();
-
-  if (fetchError || !existingVendor) {
-    return {
-      success: false,
-      error: createVendorError('NOT_FOUND', 'Vendor not found'),
-    };
-  }
-
-  // Soft delete
-  const { error } = await supabase
-    .from('vendors')
-    .update({
-      deleted_at: new Date().toISOString(),
-      status: 'inactive',
-    })
-    .eq('id', vendorId);
+  // Use the SECURITY DEFINER function to perform soft delete
+  // This bypasses RLS issues while maintaining authorization checks
+  const { data, error } = await supabase.rpc('soft_delete_vendor', {
+    p_vendor_id: vendorId,
+  });
 
   if (error) {
     console.error('Delete vendor error:', error);
@@ -474,13 +455,25 @@ export async function deleteVendor(vendorId: string): Promise<ActionResult> {
     };
   }
 
+  // Check the function result
+  const result = data as { success: boolean; error?: string; vendor_name?: string };
+  if (!result.success) {
+    return {
+      success: false,
+      error: createVendorError(
+        result.error === 'Vendor not found' ? 'NOT_FOUND' : 'UNAUTHORIZED',
+        result.error || 'Failed to delete vendor'
+      ),
+    };
+  }
+
   // Log activity
   await supabase.from('activity_log').insert({
     organization_id: organizationId,
     action: 'deleted',
     entity_type: 'vendor',
     entity_id: vendorId,
-    entity_name: existingVendor.name,
+    entity_name: result.vendor_name || 'Unknown',
   });
 
   revalidatePath('/vendors');
