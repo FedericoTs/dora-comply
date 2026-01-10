@@ -80,14 +80,14 @@ export function OnboardingCompleteBanner({ firstIncompleteTemplate }: Onboarding
             <div className="flex flex-wrap gap-2 pt-1">
               {firstIncompleteTemplate ? (
                 <Button asChild size="sm">
-                  <Link href={`/roi/templates/${firstIncompleteTemplate.id}`}>
+                  <Link href={`/roi/${firstIncompleteTemplate.id}`}>
                     Start with {firstIncompleteTemplate.name}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               ) : (
                 <Button asChild size="sm">
-                  <Link href="/roi/templates">
+                  <Link href="/roi">
                     View All Templates
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>

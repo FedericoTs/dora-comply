@@ -23,9 +23,13 @@ import { AuthCard } from '@/components/auth';
 import { PasswordInput } from '@/components/auth';
 import { login, loginSchema, type LoginInput } from '@/lib/auth';
 
-export function LoginForm() {
+interface LoginFormProps {
+  initialError?: string;
+}
+
+export function LoginForm({ initialError }: LoginFormProps) {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError || null);
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginInput>({
@@ -64,9 +68,9 @@ export function LoginForm() {
       description="Sign in to your account to continue"
       footer={
         <p>
-          Need access?{' '}
-          <Link href="/contact" className="font-medium text-primary hover:underline">
-            Request access
+          Don&apos;t have an account?{' '}
+          <Link href="/register" className="font-medium text-primary hover:underline">
+            Create account
           </Link>
         </p>
       }

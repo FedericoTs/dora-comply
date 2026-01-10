@@ -797,7 +797,7 @@ export async function getNextActions(): Promise<NextAction[]> {
         description: `Only ${stat.completeness}% complete - ${stat.rowCount} records need attention`,
         templateId: stat.templateId,
         estimatedMinutes: Math.ceil((100 - stat.completeness) / 10),
-        actionUrl: `/roi/templates/${stat.templateId}`,
+        actionUrl: `/roi/${stat.templateId}`,
       });
     }
 
@@ -811,7 +811,7 @@ export async function getNextActions(): Promise<NextAction[]> {
         description: 'This required template has no data yet',
         templateId: stat.templateId,
         estimatedMinutes: 15,
-        actionUrl: `/roi/templates/${stat.templateId}`,
+        actionUrl: `/roi/${stat.templateId}`,
       });
     }
   }
@@ -871,7 +871,7 @@ export async function getNextActions(): Promise<NextAction[]> {
         description: `${stat.completeness}% complete - just a few fields remaining`,
         templateId: stat.templateId,
         estimatedMinutes: Math.ceil((100 - stat.completeness) / 20),
-        actionUrl: `/roi/templates/${stat.templateId}`,
+        actionUrl: `/roi/${stat.templateId}`,
       });
     }
   }

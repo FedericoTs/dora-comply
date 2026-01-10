@@ -41,6 +41,8 @@ import { DeadlineBadgeStatic } from '@/components/incidents/deadline-badge';
 import { DeleteIncidentButton } from '@/components/incidents/delete-incident-button';
 import { IncidentExportButton } from '@/components/incidents/incident-export-button';
 import { IncidentLifecycle } from '@/components/incidents/incident-lifecycle';
+import { IncidentStatusDropdown } from '@/components/incidents/incident-status-dropdown';
+import { AddEventDialog } from '@/components/incidents/add-event-dialog';
 
 interface IncidentDetailPageProps {
   params: Promise<{ id: string }>;
@@ -153,9 +155,11 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
               <span className="text-sm font-mono text-muted-foreground">
                 {incident.incident_ref}
               </span>
-              <Badge variant="outline" className={getStatusStyles(incident.status)}>
-                {getStatusLabel(incident.status)}
-              </Badge>
+              <IncidentStatusDropdown
+                incidentId={incident.id}
+                currentStatus={incident.status}
+                classification={incident.classification}
+              />
             </div>
             <h1 className="text-2xl font-semibold tracking-tight">{incident.title}</h1>
           </div>
@@ -443,9 +447,12 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
 
         <TabsContent value="timeline" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Incident Timeline</CardTitle>
-              <CardDescription>Chronological events for this incident</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Incident Timeline</CardTitle>
+                <CardDescription>Chronological events for this incident</CardDescription>
+              </div>
+              <AddEventDialog incidentId={incident.id} />
             </CardHeader>
             <CardContent>
               {events.length === 0 ? (

@@ -43,6 +43,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -121,10 +131,17 @@ export default function TeamSettingsPage() {
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteEmailError, setInviteEmailError] = useState<string | null>(null);
   const [inviteRole, setInviteRole] = useState<string>('analyst');
   const [isInviting, setIsInviting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [processingInviteId, setProcessingInviteId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'role_change' | 'remove';
+    memberId: string;
+    memberName: string;
+    newRole?: string;
+  } | null>(null);
 
   // Load team members and invitations
   useEffect(() => {
@@ -155,10 +172,28 @@ export default function TeamSettingsPage() {
     loadTeamData();
   }, []);
 
+  // Validate email format
+  function validateEmail(email: string): string | null {
+    if (!email) return 'Email is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    if (members.some(m => m.email.toLowerCase() === email.toLowerCase())) {
+      return 'This person is already a team member';
+    }
+    if (invitations.some(i => i.email.toLowerCase() === email.toLowerCase())) {
+      return 'An invitation has already been sent to this email';
+    }
+    return null;
+  }
+
   // Invite team member
   async function handleInvite() {
-    if (!inviteEmail) return;
-
+    const error = validateEmail(inviteEmail);
+    if (error) {
+      setInviteEmailError(error);
+      return;
+    }
+    setInviteEmailError(null);
     setIsInviting(true);
     try {
       const response = await fetch('/api/settings/team/invite', {
@@ -254,45 +289,68 @@ export default function TeamSettingsPage() {
     }
   }
 
-  // Update member role
-  async function handleRoleChange(memberId: string, newRole: string) {
-    try {
-      const response = await fetch(`/api/settings/team/${memberId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: newRole }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update role');
-      }
-
-      setMembers(
-        members.map((m) =>
-          m.id === memberId ? { ...m, role: newRole as TeamMember['role'] } : m
-        )
-      );
-      toast.success('Role updated');
-    } catch {
-      toast.error('Failed to update role');
-    }
+  // Request role change confirmation
+  function requestRoleChange(memberId: string, memberName: string, newRole: string) {
+    setConfirmAction({
+      type: 'role_change',
+      memberId,
+      memberName,
+      newRole,
+    });
   }
 
-  // Remove member
-  async function handleRemove(memberId: string) {
-    try {
-      const response = await fetch(`/api/settings/team/${memberId}`, {
-        method: 'DELETE',
-      });
+  // Request member removal confirmation
+  function requestRemove(memberId: string, memberName: string) {
+    setConfirmAction({
+      type: 'remove',
+      memberId,
+      memberName,
+    });
+  }
 
-      if (!response.ok) {
-        throw new Error('Failed to remove member');
+  // Execute confirmed action
+  async function executeConfirmedAction() {
+    if (!confirmAction) return;
+
+    const { type, memberId, newRole } = confirmAction;
+    setConfirmAction(null);
+
+    if (type === 'role_change' && newRole) {
+      try {
+        const response = await fetch(`/api/settings/team/${memberId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: newRole }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update role');
+        }
+
+        setMembers(
+          members.map((m) =>
+            m.id === memberId ? { ...m, role: newRole as TeamMember['role'] } : m
+          )
+        );
+        toast.success('Role updated');
+      } catch {
+        toast.error('Failed to update role');
       }
+    } else if (type === 'remove') {
+      try {
+        const response = await fetch(`/api/settings/team/${memberId}`, {
+          method: 'DELETE',
+        });
 
-      setMembers(members.filter((m) => m.id !== memberId));
-      toast.success('Team member removed');
-    } catch {
-      toast.error('Failed to remove member');
+        if (!response.ok) {
+          throw new Error('Failed to remove member');
+        }
+
+        setMembers(members.filter((m) => m.id !== memberId));
+        toast.success('Team member removed');
+      } catch {
+        toast.error('Failed to remove member');
+      }
     }
   }
 
@@ -357,7 +415,14 @@ export default function TeamSettingsPage() {
           </p>
         </div>
 
-        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <Dialog open={inviteOpen} onOpenChange={(open) => {
+          setInviteOpen(open);
+          if (!open) {
+            setInviteEmail('');
+            setInviteEmailError(null);
+            setInviteRole('analyst');
+          }
+        }}>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="h-4 w-4 mr-2" />
@@ -379,8 +444,16 @@ export default function TeamSettingsPage() {
                   type="email"
                   placeholder="colleague@company.com"
                   value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
+                  onChange={(e) => {
+                    setInviteEmail(e.target.value);
+                    if (inviteEmailError) setInviteEmailError(null);
+                  }}
+                  className={cn(inviteEmailError && 'border-destructive')}
+                  aria-invalid={!!inviteEmailError}
                 />
+                {inviteEmailError && (
+                  <p className="text-sm text-destructive">{inviteEmailError}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
@@ -626,26 +699,26 @@ export default function TeamSettingsPage() {
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => handleRoleChange(member.id, 'admin')}
+                            onClick={() => requestRoleChange(member.id, member.fullName || member.email, 'admin')}
                             disabled={member.role === 'admin'}
                           >
                             Make Administrator
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleRoleChange(member.id, 'analyst')}
+                            onClick={() => requestRoleChange(member.id, member.fullName || member.email, 'analyst')}
                             disabled={member.role === 'analyst'}
                           >
                             Make Analyst
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleRoleChange(member.id, 'viewer')}
+                            onClick={() => requestRoleChange(member.id, member.fullName || member.email, 'viewer')}
                             disabled={member.role === 'viewer'}
                           >
                             Make Viewer
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => handleRemove(member.id)}
+                            onClick={() => requestRemove(member.id, member.fullName || member.email)}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
@@ -661,6 +734,42 @@ export default function TeamSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === 'remove'
+                ? 'Remove team member?'
+                : 'Change role?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.type === 'remove' ? (
+                <>
+                  Are you sure you want to remove <strong>{confirmAction?.memberName}</strong> from the team?
+                  They will lose access to all organization data immediately.
+                </>
+              ) : (
+                <>
+                  Change <strong>{confirmAction?.memberName}</strong>&apos;s role to{' '}
+                  <strong>{ROLE_CONFIG[confirmAction?.newRole as keyof typeof ROLE_CONFIG]?.label}</strong>?
+                  This will change their permissions immediately.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeConfirmedAction}
+              className={confirmAction?.type === 'remove' ? 'bg-destructive hover:bg-destructive/90' : ''}
+            >
+              {confirmAction?.type === 'remove' ? 'Remove' : 'Change Role'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

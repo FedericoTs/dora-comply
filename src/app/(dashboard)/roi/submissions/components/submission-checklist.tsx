@@ -292,7 +292,7 @@ function ChecklistItemRow({ item, onClick, onMarkComplete }: ChecklistItemRowPro
                   className="h-6 w-6"
                   asChild
                 >
-                  <Link href={`/roi/templates/${item.templateId}`}>
+                  <Link href={`/roi/${item.templateId}`}>
                     <ExternalLink className="h-3 w-3" />
                   </Link>
                 </Button>

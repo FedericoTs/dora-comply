@@ -1,10 +1,11 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { checkAuthStatus } from '@/lib/auth';
+import { RegisterForm } from './register-form';
 
 export const metadata: Metadata = {
-  title: 'Request Access | DORA Comply',
-  description: 'Request access to DORA Comply',
+  title: 'Create Account | DORA Comply',
+  description: 'Create your DORA Comply account to start your compliance journey',
 };
 
 export default async function RegisterPage() {
@@ -14,6 +15,5 @@ export default async function RegisterPage() {
     redirect(needsOnboarding ? '/onboarding' : '/dashboard');
   }
 
-  // Public registration is disabled - redirect to contact page
-  redirect('/contact?source=register');
+  return <RegisterForm />;
 }
