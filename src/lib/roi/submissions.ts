@@ -305,3 +305,301 @@ export async function generateSubmissionChecklist(
     isComplete: requiredComplete,
   };
 }
+
+// ============================================================================
+// Approval Workflow Functions
+// ============================================================================
+
+export type ApprovalStatus = 'pending_review' | 'reviewed' | 'pending_approval' | 'approved' | 'rejected';
+
+export interface SubmissionApprovalInfo {
+  approvalStatus: ApprovalStatus;
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewedAt?: Date;
+  reviewNotes?: string;
+  approvedBy?: string;
+  approvedByName?: string;
+  approvedAt?: Date;
+  approvalNotes?: string;
+}
+
+/**
+ * Fetch submission approval status
+ */
+export async function fetchSubmissionApproval(
+  submissionId: string
+): Promise<SubmissionApprovalInfo | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('roi_submissions')
+    .select(`
+      approval_status,
+      reviewed_by,
+      reviewed_at,
+      review_notes,
+      approved_by,
+      approved_at,
+      approval_notes,
+      reviewer:users!reviewed_by(full_name),
+      approver:users!approved_by(full_name)
+    `)
+    .eq('id', submissionId)
+    .single();
+
+  if (error || !data) {
+    console.error('Error fetching approval info:', error);
+    return null;
+  }
+
+  return {
+    approvalStatus: (data.approval_status || 'pending_review') as ApprovalStatus,
+    reviewedBy: data.reviewed_by,
+    reviewedByName: data.reviewer?.full_name,
+    reviewedAt: data.reviewed_at ? new Date(data.reviewed_at) : undefined,
+    reviewNotes: data.review_notes,
+    approvedBy: data.approved_by,
+    approvedByName: data.approver?.full_name,
+    approvedAt: data.approved_at ? new Date(data.approved_at) : undefined,
+    approvalNotes: data.approval_notes,
+  };
+}
+
+/**
+ * Submit submission for review
+ * Called by data owner when data entry is complete
+ */
+export async function submitForReview(
+  submissionId: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('roi_submissions')
+    .update({
+      approval_status: 'pending_review',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', submissionId);
+
+  if (error) {
+    console.error('Error submitting for review:', error);
+    return { success: false, error: error.message };
+  }
+
+  await addSubmissionComment(submissionId, 'Submitted for data review', 'status_change');
+  return { success: true };
+}
+
+/**
+ * Mark submission as reviewed
+ * Called by designated reviewer to confirm data accuracy
+ */
+export async function markAsReviewed(
+  submissionId: string,
+  notes?: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  // Check user has permission (admin or owner)
+  const { data: userInfo } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userData.user.id)
+    .single();
+
+  if (!userInfo || !['owner', 'admin', 'analyst'].includes(userInfo.role)) {
+    return { success: false, error: 'Insufficient permissions to review' };
+  }
+
+  const { error } = await supabase
+    .from('roi_submissions')
+    .update({
+      approval_status: 'reviewed',
+      reviewed_by: userData.user.id,
+      reviewed_at: new Date().toISOString(),
+      review_notes: notes || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', submissionId);
+
+  if (error) {
+    console.error('Error marking as reviewed:', error);
+    return { success: false, error: error.message };
+  }
+
+  await addSubmissionComment(
+    submissionId,
+    `Data review completed${notes ? `: ${notes}` : ''}`,
+    'status_change'
+  );
+  return { success: true };
+}
+
+/**
+ * Submit for management approval
+ * Called after review is complete
+ */
+export async function submitForApproval(
+  submissionId: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  // Verify review is complete
+  const { data: submission } = await supabase
+    .from('roi_submissions')
+    .select('approval_status, reviewed_by')
+    .eq('id', submissionId)
+    .single();
+
+  if (!submission?.reviewed_by) {
+    return { success: false, error: 'Data review must be completed first' };
+  }
+
+  const { error } = await supabase
+    .from('roi_submissions')
+    .update({
+      approval_status: 'pending_approval',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', submissionId);
+
+  if (error) {
+    console.error('Error submitting for approval:', error);
+    return { success: false, error: error.message };
+  }
+
+  await addSubmissionComment(submissionId, 'Submitted for management approval', 'status_change');
+  return { success: true };
+}
+
+/**
+ * Approve submission for regulatory filing
+ * Called by authorized management (owner/admin only)
+ */
+export async function approveSubmission(
+  submissionId: string,
+  notes?: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  // Check user has approval permission (owner or admin only)
+  const { data: userInfo } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userData.user.id)
+    .single();
+
+  if (!userInfo || !['owner', 'admin'].includes(userInfo.role)) {
+    return { success: false, error: 'Only owners and administrators can approve submissions' };
+  }
+
+  // Verify review is complete
+  const { data: submission } = await supabase
+    .from('roi_submissions')
+    .select('approval_status, reviewed_by')
+    .eq('id', submissionId)
+    .single();
+
+  if (!submission?.reviewed_by) {
+    return { success: false, error: 'Data review must be completed before approval' };
+  }
+
+  const { error } = await supabase
+    .from('roi_submissions')
+    .update({
+      approval_status: 'approved',
+      approved_by: userData.user.id,
+      approved_at: new Date().toISOString(),
+      approval_notes: notes || null,
+      status: 'ready', // Mark as ready for submission
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', submissionId);
+
+  if (error) {
+    console.error('Error approving submission:', error);
+    return { success: false, error: error.message };
+  }
+
+  await addSubmissionComment(
+    submissionId,
+    `Management approval granted${notes ? `: ${notes}` : ''}`,
+    'status_change'
+  );
+  return { success: true };
+}
+
+/**
+ * Reject submission with feedback
+ * Called by reviewer or approver when changes are needed
+ */
+export async function rejectSubmission(
+  submissionId: string,
+  reason: string,
+  stage: 'review' | 'approval'
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  const updateData: Record<string, unknown> = {
+    approval_status: 'rejected',
+    updated_at: new Date().toISOString(),
+  };
+
+  if (stage === 'review') {
+    updateData.review_notes = reason;
+  } else {
+    updateData.approval_notes = reason;
+  }
+
+  const { error } = await supabase
+    .from('roi_submissions')
+    .update(updateData)
+    .eq('id', submissionId);
+
+  if (error) {
+    console.error('Error rejecting submission:', error);
+    return { success: false, error: error.message };
+  }
+
+  await addSubmissionComment(
+    submissionId,
+    `${stage === 'review' ? 'Review' : 'Approval'} rejected: ${reason}`,
+    'status_change'
+  );
+  return { success: true };
+}
+
+/**
+ * Get approval status for checklist
+ */
+export async function getApprovalChecklistStatus(
+  submissionId: string
+): Promise<{ reviewComplete: boolean; approvalComplete: boolean }> {
+  const approval = await fetchSubmissionApproval(submissionId);
+
+  if (!approval) {
+    return { reviewComplete: false, approvalComplete: false };
+  }
+
+  return {
+    reviewComplete: !!approval.reviewedBy && approval.approvalStatus !== 'rejected',
+    approvalComplete: !!approval.approvedBy && approval.approvalStatus === 'approved',
+  };
+}

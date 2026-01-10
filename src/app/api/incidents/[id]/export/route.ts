@@ -19,6 +19,8 @@ import {
   getReportTypeLabel,
   type ReportType,
 } from '@/lib/incidents/types';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ExportParams {
   params: Promise<{ id: string }>;
@@ -282,220 +284,323 @@ function buildExportData(
 
 async function generateIncidentPdf(
   data: ExportData,
-  reportType: ReportType | null
+  _reportType: ReportType | null
 ): Promise<Buffer> {
-  // Simple HTML-to-PDF approach using inline styles
-  // In production, use a library like @react-pdf/renderer, puppeteer, or jsPDF
+  // Create PDF document (A4 size)
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
 
-  const html = buildPdfHtml(data, reportType);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 20;
+  const contentWidth = pageWidth - 2 * margin;
+  let y = margin;
 
-  // For now, return a basic text representation
-  // A full implementation would use puppeteer or similar
-  const textContent = buildTextContent(data, reportType);
+  // Colors
+  const primaryColor: [number, number, number] = [224, 122, 95]; // #E07A5F
+  const darkColor: [number, number, number] = [26, 26, 26];
+  const grayColor: [number, number, number] = [107, 114, 128];
 
-  // Return as UTF-8 text buffer (will be replaced with actual PDF)
-  return Buffer.from(textContent, 'utf-8');
-}
-
-function buildTextContent(data: ExportData, reportType: ReportType | null): string {
-  const lines: string[] = [];
-  const hr = '='.repeat(60);
-  const sr = '-'.repeat(40);
-
-  // Header
-  lines.push(hr);
-  lines.push(data.reportTitle.toUpperCase());
-  lines.push(hr);
-  lines.push('');
-  lines.push(`Generated: ${new Date(data.generatedAt).toLocaleString('en-GB')}`);
-  if (data.organization) {
-    lines.push(`Organization: ${data.organization.name}`);
-    if (data.organization.lei) {
-      lines.push(`LEI: ${data.organization.lei}`);
+  // Helper function to add a new page if needed
+  const checkPage = (requiredSpace: number = 40): void => {
+    if (y + requiredSpace > doc.internal.pageSize.getHeight() - margin) {
+      doc.addPage();
+      y = margin;
     }
-  }
-  lines.push('');
+  };
 
-  // DORA Compliance Header
-  lines.push(sr);
-  lines.push('DORA ARTICLE 19 - ICT-RELATED INCIDENT NOTIFICATION');
-  lines.push(sr);
-  lines.push('');
+  // Helper function to add a section header
+  const addSectionHeader = (title: string): void => {
+    checkPage(25);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...darkColor);
+    doc.text(title, margin, y);
+    y += 2;
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, margin + 40, y);
+    y += 8;
+  };
 
-  // Incident Summary
-  lines.push('1. INCIDENT IDENTIFICATION');
-  lines.push(sr);
-  lines.push(`Reference:      ${data.incident.ref}`);
-  lines.push(`Classification: ${data.incident.classificationLabel}`);
-  lines.push(`Type:           ${data.incident.typeLabel}`);
-  lines.push(`Status:         ${data.incident.statusLabel}`);
-  lines.push(`Title:          ${data.incident.title}`);
+  // Helper function to add a key-value pair
+  const addField = (label: string, value: string | null | undefined): void => {
+    if (!value) return;
+    checkPage(10);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...grayColor);
+    doc.text(label, margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...darkColor);
+    const splitValue = doc.splitTextToSize(value, contentWidth - 45);
+    doc.text(splitValue, margin + 45, y);
+    y += 5 * Math.max(1, splitValue.length);
+  };
+
+  // ===== HEADER =====
+  // Logo/Title bar
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, 0, pageWidth, 35, 'F');
+
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('DORA Comply', margin, 15);
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('ICT Incident Report - Article 19', margin, 23);
+
+  // Classification badge
+  const classColor = getClassificationColor(data.incident.classification);
+  doc.setFillColor(...classColor);
+  doc.roundedRect(pageWidth - margin - 35, 10, 35, 15, 2, 2, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text(data.incident.classificationLabel.toUpperCase(), pageWidth - margin - 32, 19);
+
+  y = 45;
+
+  // Document info box
+  doc.setFillColor(249, 250, 251);
+  doc.setDrawColor(229, 231, 235);
+  doc.rect(margin, y, contentWidth, 25, 'FD');
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...darkColor);
+  doc.text(data.reportTitle, margin + 5, y + 8);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...grayColor);
+  const infoLine = [
+    `Reference: ${data.incident.ref}`,
+    data.organization?.name ? `Organization: ${data.organization.name}` : null,
+    `Generated: ${formatDateTime(data.generatedAt)}`,
+  ].filter(Boolean).join('  |  ');
+  doc.text(infoLine, margin + 5, y + 18);
+
+  y += 35;
+
+  // ===== 1. INCIDENT IDENTIFICATION =====
+  addSectionHeader('1. INCIDENT IDENTIFICATION');
+  addField('Reference:', data.incident.ref);
+  addField('Title:', data.incident.title);
+  addField('Classification:', data.incident.classificationLabel);
+  addField('Type:', data.incident.typeLabel);
+  addField('Status:', data.incident.statusLabel);
   if (data.incident.description) {
-    lines.push(`Description:    ${data.incident.description}`);
+    addField('Description:', data.incident.description);
   }
-  lines.push('');
+  if (data.organization?.lei) {
+    addField('Entity LEI:', data.organization.lei);
+  }
+  y += 5;
 
-  // Timeline
-  lines.push('2. INCIDENT TIMELINE');
-  lines.push(sr);
-  lines.push(`Detection:      ${formatDateTime(data.timeline.detected)}`);
-  if (data.timeline.occurred) {
-    lines.push(`Occurrence:     ${formatDateTime(data.timeline.occurred)}`);
-  }
-  if (data.timeline.recovered) {
-    lines.push(`Recovery:       ${formatDateTime(data.timeline.recovered)}`);
-  }
-  if (data.timeline.resolved) {
-    lines.push(`Resolution:     ${formatDateTime(data.timeline.resolved)}`);
-  }
-  if (data.timeline.durationHours) {
-    lines.push(`Duration:       ${data.timeline.durationHours} hours`);
-  }
-  lines.push('');
+  // ===== 2. INCIDENT TIMELINE =====
+  addSectionHeader('2. INCIDENT TIMELINE');
 
-  // Impact Assessment
-  lines.push('3. IMPACT ASSESSMENT');
-  lines.push(sr);
+  // Timeline table
+  checkPage(30);
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    head: [['Event', 'Date/Time']],
+    body: [
+      ['Detection', formatDateTime(data.timeline.detected)],
+      ...(data.timeline.occurred ? [['Occurrence', formatDateTime(data.timeline.occurred)]] : []),
+      ...(data.timeline.recovered ? [['Recovery', formatDateTime(data.timeline.recovered)]] : []),
+      ...(data.timeline.resolved ? [['Resolution', formatDateTime(data.timeline.resolved)]] : []),
+      ...(data.timeline.durationHours ? [['Total Duration', `${data.timeline.durationHours} hours`]] : []),
+    ],
+    headStyles: {
+      fillColor: primaryColor,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 9,
+    },
+    bodyStyles: {
+      fontSize: 9,
+      textColor: darkColor,
+    },
+    alternateRowStyles: {
+      fillColor: [249, 250, 251],
+    },
+    theme: 'grid',
+  });
+
+  y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+
+  // ===== 3. IMPACT ASSESSMENT =====
+  addSectionHeader('3. IMPACT ASSESSMENT');
+
+  // Impact metrics
+  const impactRows: [string, string][] = [];
   if (data.impact.clientsAffected !== null) {
-    const pct = data.impact.clientsPercentage !== null
-      ? ` (${data.impact.clientsPercentage}%)`
-      : '';
-    lines.push(`Clients Affected:       ${data.impact.clientsAffected.toLocaleString()}${pct}`);
+    const pct = data.impact.clientsPercentage !== null ? ` (${data.impact.clientsPercentage}%)` : '';
+    impactRows.push(['Clients Affected', `${data.impact.clientsAffected.toLocaleString()}${pct}`]);
   }
   if (data.impact.transactionsAffected !== null) {
-    lines.push(`Transactions Affected:  ${data.impact.transactionsAffected.toLocaleString()}`);
+    impactRows.push(['Transactions Affected', data.impact.transactionsAffected.toLocaleString()]);
   }
   if (data.impact.transactionValue !== null) {
-    lines.push(`Transaction Value:      EUR ${data.impact.transactionValue.toLocaleString()}`);
+    impactRows.push(['Transaction Value (EUR)', `€${data.impact.transactionValue.toLocaleString()}`]);
   }
   if (data.impact.economicImpact !== null) {
-    lines.push(`Economic Impact:        EUR ${data.impact.economicImpact.toLocaleString()}`);
+    impactRows.push(['Economic Impact (EUR)', `€${data.impact.economicImpact.toLocaleString()}`]);
   }
   if (data.impact.dataBreachFlag) {
-    lines.push(`Data Breach:            YES`);
+    impactRows.push(['Data Breach', 'YES']);
     if (data.impact.dataRecordsAffected !== null) {
-      lines.push(`Records Affected:       ${data.impact.dataRecordsAffected.toLocaleString()}`);
+      impactRows.push(['Data Records Affected', data.impact.dataRecordsAffected.toLocaleString()]);
     }
   }
   if (data.impact.reputationalImpact) {
-    lines.push(`Reputational Impact:    ${data.impact.reputationalImpact.toUpperCase()}`);
+    impactRows.push(['Reputational Impact', data.impact.reputationalImpact.toUpperCase()]);
   }
-  lines.push('');
+
+  if (impactRows.length > 0) {
+    checkPage(impactRows.length * 8 + 15);
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Metric', 'Value']],
+      body: impactRows,
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: darkColor,
+      },
+      alternateRowStyles: {
+        fillColor: [249, 250, 251],
+      },
+      theme: 'grid',
+    });
+    y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5;
+  }
 
   // Services & Functions
   if (data.impact.servicesAffected.length > 0) {
-    lines.push('Services Affected:');
-    data.impact.servicesAffected.forEach(s => lines.push(`  - ${s}`));
-    lines.push('');
+    checkPage(15);
+    addField('Services Affected:', data.impact.servicesAffected.join(', '));
   }
   if (data.impact.criticalFunctions.length > 0) {
-    lines.push('Critical Functions Affected:');
-    data.impact.criticalFunctions.forEach(f => lines.push(`  - ${f}`));
-    lines.push('');
+    checkPage(15);
+    addField('Critical Functions:', data.impact.criticalFunctions.join(', '));
   }
   if (data.impact.geographicSpread.length > 0) {
-    lines.push('Geographic Spread:');
-    data.impact.geographicSpread.forEach(g => lines.push(`  - ${g}`));
-    lines.push('');
+    checkPage(15);
+    addField('Geographic Spread:', data.impact.geographicSpread.join(', '));
   }
+  y += 5;
 
-  // Third-Party Involvement
+  // ===== 4. THIRD-PARTY INVOLVEMENT =====
   if (data.vendor) {
-    lines.push('4. THIRD-PARTY INVOLVEMENT');
-    lines.push(sr);
-    lines.push(`ICT Provider:   ${data.vendor.name}`);
+    addSectionHeader('4. THIRD-PARTY INVOLVEMENT');
+    addField('ICT Provider:', data.vendor.name);
     if (data.vendor.lei) {
-      lines.push(`Provider LEI:   ${data.vendor.lei}`);
+      addField('Provider LEI:', data.vendor.lei);
     }
-    lines.push('');
+    y += 5;
   }
 
-  // Root Cause & Remediation
-  if (data.analysis.rootCause || data.analysis.remediationActions) {
-    lines.push('5. ROOT CAUSE AND REMEDIATION');
-    lines.push(sr);
+  // ===== 5. ROOT CAUSE & REMEDIATION =====
+  if (data.analysis.rootCause || data.analysis.remediationActions || data.analysis.lessonsLearned) {
+    addSectionHeader('5. ROOT CAUSE AND REMEDIATION');
     if (data.analysis.rootCause) {
-      lines.push(`Root Cause:`);
-      lines.push(data.analysis.rootCause);
-      lines.push('');
+      addField('Root Cause:', data.analysis.rootCause);
     }
     if (data.analysis.remediationActions) {
-      lines.push(`Remediation Actions:`);
-      lines.push(data.analysis.remediationActions);
-      lines.push('');
+      addField('Remediation:', data.analysis.remediationActions);
     }
     if (data.analysis.lessonsLearned) {
-      lines.push(`Lessons Learned:`);
-      lines.push(data.analysis.lessonsLearned);
-      lines.push('');
+      addField('Lessons Learned:', data.analysis.lessonsLearned);
     }
+    y += 5;
   }
 
-  // Classification Override
+  // ===== 6. CLASSIFICATION OVERRIDE =====
   if (data.classificationOverride.isOverride) {
-    lines.push('6. CLASSIFICATION OVERRIDE');
-    lines.push(sr);
-    lines.push(`Original Classification: ${data.classificationOverride.calculatedClassification || 'N/A'}`);
-    lines.push(`Override Justification:`);
-    lines.push(data.classificationOverride.justification || 'None provided');
-    lines.push('');
+    addSectionHeader('6. CLASSIFICATION OVERRIDE');
+    addField('Original Class.:', data.classificationOverride.calculatedClassification || 'N/A');
+    addField('Justification:', data.classificationOverride.justification || 'None provided');
+    y += 5;
   }
 
-  // Report History
+  // ===== 7. REPORT HISTORY =====
   if (data.reports.length > 0) {
-    lines.push('7. REPORT SUBMISSION HISTORY');
-    lines.push(sr);
-    data.reports.forEach(r => {
-      const submitted = r.submittedAt
-        ? `Submitted: ${formatDateTime(r.submittedAt)}`
-        : `Deadline: ${formatDateTime(r.deadline)}`;
-      lines.push(`${r.typeLabel} (v${r.version}) - ${r.status.toUpperCase()} - ${submitted}`);
+    addSectionHeader('7. REPORT SUBMISSION HISTORY');
+    checkPage(data.reports.length * 8 + 15);
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Report Type', 'Version', 'Status', 'Date']],
+      body: data.reports.map((r) => [
+        r.typeLabel,
+        `v${r.version}`,
+        r.status.toUpperCase(),
+        r.submittedAt ? formatDateTime(r.submittedAt) : `Due: ${formatDateTime(r.deadline)}`,
+      ]),
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: darkColor,
+      },
+      alternateRowStyles: {
+        fillColor: [249, 250, 251],
+      },
+      theme: 'grid',
     });
-    lines.push('');
+    y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
   }
 
-  // Footer
-  lines.push(hr);
-  lines.push('END OF REPORT');
-  lines.push(`Generated by DORA Comply - ${new Date().toISOString()}`);
-  lines.push(hr);
+  // ===== FOOTER =====
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    const footerY = doc.internal.pageSize.getHeight() - 10;
+    doc.setDrawColor(229, 231, 235);
+    doc.setLineWidth(0.3);
+    doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
 
-  return lines.join('\n');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...grayColor);
+    doc.text(`DORA Comply - Confidential`, margin, footerY);
+    doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin - 20, footerY);
+    doc.text(new Date().toISOString().split('T')[0], pageWidth / 2 - 10, footerY);
+  }
+
+  // Return as Buffer
+  const arrayBuffer = doc.output('arraybuffer');
+  return Buffer.from(arrayBuffer);
 }
 
-function buildPdfHtml(data: ExportData, reportType: ReportType | null): string {
-  // HTML template for PDF generation (for future puppeteer/wkhtmltopdf integration)
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>${data.reportTitle}</title>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.5; color: #333; padding: 40px; }
-    h1 { color: #1a1a1a; border-bottom: 2px solid #e07a5f; padding-bottom: 10px; }
-    h2 { color: #444; margin-top: 30px; }
-    .header { background: #f9fafb; padding: 20px; border-left: 4px solid #e07a5f; margin-bottom: 30px; }
-    .classification-major { color: #dc2626; font-weight: bold; }
-    .classification-significant { color: #d97706; font-weight: bold; }
-    .classification-minor { color: #6b7280; }
-    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-    th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: left; }
-    th { background: #f3f4f6; }
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; }
-  </style>
-</head>
-<body>
-  <h1>${data.reportTitle}</h1>
-  <div class="header">
-    <strong>DORA Article 19 - ICT-Related Incident Notification</strong><br>
-    Generated: ${new Date(data.generatedAt).toLocaleString('en-GB')}<br>
-    ${data.organization ? `Organization: ${data.organization.name}` : ''}
-  </div>
-  <!-- Content would continue... -->
-</body>
-</html>
-  `;
+// Get color based on classification
+function getClassificationColor(classification: string): [number, number, number] {
+  switch (classification) {
+    case 'major':
+      return [220, 38, 38]; // Red
+    case 'significant':
+      return [217, 119, 6]; // Orange
+    default:
+      return [107, 114, 128]; // Gray
+  }
 }
 
 function formatDateTime(iso: string): string {

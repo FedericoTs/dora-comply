@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 // Valid roles aligned with DORA compliance responsibilities
-const VALID_ROLES = ['admin', 'member', 'viewer'] as const;
+const VALID_ROLES = ['admin', 'analyst', 'viewer'] as const;
 
 export async function PATCH(
   request: NextRequest,
@@ -91,7 +91,7 @@ export async function PATCH(
 
     if (!role || !VALID_ROLES.includes(role)) {
       return NextResponse.json(
-        { error: { message: 'Invalid role. Must be admin, member, or viewer' } },
+        { error: { message: 'Invalid role. Must be admin, analyst, or viewer' } },
         { status: 400 }
       );
     }

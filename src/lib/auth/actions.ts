@@ -21,6 +21,12 @@ import {
   type OnboardingInput,
 } from './schemas';
 import type { ActionResult, AuthError, AuthErrorCode, User } from './types';
+import {
+  checkLoginRateLimit,
+  recordLoginAttempt,
+  logAuthEvent,
+  requiresMFA,
+} from './audit';
 
 // ============================================================================
 // Helper Functions
@@ -69,25 +75,85 @@ export async function login(formData: LoginInput): Promise<ActionResult<{ redire
     };
   }
 
+  const email = result.data.email;
+
+  // Check rate limiting BEFORE attempting login
+  const rateLimit = await checkLoginRateLimit(email);
+  if (rateLimit.isLimited) {
+    await logAuthEvent({
+      eventType: 'login_failed',
+      result: 'blocked',
+      failureReason: 'Rate limited',
+      metadata: { email, lockedUntil: rateLimit.lockedUntil?.toISOString() },
+    });
+
+    const minutesRemaining = rateLimit.lockedUntil
+      ? Math.ceil((rateLimit.lockedUntil.getTime() - Date.now()) / 60000)
+      : 15;
+
+    return {
+      success: false,
+      error: createAuthError(
+        'RATE_LIMITED',
+        `Too many login attempts. Please try again in ${minutesRemaining} minutes.`
+      ),
+    };
+  }
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: result.data.email,
+    email: email,
     password: result.data.password,
   });
 
   if (error) {
+    // Record failed attempt for rate limiting
+    await recordLoginAttempt(email, false, error.message);
+
+    // Log failed login
+    await logAuthEvent({
+      eventType: 'login_failed',
+      result: 'failure',
+      failureReason: error.message,
+      metadata: { email },
+    });
+
     return {
       success: false,
       error: mapSupabaseError(error),
     };
   }
 
-  // Check if MFA is required
-  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  // Record successful attempt
+  await recordLoginAttempt(email, true);
 
-  // If MFA is enrolled (nextLevel is aal2) but not verified (currentLevel is not aal2)
-  if (aal?.nextLevel === 'aal2' && aal?.currentLevel !== 'aal2') {
+  // Get user role to check MFA requirements
+  const { data: userData } = await supabase
+    .from('users')
+    .select('organization_id, role')
+    .eq('id', data.user.id)
+    .single();
+
+  // Check if MFA is required for this role (admin/owner MUST have MFA)
+  const userRole = userData?.role || 'viewer';
+  const mfaRequired = requiresMFA(userRole);
+
+  // Check current MFA status
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const hasMFAEnrolled = aal?.nextLevel === 'aal2';
+  const mfaVerified = aal?.currentLevel === 'aal2';
+
+  // If MFA is enrolled but not yet verified for this session, redirect to verify
+  if (hasMFAEnrolled && !mfaVerified) {
+    await logAuthEvent({
+      userId: data.user.id,
+      organizationId: userData?.organization_id,
+      eventType: 'login_success',
+      result: 'success',
+      metadata: { email, mfaPending: true },
+    });
+
     return {
       success: true,
       data: {
@@ -96,12 +162,32 @@ export async function login(formData: LoginInput): Promise<ActionResult<{ redire
     };
   }
 
-  // Check if user has completed onboarding (has organization)
-  const { data: userData } = await supabase
-    .from('users')
-    .select('organization_id')
-    .eq('id', data.user.id)
-    .single();
+  // If MFA is required but NOT enrolled, redirect to setup
+  if (mfaRequired && !hasMFAEnrolled) {
+    await logAuthEvent({
+      userId: data.user.id,
+      organizationId: userData?.organization_id,
+      eventType: 'login_success',
+      result: 'success',
+      metadata: { email, mfaSetupRequired: true, role: userRole },
+    });
+
+    return {
+      success: true,
+      data: {
+        redirectTo: '/mfa/setup?required=true',
+      },
+    };
+  }
+
+  // Log successful login
+  await logAuthEvent({
+    userId: data.user.id,
+    organizationId: userData?.organization_id,
+    eventType: 'login_success',
+    result: 'success',
+    metadata: { email },
+  });
 
   const needsOnboarding = !userData?.organization_id;
 
@@ -163,6 +249,24 @@ export async function register(formData: RegisterInput): Promise<ActionResult<{ 
 
 export async function logout(): Promise<void> {
   const supabase = await createClient();
+
+  // Get user info before logging out for audit
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: userData } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single();
+
+    await logAuthEvent({
+      userId: user.id,
+      organizationId: userData?.organization_id,
+      eventType: 'logout',
+      result: 'success',
+    });
+  }
+
   await supabase.auth.signOut();
   revalidatePath('/', 'layout');
   redirect('/login');
@@ -214,15 +318,42 @@ export async function updatePassword(formData: NewPasswordInput): Promise<Action
 
   const supabase = await createClient();
 
+  // Get user info for audit
+  const { data: { user } } = await supabase.auth.getUser();
+
   const { error } = await supabase.auth.updateUser({
     password: result.data.password,
   });
 
   if (error) {
+    if (user) {
+      await logAuthEvent({
+        userId: user.id,
+        eventType: 'password_change',
+        result: 'failure',
+        failureReason: error.message,
+      });
+    }
     return {
       success: false,
       error: mapSupabaseError(error),
     };
+  }
+
+  // Log successful password change
+  if (user) {
+    const { data: userData } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single();
+
+    await logAuthEvent({
+      userId: user.id,
+      organizationId: userData?.organization_id,
+      eventType: 'password_change',
+      result: 'success',
+    });
   }
 
   revalidatePath('/', 'layout');
