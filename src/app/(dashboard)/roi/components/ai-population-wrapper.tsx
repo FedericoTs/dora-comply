@@ -3,10 +3,12 @@
 /**
  * AI Population Wrapper
  *
- * Client component that wraps AiPopulationPanel with population handler
+ * Client component that wraps AiPopulationPanel with population handler.
+ * Supports highlighting and auto-triggering population for a specific document
+ * when coming from the document detail page.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { AiPopulationPanel } from './ai-population-panel';
@@ -14,11 +16,13 @@ import type { PopulatableDocument } from '@/lib/roi/types';
 
 interface AiPopulationWrapperProps {
   initialDocuments: PopulatableDocument[];
+  highlightDocumentId?: string;
 }
 
-export function AiPopulationWrapper({ initialDocuments }: AiPopulationWrapperProps) {
+export function AiPopulationWrapper({ initialDocuments, highlightDocumentId }: AiPopulationWrapperProps) {
   const router = useRouter();
   const [documents, setDocuments] = useState(initialDocuments);
+  const hasTriggeredRef = useRef(false);
 
   const handlePopulateDocument = useCallback(async (documentId: string) => {
     try {
@@ -96,10 +100,48 @@ export function AiPopulationWrapper({ initialDocuments }: AiPopulationWrapperPro
     }
   }, [router]);
 
+  // Show guidance when navigating from document detail
+  useEffect(() => {
+    if (highlightDocumentId && !hasTriggeredRef.current) {
+      hasTriggeredRef.current = true;
+
+      // Find the document
+      const doc = documents.find(d => d.documentId === highlightDocumentId);
+
+      if (doc && !doc.isPopulated) {
+        // Show a helpful toast guiding the user
+        toast.info('Ready to Populate RoI', {
+          description: `Click "Populate" on "${doc.vendorName || 'your document'}" to extract data into the Register of Information.`,
+          duration: 8000,
+        });
+
+        // Scroll to the AI Population Panel after a short delay
+        setTimeout(() => {
+          const panel = document.querySelector('[data-ai-population-panel]');
+          if (panel) {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 500);
+      } else if (doc?.isPopulated) {
+        toast.success('Already Populated', {
+          description: 'This document has already been used to populate the RoI.',
+        });
+      } else {
+        toast.warning('Document Not Found', {
+          description: 'The specified document was not found in the population queue.',
+        });
+      }
+
+      // Clear the URL param to prevent re-triggering
+      router.replace('/roi', { scroll: false });
+    }
+  }, [highlightDocumentId, documents, router]);
+
   return (
     <AiPopulationPanel
       documents={documents}
       onPopulateDocument={handlePopulateDocument}
+      highlightDocumentId={highlightDocumentId}
     />
   );
 }

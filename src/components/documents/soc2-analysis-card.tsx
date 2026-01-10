@@ -40,6 +40,8 @@ import {
   Eye,
   Network,
   Users,
+  Database,
+  ArrowRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -566,6 +568,31 @@ export function SOC2AnalysisCard({
                 </Link>
               </Button>
             )}
+          </div>
+
+          {/* Next Step: Populate RoI CTA */}
+          <div className="border-t pt-4 mt-2">
+            <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-4 border border-primary/20">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-primary/10 p-2 flex-shrink-0">
+                  <Database className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm">Next Step: Populate Register of Information</h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Use this SOC 2 data to auto-populate vendor details, subservice organizations,
+                    and service functions in your DORA Register of Information.
+                  </p>
+                  <Button size="sm" className="mt-3 gap-2" asChild>
+                    <Link href={`/roi?populateDoc=${documentId}`}>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Populate RoI Now
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Parsed timestamp */}

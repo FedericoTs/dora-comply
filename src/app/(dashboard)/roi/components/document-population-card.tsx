@@ -19,9 +19,10 @@ import type { PopulatableDocument } from '@/lib/roi/types';
 interface DocumentPopulationCardProps {
   document: PopulatableDocument;
   onPopulate?: (documentId: string) => void;
+  isHighlighted?: boolean;
 }
 
-export function DocumentPopulationCard({ document, onPopulate }: DocumentPopulationCardProps) {
+export function DocumentPopulationCard({ document, onPopulate, isHighlighted }: DocumentPopulationCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPopulating, setIsPopulating] = useState(false);
 
@@ -46,7 +47,8 @@ export function DocumentPopulationCard({ document, onPopulate }: DocumentPopulat
   return (
     <Card className={cn(
       'transition-all',
-      document.isPopulated && 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/30 dark:bg-emerald-900/10'
+      document.isPopulated && 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/30 dark:bg-emerald-900/10',
+      isHighlighted && !document.isPopulated && 'ring-2 ring-primary ring-offset-2 border-primary bg-primary/5 animate-pulse'
     )}>
       <CardContent className="p-4">
         <div className="flex items-start gap-3">

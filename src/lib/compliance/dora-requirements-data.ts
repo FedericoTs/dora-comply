@@ -1089,3 +1089,9 @@ export function getRequirementsWithoutSOC2Coverage(): DORARequirement[] {
 export function getCriticalRequirements(): DORARequirement[] {
   return DORA_REQUIREMENTS.filter(r => r.priority === 'critical');
 }
+
+/**
+ * Total count of DORA requirements
+ * Used for consistent display across the application
+ */
+export const DORA_REQUIREMENT_COUNT = DORA_REQUIREMENTS.length;

@@ -31,7 +31,11 @@ export const metadata = {
   description: 'ESA DORA Register of Information management and export',
 };
 
-async function RoiDashboardContent() {
+interface RoiDashboardContentProps {
+  populateDocId?: string;
+}
+
+async function RoiDashboardContent({ populateDocId }: RoiDashboardContentProps) {
   // Fetch all data in parallel
   const [stats, nextActions, populatableDocs, templatesWithStatus, onboardingProgress] = await Promise.all([
     fetchAllTemplateStats(),
@@ -135,7 +139,10 @@ async function RoiDashboardContent() {
       </div>
 
       {/* AI Population Panel - Prominent Position */}
-      <AiPopulationWrapper initialDocuments={populatableDocs} />
+      <AiPopulationWrapper
+        initialDocuments={populatableDocs}
+        highlightDocumentId={populateDocId}
+      />
 
       {/* Two Column Layout: Actions + Stats */}
       <div className="grid gap-6 lg:grid-cols-5">
@@ -216,10 +223,19 @@ function DashboardSkeleton() {
   );
 }
 
-export default function RoiDashboardPage() {
+interface RoiDashboardPageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function RoiDashboardPage({ searchParams }: RoiDashboardPageProps) {
+  const resolvedParams = await searchParams;
+  const populateDocId = typeof resolvedParams.populateDoc === 'string'
+    ? resolvedParams.populateDoc
+    : undefined;
+
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <RoiDashboardContent />
+      <RoiDashboardContent populateDocId={populateDocId} />
     </Suspense>
   );
 }

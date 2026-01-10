@@ -28,6 +28,7 @@ import {
 import { NIS2_REQUIREMENTS, NIS2_REQUIREMENT_COUNT } from '@/lib/compliance/nis2-requirements';
 import { GDPR_REQUIREMENTS, GDPR_REQUIREMENT_COUNT } from '@/lib/compliance/gdpr-requirements';
 import { ISO27001_REQUIREMENTS, ISO27001_REQUIREMENT_COUNT } from '@/lib/compliance/iso27001-requirements';
+import { DORA_REQUIREMENT_COUNT } from '@/lib/compliance/dora-requirements-data';
 import { getAllFrameworkOverlaps } from '@/lib/compliance/mappings';
 
 // Framework icons
@@ -46,9 +47,9 @@ const FRAMEWORK_COLORS: Record<FrameworkCode, string> = {
   iso27001: 'bg-orange-500',
 };
 
-// Framework requirement counts (DORA from existing data)
+// Framework requirement counts
 const REQUIREMENT_COUNTS: Record<FrameworkCode, number> = {
-  dora: 58, // From existing DORA requirements
+  dora: DORA_REQUIREMENT_COUNT, // 45 requirements from dora-requirements-data.ts
   nis2: NIS2_REQUIREMENT_COUNT,
   gdpr: GDPR_REQUIREMENT_COUNT,
   iso27001: ISO27001_REQUIREMENT_COUNT,

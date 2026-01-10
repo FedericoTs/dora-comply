@@ -18,9 +18,10 @@ import type { PopulatableDocument } from '@/lib/roi/types';
 interface AiPopulationPanelProps {
   documents: PopulatableDocument[];
   onPopulateDocument?: (documentId: string) => Promise<void>;
+  highlightDocumentId?: string;
 }
 
-export function AiPopulationPanel({ documents, onPopulateDocument }: AiPopulationPanelProps) {
+export function AiPopulationPanel({ documents, onPopulateDocument, highlightDocumentId }: AiPopulationPanelProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
   const unpopulatedDocs = documents.filter(d => !d.isPopulated);
@@ -53,7 +54,7 @@ export function AiPopulationPanel({ documents, onPopulateDocument }: AiPopulatio
   }
 
   return (
-    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded} data-ai-population-panel>
       <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -97,6 +98,7 @@ export function AiPopulationPanel({ documents, onPopulateDocument }: AiPopulatio
                     key={doc.documentId}
                     document={doc}
                     onPopulate={onPopulateDocument}
+                    isHighlighted={doc.documentId === highlightDocumentId}
                   />
                 ))}
               </div>
