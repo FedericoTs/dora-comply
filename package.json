@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "npx tsx scripts/test-dora-calculator.ts",
+    "test:python": "python3 modal-workers/parsers/test_dora_mapping.py",
+    "test:all": "npm run test && npm run test:python"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.2",
