@@ -83,13 +83,13 @@ function inferServiceTypes(services: string[]): string[] {
     mapped.push('cloud_computing');
   }
   if (servicesLower.includes('saas') || servicesLower.includes('software')) {
-    mapped.push('saas');
+    mapped.push('software_as_service');
   }
   if (servicesLower.includes('paas') || servicesLower.includes('platform')) {
-    mapped.push('paas');
+    mapped.push('platform_as_service');
   }
   if (servicesLower.includes('iaas') || servicesLower.includes('infrastructure as')) {
-    mapped.push('iaas');
+    mapped.push('infrastructure_as_service');
   }
   if (servicesLower.includes('data') || servicesLower.includes('analytics')) {
     mapped.push('data_analytics');
