@@ -9,8 +9,7 @@
  * - Exception severity factored into maturity levels
  * - Expandable pillar breakdown with gap details
  *
- * This replaces the legacy VendorDORACompliance component which only measured
- * SOC 2 control effectiveness (showing misleading 100% scores).
+ * Uses the centralized dora-data-service for consistent data mapping.
  */
 
 import { useEffect, useState } from 'react';
@@ -23,45 +22,16 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
-import { calculateDORACompliance } from '@/lib/compliance/dora-calculator';
+import { calculateDORAFromDB, type DBParsedSOC2 } from '@/lib/compliance/dora-data-service';
 import { DORAComplianceDashboard } from '@/components/compliance';
 import type { DORAComplianceResult } from '@/lib/compliance/dora-types';
-
-interface ParsedSOC2Data {
-  id: string;
-  document_id: string;
-  report_type: string;
-  audit_firm: string;
-  opinion: string;
-  period_start: string;
-  period_end: string;
-  controls: Array<{
-    id: string;
-    category: string;
-    description: string;
-    testResult?: 'operating_effectively' | 'exception' | 'not_tested';
-    pageRef?: number;
-  }>;
-  exceptions: Array<{
-    controlId: string;
-    description: string;
-    exceptionType?: 'design_deficiency' | 'operating_deficiency' | 'population_deviation';
-    impact?: 'low' | 'medium' | 'high';
-    managementResponse?: string;
-    remediationDate?: string;
-    remediationVerified?: boolean;
-  }>;
-  cuecs: Array<{ id: string; description: string }>;
-  subservice_orgs: Array<{ name: string; services: string }>;
-  confidence_score: number;
-}
 
 interface VendorDocument {
   id: string;
   filename: string;
   type: string;
   created_at: string;
-  parsed_soc2?: ParsedSOC2Data[];
+  parsed_soc2?: DBParsedSOC2[];
 }
 
 interface VendorDORADashboardProps {
@@ -71,6 +41,7 @@ interface VendorDORADashboardProps {
 
 export function VendorDORADashboard({ vendorId, vendorName }: VendorDORADashboardProps) {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<VendorDocument[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [doraCompliance, setDoraCompliance] = useState<DORAComplianceResult | null>(null);
@@ -78,72 +49,89 @@ export function VendorDORADashboard({ vendorId, vendorName }: VendorDORADashboar
   useEffect(() => {
     async function fetchDORAData() {
       setLoading(true);
-      const supabase = createClient();
+      setError(null);
 
-      // Fetch vendor's documents with parsed SOC 2 data
-      const { data, error } = await supabase
-        .from('documents')
-        .select(`
-          id,
-          filename,
-          type,
-          created_at,
-          parsed_soc2 (
+      try {
+        const supabase = createClient();
+
+        // Fetch vendor's documents with parsed SOC 2 data
+        const { data, error: fetchError } = await supabase
+          .from('documents')
+          .select(`
             id,
-            document_id,
-            report_type,
-            audit_firm,
-            opinion,
-            period_start,
-            period_end,
-            controls,
-            exceptions,
-            cuecs,
-            subservice_orgs,
-            confidence_score,
-            created_at
-          )
-        `)
-        .eq('vendor_id', vendorId)
-        .order('created_at', { ascending: false });
+            filename,
+            type,
+            created_at,
+            parsed_soc2 (
+              id,
+              document_id,
+              report_type,
+              audit_firm,
+              opinion,
+              period_start,
+              period_end,
+              controls,
+              exceptions,
+              cuecs,
+              subservice_orgs,
+              confidence_score,
+              confidence_scores,
+              created_at
+            )
+          `)
+          .eq('vendor_id', vendorId)
+          .order('created_at', { ascending: false });
 
-      if (error || !data) {
-        console.error('Error fetching documents:', error);
-        setLoading(false);
-        return;
-      }
+        if (fetchError) {
+          console.error('[VendorDORADashboard] Error fetching documents:', fetchError);
+          setError('Failed to load compliance data');
+          setLoading(false);
+          return;
+        }
 
-      // Filter to documents with parsed SOC 2 data
-      const docsWithSoc2 = data.filter(
-        (doc: { parsed_soc2?: unknown[] }) => doc.parsed_soc2 && doc.parsed_soc2.length > 0
-      ) as VendorDocument[];
+        if (!data || data.length === 0) {
+          console.log('[VendorDORADashboard] No documents found for vendor:', vendorId);
+          setDocuments([]);
+          setLoading(false);
+          return;
+        }
 
-      setDocuments(docsWithSoc2);
+        // Filter to documents with parsed SOC 2 data
+        const docsWithSoc2 = data.filter(
+          (doc: { parsed_soc2?: unknown[] }) =>
+            doc.parsed_soc2 &&
+            Array.isArray(doc.parsed_soc2) &&
+            doc.parsed_soc2.length > 0
+        ) as VendorDocument[];
 
-      if (docsWithSoc2.length > 0) {
-        // Select the most recent parsed SOC 2
-        const latestDoc = docsWithSoc2[0];
-        setSelectedDocId(latestDoc.id);
+        console.log('[VendorDORADashboard] Documents with SOC2:', docsWithSoc2.length);
 
-        // Use the CORRECT calculator that considers all DORA requirements
-        const parsedData = latestDoc.parsed_soc2![0];
-        const compliance = calculateDORACompliance(
-          vendorId,
-          vendorName,
-          {
-            ...parsedData,
-            exceptions: parsedData.exceptions || [],
-            cuecs: parsedData.cuecs || [],
-            subservice_orgs: parsedData.subservice_orgs || [],
-            confidence_score: parsedData.confidence_score || 0.8,
-          },
-          {
-            id: latestDoc.id,
-            name: latestDoc.filename,
-            type: latestDoc.type || 'soc2',
-          }
-        );
-        setDoraCompliance(compliance);
+        setDocuments(docsWithSoc2);
+
+        if (docsWithSoc2.length > 0) {
+          // Select the most recent parsed SOC 2
+          const latestDoc = docsWithSoc2[0];
+          setSelectedDocId(latestDoc.id);
+
+          // Use the centralized DORA calculator with proper field mapping
+          const dbParsedData = latestDoc.parsed_soc2![0];
+
+          const compliance = calculateDORAFromDB(
+            vendorId,
+            vendorName,
+            dbParsedData,
+            {
+              id: latestDoc.id,
+              name: latestDoc.filename,
+              type: latestDoc.type || 'soc2',
+            }
+          );
+
+          setDoraCompliance(compliance);
+        }
+      } catch (err) {
+        console.error('[VendorDORADashboard] Unexpected error:', err);
+        setError('An unexpected error occurred');
       }
 
       setLoading(false);
@@ -157,17 +145,11 @@ export function VendorDORADashboard({ vendorId, vendorName }: VendorDORADashboar
     if (doc && doc.parsed_soc2?.[0]) {
       setSelectedDocId(doc.id);
 
-      const parsedData = doc.parsed_soc2[0];
-      const compliance = calculateDORACompliance(
+      const dbParsedData = doc.parsed_soc2[0];
+      const compliance = calculateDORAFromDB(
         vendorId,
         vendorName,
-        {
-          ...parsedData,
-          exceptions: parsedData.exceptions || [],
-          cuecs: parsedData.cuecs || [],
-          subservice_orgs: parsedData.subservice_orgs || [],
-          confidence_score: parsedData.confidence_score || 0.8,
-        },
+        dbParsedData,
         {
           id: doc.id,
           name: doc.filename,
@@ -184,6 +166,21 @@ export function VendorDORADashboard({ vendorId, vendorName }: VendorDORADashboar
         <CardContent className="py-16 text-center">
           <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary mb-4" />
           <p className="text-muted-foreground">Calculating DORA compliance...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="py-16 text-center">
+          <Target className="h-12 w-12 mx-auto text-destructive mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Error Loading Data</h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
         </CardContent>
       </Card>
     );

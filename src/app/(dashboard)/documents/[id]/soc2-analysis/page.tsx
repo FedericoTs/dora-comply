@@ -64,7 +64,7 @@ import {
   ComplianceStatusBadge,
   VerificationChecklist,
 } from '@/components/compliance';
-import { calculateDORACompliance } from '@/lib/compliance/dora-calculator';
+import { calculateDORAFromDB, type DBParsedSOC2 } from '@/lib/compliance/dora-data-service';
 import type { DORAComplianceResult } from '@/lib/compliance/dora-types';
 
 interface SOC2AnalysisPageProps {
@@ -335,39 +335,12 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
 
   const doraCoverage = calculateDORACoverage();
 
-  // Calculate DORA compliance using the new maturity-based system
-  const doraCompliance: DORAComplianceResult = calculateDORACompliance(
+  // Calculate DORA compliance using the centralized data service
+  // This ensures consistency with vendor DORA dashboard calculations
+  const doraCompliance: DORAComplianceResult = calculateDORAFromDB(
     vendor?.id || 'unknown',
     vendor?.name || 'Unknown Vendor',
-    {
-      id: analysis.id,
-      document_id: analysis.document_id,
-      report_type: analysis.report_type,
-      audit_firm: analysis.audit_firm,
-      opinion: analysis.opinion,
-      period_start: analysis.period_start,
-      period_end: analysis.period_end,
-      controls: controls.map(c => ({
-        id: c.controlId,
-        category: c.tscCategory,
-        description: c.description,
-        testResult: c.testResult,
-        pageRef: c.pageRef,
-      })),
-      exceptions: exceptions.map(e => ({
-        controlId: e.controlId,
-        description: e.exceptionDescription,
-      })),
-      cuecs: cuecs.map(c => ({
-        id: c.id || '',
-        description: c.description,
-      })),
-      subservice_orgs: subserviceOrgs.map(s => ({
-        name: s.name,
-        services: s.serviceDescription,
-      })),
-      confidence_score: analysis.confidence_scores?.overall || 0.85,
-    },
+    analysis as unknown as DBParsedSOC2,
     { id, name: document.filename, type: 'soc2' }
   );
 
