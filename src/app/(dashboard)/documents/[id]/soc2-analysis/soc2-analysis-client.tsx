@@ -4,24 +4,11 @@
  * SOC 2 Analysis Client Component
  *
  * Client-side component for interactive charts:
- * - DORA Coverage Radar Chart
- * - Control Status Donut Chart
+ * - DORA Coverage Radar Chart (by pillar)
+ * - DORA Evidence Coverage Donut Chart (replaces misleading "100% SOC 2 Effective")
  */
 
-import { DORACoverageChart, type DORAcoverageByPillar } from '@/components/compliance';
-import { ControlStatusChart } from '@/components/compliance';
-
-interface ParsedControl {
-  controlId: string;
-  controlArea: string;
-  tscCategory: string;
-  description: string;
-  testResult: 'operating_effectively' | 'exception' | 'not_tested';
-  testingProcedure?: string;
-  exceptionDescription?: string;
-  location?: string;
-  confidence: number;
-}
+import { DORACoverageChart, DORAEvidenceChart, type DORAcoverageByPillar } from '@/components/compliance';
 
 interface DORACoverage {
   overall: number;
@@ -29,23 +16,27 @@ interface DORACoverage {
   gaps: string[];
 }
 
+interface DORAEvidence {
+  sufficient: number;
+  partial: number;
+  insufficient: number;
+  total: number;
+  overallPercentage: number;
+  criticalGapsCount: number;
+}
+
 interface SOC2AnalysisClientProps {
   doraCoverage: DORACoverage;
-  controlsEffective: number;
-  controlsWithException: number;
-  controlsNotTested: number;
-  controls: ParsedControl[];
+  doraEvidence: DORAEvidence;
 }
 
 export function SOC2AnalysisClient({
   doraCoverage,
-  controlsEffective,
-  controlsWithException,
-  controlsNotTested,
+  doraEvidence,
 }: SOC2AnalysisClientProps) {
   return (
     <>
-      {/* DORA Coverage Radar Chart */}
+      {/* DORA Coverage Radar Chart - shows coverage by pillar */}
       <DORACoverageChart
         coverage={doraCoverage.byPillar}
         overallScore={doraCoverage.overall}
@@ -54,11 +45,14 @@ export function SOC2AnalysisClient({
         showLegend={false}
       />
 
-      {/* Control Status Donut Chart */}
-      <ControlStatusChart
-        operatingEffectively={controlsEffective}
-        withExceptions={controlsWithException}
-        notTested={controlsNotTested}
+      {/* DORA Evidence Coverage - shows how many requirements have evidence */}
+      <DORAEvidenceChart
+        sufficient={doraEvidence.sufficient}
+        partial={doraEvidence.partial}
+        insufficient={doraEvidence.insufficient}
+        total={doraEvidence.total}
+        overallPercentage={doraEvidence.overallPercentage}
+        criticalGapsCount={doraEvidence.criticalGapsCount}
         size="md"
       />
     </>

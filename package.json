@@ -69,6 +69,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/chai": "^5.2.3",
     "@types/jszip": "^3.4.0",
     "@types/node": "^20",
     "@types/pdf-parse": "^1.1.5",

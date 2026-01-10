@@ -409,15 +409,19 @@ export default async function SOC2AnalysisPage({ params, searchParams }: SOC2Ana
           </div>
         </div>
 
-        {/* DORA Coverage + Control Status Row */}
+        {/* DORA Coverage + Evidence Row */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* DORA Coverage Chart (Client Component) */}
+          {/* DORA Charts (Client Component) */}
           <SOC2AnalysisClient
             doraCoverage={doraCoverage}
-            controlsEffective={controlsEffective}
-            controlsWithException={controlsWithException}
-            controlsNotTested={controlsNotTested}
-            controls={controls}
+            doraEvidence={{
+              sufficient: doraCompliance.evidenceSummary.sufficient,
+              partial: doraCompliance.evidenceSummary.partial,
+              insufficient: doraCompliance.evidenceSummary.insufficient,
+              total: doraCompliance.evidenceSummary.total,
+              overallPercentage: doraCompliance.overallPercentage,
+              criticalGapsCount: doraCompliance.criticalGaps.length,
+            }}
           />
         </div>
 
