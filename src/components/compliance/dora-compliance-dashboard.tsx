@@ -8,12 +8,18 @@
  *
  * Features:
  * - Overall maturity level with visual indicator
- * - Per-pillar breakdown with gap indicators
+ * - Per-pillar breakdown with gap indicators (expandable)
  * - Critical gaps summary
  * - Remediation timeline estimate
  */
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
@@ -34,7 +40,7 @@ import {
   TestTube2,
   Building2,
   Share2,
-  ChevronRight,
+  ChevronDown,
   Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -309,7 +315,7 @@ export function DORAComplianceDashboard({
   );
 }
 
-// Pillar row component
+// Pillar row component with expandable gaps
 function PillarRow({
   pillar,
   score,
@@ -319,67 +325,143 @@ function PillarRow({
   score: PillarScore;
   onClick?: () => void;
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const { maturityLevel, percentageScore, requirementsMet, requirementsTotal, gaps, status } =
     score;
 
   return (
-    <div
-      className={cn(
-        'flex items-center gap-4 p-3 rounded-lg border transition-colors',
-        'hover:bg-muted/50 cursor-pointer',
-        {
-          'border-emerald-500/30 bg-emerald-500/5': status === 'compliant',
-          'border-amber-500/30 bg-amber-500/5': status === 'partial',
-          'border-red-500/30 bg-red-500/5': status === 'non_compliant',
-        }
-      )}
-      onClick={onClick}
-    >
-      {/* Icon */}
-      <div
-        className={cn('flex items-center justify-center w-10 h-10 rounded-lg', {
-          'bg-emerald-500/20 text-emerald-600': status === 'compliant',
-          'bg-amber-500/20 text-amber-600': status === 'partial',
-          'bg-red-500/20 text-red-600': status === 'non_compliant',
-        })}
-      >
-        {PillarIcons[pillar]}
-      </div>
-
-      {/* Label */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{DORAPillarLabels[pillar]}</span>
-          {gaps.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {gaps.length} gap{gaps.length !== 1 ? 's' : ''}
-            </Badge>
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <CollapsibleTrigger asChild>
+        <div
+          className={cn(
+            'flex items-center gap-4 p-3 rounded-lg border transition-colors',
+            'hover:bg-muted/50 cursor-pointer',
+            {
+              'border-emerald-500/30 bg-emerald-500/5': status === 'compliant',
+              'border-amber-500/30 bg-amber-500/5': status === 'partial',
+              'border-red-500/30 bg-red-500/5': status === 'non_compliant',
+              'rounded-b-none': isExpanded,
+            }
           )}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {requirementsMet} of {requirementsTotal} requirements met
-        </p>
-      </div>
+          onClick={(e) => {
+            e.preventDefault();
+            setIsExpanded(!isExpanded);
+          }}
+        >
+          {/* Icon */}
+          <div
+            className={cn('flex items-center justify-center w-10 h-10 rounded-lg', {
+              'bg-emerald-500/20 text-emerald-600': status === 'compliant',
+              'bg-amber-500/20 text-amber-600': status === 'partial',
+              'bg-red-500/20 text-red-600': status === 'non_compliant',
+            })}
+          >
+            {PillarIcons[pillar]}
+          </div>
 
-      {/* Score */}
-      <div className="flex items-center gap-3">
-        <div className="text-right hidden sm:block">
-          <div className="text-sm font-semibold">{percentageScore}%</div>
-          <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
-            <div
-              className={cn('h-full rounded-full', {
-                'bg-emerald-500': status === 'compliant',
-                'bg-amber-500': status === 'partial',
-                'bg-red-500': status === 'non_compliant',
-              })}
-              style={{ width: `${percentageScore}%` }}
+          {/* Label */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{DORAPillarLabels[pillar]}</span>
+              {gaps.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {gaps.length} gap{gaps.length !== 1 ? 's' : ''}
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {requirementsMet} of {requirementsTotal} requirements met
+            </p>
+          </div>
+
+          {/* Score - visible on all screens */}
+          <div className="flex items-center gap-3">
+            <div className="text-right flex-shrink-0">
+              <div className="text-sm font-semibold">{percentageScore}%</div>
+              <div className="w-16 sm:w-24 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={cn('h-full rounded-full', {
+                    'bg-emerald-500': status === 'compliant',
+                    'bg-amber-500': status === 'partial',
+                    'bg-red-500': status === 'non_compliant',
+                  })}
+                  style={{ width: `${Math.max(2, percentageScore)}%` }}
+                />
+              </div>
+            </div>
+            <MaturityLevelBadge level={maturityLevel} size="sm" showDescription />
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 text-muted-foreground transition-transform duration-200',
+                isExpanded && 'rotate-180'
+              )}
             />
           </div>
         </div>
-        <MaturityLevelBadge level={maturityLevel} size="sm" showDescription />
-        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-      </div>
-    </div>
+      </CollapsibleTrigger>
+
+      <CollapsibleContent>
+        <div
+          className={cn(
+            'pl-14 pr-4 py-3 space-y-2 rounded-b-lg border-x border-b',
+            {
+              'border-emerald-500/30 bg-emerald-500/5': status === 'compliant',
+              'border-amber-500/30 bg-amber-500/5': status === 'partial',
+              'border-red-500/30 bg-red-500/5': status === 'non_compliant',
+            }
+          )}
+        >
+          <div className="text-sm font-medium mb-2">
+            Requirements ({requirementsMet}/{requirementsTotal} met)
+          </div>
+          {gaps.length > 0 ? (
+            <div className="space-y-2">
+              {gaps.map((gap) => (
+                <div
+                  key={gap.requirementId}
+                  className="flex items-center justify-between text-sm p-2 rounded bg-background/50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClick?.();
+                  }}
+                >
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <Badge
+                      variant="outline"
+                      className={cn('text-xs shrink-0', {
+                        'border-red-500 text-red-600': gap.priority === 'critical',
+                        'border-amber-500 text-amber-600': gap.priority === 'high',
+                        'border-blue-500 text-blue-600': gap.priority === 'medium',
+                      })}
+                    >
+                      {gap.articleNumber}
+                    </Badge>
+                    <span className="truncate">{gap.articleTitle}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge
+                      variant={gap.priority === 'critical' ? 'destructive' : 'secondary'}
+                      className="text-xs"
+                    >
+                      {gap.priority}
+                    </Badge>
+                    {gap.soc2Coverage === 'none' && (
+                      <Badge variant="outline" className="text-xs border-red-500 text-red-500">
+                        No SOC 2
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              All requirements met for this pillar
+            </p>
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

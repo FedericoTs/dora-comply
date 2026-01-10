@@ -1,7 +1,17 @@
 'use client';
 
 /**
- * Vendor DORA Compliance Component
+ * @deprecated Use VendorDORADashboard from '@/components/vendors/vendor-dora-dashboard' instead.
+ *
+ * This component uses a simplified calculation that ONLY counts SOC 2 control effectiveness
+ * and maps it to DORA pillars. It IGNORES DORA requirements that have no SOC 2 mapping
+ * (e.g., Art. 18, 19, 26, 31, 45), leading to misleading 100% scores.
+ *
+ * The new VendorDORADashboard component uses the correct calculateDORACompliance function
+ * that evaluates all 45 DORA requirements, accounts for evidence gaps, and provides
+ * accurate maturity-based scoring (L0-L4).
+ *
+ * OLD Vendor DORA Compliance Component (DEPRECATED)
  *
  * Displays DORA compliance analysis for a vendor based on:
  * - Parsed SOC 2 reports

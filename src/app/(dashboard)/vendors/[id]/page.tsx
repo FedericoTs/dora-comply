@@ -33,7 +33,7 @@ import { SimpleBreadcrumb } from '@/components/navigation';
 import { VendorDocuments } from './vendor-documents';
 import { VendorContacts } from '@/components/vendors/vendor-contacts';
 import { VendorContracts } from '@/components/vendors/vendor-contracts';
-import { VendorDORACompliance } from '@/components/vendors/vendor-dora-compliance';
+import { VendorDORADashboard } from '@/components/vendors/vendor-dora-dashboard';
 import { VendorFrameworksTab } from '@/components/vendors/frameworks';
 import { VendorTabs } from './vendor-tabs';
 
@@ -355,7 +355,7 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
           />
         }
         enrichment={<VendorEnrichmentTab vendor={vendor} />}
-        dora={<VendorDORACompliance vendorId={vendor.id} vendorName={vendor.name} />}
+        dora={<VendorDORADashboard vendorId={vendor.id} vendorName={vendor.name} />}
         monitoring={
           <VendorMonitoringTab
             vendorId={vendor.id}
