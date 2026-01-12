@@ -240,6 +240,14 @@ export async function buildFullSupplyChainGraph(): Promise<{
 
   if (subsError) throw subsError;
 
+  // Pre-index subcontractors by vendor_id for O(1) lookup instead of O(n) filter
+  const subcontractorsByVendor = new Map<string, typeof allSubcontractors>();
+  for (const sub of allSubcontractors || []) {
+    const existing = subcontractorsByVendor.get(sub.vendor_id) || [];
+    existing.push(sub);
+    subcontractorsByVendor.set(sub.vendor_id, existing);
+  }
+
   const nodes: DependencyNode[] = [];
   const edges: DependencyEdge[] = [];
   const vendorMetrics = new Map<string, ChainMetrics>();
@@ -282,10 +290,8 @@ export async function buildFullSupplyChainGraph(): Promise<{
       criticality: vendor.tier === 'critical' ? 'critical' : 'standard',
     });
 
-    // Get this vendor's subcontractors
-    const vendorSubs = (allSubcontractors || []).filter(
-      (s) => s.vendor_id === vendor.id
-    );
+    // Get this vendor's subcontractors (O(1) lookup from pre-indexed Map)
+    const vendorSubs = subcontractorsByVendor.get(vendor.id) || [];
 
     if (vendorSubs.length > 0) {
       vendorsWithChains++;

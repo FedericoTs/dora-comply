@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
   Target,
   FileText,
@@ -23,8 +24,27 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { calculateDORAFromDB, getSOC2CoverageByRequirement, type DBParsedSOC2 } from '@/lib/compliance/dora-data-service';
-import { DORAComplianceDashboard, DORAGapRemediation } from '@/components/compliance';
 import type { DORAComplianceResult } from '@/lib/compliance/dora-types';
+
+// Lazy load heavy compliance dashboard components
+const ComplianceLoadingFallback = () => (
+  <Card className="p-6">
+    <div className="flex items-center justify-center h-[200px]">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <span className="ml-2 text-sm text-muted-foreground">Loading compliance dashboard...</span>
+    </div>
+  </Card>
+);
+
+const DORAComplianceDashboard = dynamic(
+  () => import('@/components/compliance').then(mod => ({ default: mod.DORAComplianceDashboard })),
+  { ssr: false, loading: ComplianceLoadingFallback }
+);
+
+const DORAGapRemediation = dynamic(
+  () => import('@/components/compliance').then(mod => ({ default: mod.DORAGapRemediation })),
+  { ssr: false, loading: ComplianceLoadingFallback }
+);
 
 interface VendorDocument {
   id: string;

@@ -1047,28 +1047,31 @@ export async function calculateAllVendorRiskScores(): Promise<ActionResult<{
   const results = calculateBatchRiskScores(mappedVendors, additionalData);
   const distribution = getRiskDistribution(results);
 
-  // Update all vendors in database
-  let updated = 0;
-  for (const vendor of vendors) {
+  // Update all vendors in database (parallel execution for performance)
+  const now = new Date().toISOString();
+  const updatePromises = vendors.map(async (vendor) => {
     const result = results.get(vendor.id);
-    if (!result) continue;
+    if (!result) return false;
 
     const { error } = await supabase
       .from('vendors')
       .update({
         risk_score: result.totalScore,
-        last_assessment_date: new Date().toISOString(),
+        last_assessment_date: now,
         metadata: {
           ...vendor.metadata,
           risk_breakdown: result.components,
           risk_recommendations: result.recommendations,
         },
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       })
       .eq('id', vendor.id);
 
-    if (!error) updated++;
-  }
+    return !error;
+  });
+
+  const updateResults = await Promise.all(updatePromises);
+  const updated = updateResults.filter(Boolean).length;
 
   // Log activity
   await supabase.from('activity_log').insert({

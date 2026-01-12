@@ -8,7 +8,26 @@
  * - DORA Evidence Coverage Donut Chart (replaces misleading "100% SOC 2 Effective")
  */
 
-import { DORACoverageChart, DORAEvidenceChart, type DORAcoverageByPillar } from '@/components/compliance';
+import dynamic from 'next/dynamic';
+import { Loader2 } from 'lucide-react';
+import type { DORAcoverageByPillar } from '@/components/compliance';
+
+// Lazy load chart components - recharts is 7MB
+const ChartLoadingFallback = () => (
+  <div className="flex items-center justify-center h-[200px] bg-muted/20 rounded-lg">
+    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+  </div>
+);
+
+const DORACoverageChart = dynamic(
+  () => import('@/components/compliance').then(mod => ({ default: mod.DORACoverageChart })),
+  { ssr: false, loading: ChartLoadingFallback }
+);
+
+const DORAEvidenceChart = dynamic(
+  () => import('@/components/compliance').then(mod => ({ default: mod.DORAEvidenceChart })),
+  { ssr: false, loading: ChartLoadingFallback }
+);
 
 interface DORACoverage {
   overall: number;

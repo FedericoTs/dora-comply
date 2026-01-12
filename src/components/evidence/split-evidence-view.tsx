@@ -21,12 +21,27 @@ import {
   useRef,
   useEffect,
   type ReactNode,
+  Suspense,
 } from 'react';
-import { GripVertical, PanelLeftClose, PanelRightClose, FileText, Maximize2, Minimize2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { GripVertical, PanelLeftClose, PanelRightClose, FileText, Maximize2, Minimize2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { PDFViewer } from '@/components/documents/pdf-viewer';
 import type { PDFHighlight } from '@/components/documents/pdf-viewer';
+
+// Lazy load PDF viewer - pdfjs-dist is 36MB
+const PDFViewer = dynamic(
+  () => import('@/components/documents/pdf-viewer').then(mod => ({ default: mod.PDFViewer })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full bg-muted/30">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-sm text-muted-foreground">Loading PDF viewer...</span>
+      </div>
+    ),
+  }
+);
 
 interface SplitEvidenceViewProps {
   /** URL to the PDF document */

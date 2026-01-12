@@ -731,9 +731,8 @@ export async function fetchAllTemplateStats(): Promise<RoiStats[]> {
     'B_06.01', 'B_07.01', 'B_99.01',
   ];
 
-  const stats: RoiStats[] = [];
-
-  for (const templateId of templates) {
+  // Fetch all templates in parallel for better performance
+  const statsPromises = templates.map(async (templateId): Promise<RoiStats> => {
     const result = await fetchTemplateData(templateId);
     const mapping = TEMPLATE_MAPPINGS[templateId];
 
@@ -763,16 +762,16 @@ export async function fetchAllTemplateStats(): Promise<RoiStats[]> {
       }
     }
 
-    stats.push({
+    return {
       templateId,
       name: TEMPLATE_NAMES[templateId],
       rowCount: result.count,
       completeness,
       hasData: result.count > 0,
-    });
-  }
+    };
+  });
 
-  return stats;
+  return Promise.all(statsPromises);
 }
 
 // ============================================================================
