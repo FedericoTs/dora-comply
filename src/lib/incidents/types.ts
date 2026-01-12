@@ -218,6 +218,7 @@ export interface CreateReportInput {
 
 export interface CreateEventInput {
   event_type: EventType;
+  event_datetime?: string;
   description?: string;
   metadata?: Record<string, unknown>;
 }

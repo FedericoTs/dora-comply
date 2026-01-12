@@ -1063,6 +1063,226 @@ export interface CrossFieldRule {
   validate: (rows: Record<string, unknown>[]) => { valid: boolean; errors: string[] };
 }
 
+// ============================================================================
+// Cross-Template Validation Rules
+// ============================================================================
+
+export interface CrossTemplateRule {
+  name: string;
+  description: string;
+  severity: ValidationSeverity;
+  sourceTemplate: RoiTemplateId;
+  targetTemplate: RoiTemplateId;
+  sourceField: string;
+  targetField: string;
+  validate: (
+    sourceData: Record<string, unknown>[],
+    targetData: Record<string, unknown>[]
+  ) => { valid: boolean; errors: string[] };
+}
+
+export const CROSS_TEMPLATE_RULES: CrossTemplateRule[] = [
+  {
+    name: 'contract_provider_exists',
+    description: 'Contract providers must exist in B_05.01',
+    severity: 'error',
+    sourceTemplate: 'B_02.02',
+    targetTemplate: 'B_05.01',
+    sourceField: 'c0030',
+    targetField: 'c0010',
+    validate: (contracts, providers) => {
+      const errors: string[] = [];
+      const providerIds = new Set(providers.map(p => p.c0010 as string).filter(Boolean));
+
+      contracts.forEach((contract, i) => {
+        const providerId = contract.c0030 as string;
+        if (providerId && !providerIds.has(providerId)) {
+          errors.push(
+            `B_02.02 Row ${i + 1}: Provider "${providerId}" not found in B_05.01 (ICT Providers). Add the provider first.`
+          );
+        }
+      });
+
+      return { valid: errors.length === 0, errors };
+    },
+  },
+  {
+    name: 'contract_entity_exists',
+    description: 'Contract entities must exist in B_01.02',
+    severity: 'error',
+    sourceTemplate: 'B_02.02',
+    targetTemplate: 'B_01.02',
+    sourceField: 'c0020',
+    targetField: 'c0010',
+    validate: (contracts, entities) => {
+      const errors: string[] = [];
+      const entityLeis = new Set(entities.map(e => e.c0010 as string).filter(Boolean));
+
+      contracts.forEach((contract, i) => {
+        const entityLei = contract.c0020 as string;
+        if (entityLei && !entityLeis.has(entityLei)) {
+          errors.push(
+            `B_02.02 Row ${i + 1}: Entity LEI "${entityLei}" not found in B_01.02 (Entities in Scope). Register the entity first.`
+          );
+        }
+      });
+
+      return { valid: errors.length === 0, errors };
+    },
+  },
+  {
+    name: 'linked_contract_exists',
+    description: 'Linked contracts must exist in B_02.01',
+    severity: 'error',
+    sourceTemplate: 'B_02.03',
+    targetTemplate: 'B_02.01',
+    sourceField: 'c0020',
+    targetField: 'c0010',
+    validate: (links, contracts) => {
+      const errors: string[] = [];
+      const contractRefs = new Set(contracts.map(c => c.c0010 as string).filter(Boolean));
+
+      links.forEach((link, i) => {
+        const linkedRef = link.c0020 as string;
+        const sourceRef = link.c0010 as string;
+
+        if (linkedRef && !contractRefs.has(linkedRef)) {
+          errors.push(
+            `B_02.03 Row ${i + 1}: Linked contract "${linkedRef}" not found in B_02.01. Create the contract first.`
+          );
+        }
+        if (sourceRef && !contractRefs.has(sourceRef)) {
+          errors.push(
+            `B_02.03 Row ${i + 1}: Source contract "${sourceRef}" not found in B_02.01.`
+          );
+        }
+      });
+
+      return { valid: errors.length === 0, errors };
+    },
+  },
+  {
+    name: 'branch_entity_exists',
+    description: 'Branch head offices must exist in B_01.02',
+    severity: 'error',
+    sourceTemplate: 'B_01.03',
+    targetTemplate: 'B_01.02',
+    sourceField: 'c0020',
+    targetField: 'c0010',
+    validate: (branches, entities) => {
+      const errors: string[] = [];
+      const entityLeis = new Set(entities.map(e => e.c0010 as string).filter(Boolean));
+
+      branches.forEach((branch, i) => {
+        const headOfficeLei = branch.c0020 as string;
+        if (headOfficeLei && !entityLeis.has(headOfficeLei)) {
+          errors.push(
+            `B_01.03 Row ${i + 1}: Head office LEI "${headOfficeLei}" not found in B_01.02. Register the entity first.`
+          );
+        }
+      });
+
+      return { valid: errors.length === 0, errors };
+    },
+  },
+  {
+    name: 'critical_function_entity_exists',
+    description: 'Critical function entities must exist in B_01.02',
+    severity: 'error',
+    sourceTemplate: 'B_06.01',
+    targetTemplate: 'B_01.02',
+    sourceField: 'c0040',
+    targetField: 'c0010',
+    validate: (functions, entities) => {
+      const errors: string[] = [];
+      const entityLeis = new Set(entities.map(e => e.c0010 as string).filter(Boolean));
+
+      functions.forEach((func, i) => {
+        const entityLei = func.c0040 as string;
+        if (entityLei && !entityLeis.has(entityLei)) {
+          errors.push(
+            `B_06.01 Row ${i + 1}: Entity LEI "${entityLei}" not found in B_01.02. Register the entity first.`
+          );
+        }
+      });
+
+      return { valid: errors.length === 0, errors };
+    },
+  },
+  {
+    name: 'exit_arrangement_contract_exists',
+    description: 'Exit arrangements must reference existing contracts',
+    severity: 'error',
+    sourceTemplate: 'B_07.01',
+    targetTemplate: 'B_02.01',
+    sourceField: 'c0010',
+    targetField: 'c0010',
+    validate: (exits, contracts) => {
+      const errors: string[] = [];
+      const contractRefs = new Set(contracts.map(c => c.c0010 as string).filter(Boolean));
+
+      exits.forEach((exit, i) => {
+        const contractRef = exit.c0010 as string;
+        if (contractRef && !contractRefs.has(contractRef)) {
+          errors.push(
+            `B_07.01 Row ${i + 1}: Contract "${contractRef}" not found in B_02.01. Create the contract first.`
+          );
+        }
+      });
+
+      return { valid: errors.length === 0, errors };
+    },
+  },
+  {
+    name: 'subcontracting_contract_exists',
+    description: 'Subcontracting chains must reference existing contracts',
+    severity: 'error',
+    sourceTemplate: 'B_05.02',
+    targetTemplate: 'B_02.01',
+    sourceField: 'c0010',
+    targetField: 'c0010',
+    validate: (subcontracts, contracts) => {
+      const errors: string[] = [];
+      const contractRefs = new Set(contracts.map(c => c.c0010 as string).filter(Boolean));
+
+      subcontracts.forEach((sub, i) => {
+        const contractRef = sub.c0010 as string;
+        if (contractRef && !contractRefs.has(contractRef)) {
+          errors.push(
+            `B_05.02 Row ${i + 1}: Contract "${contractRef}" not found in B_02.01.`
+          );
+        }
+      });
+
+      return { valid: errors.length === 0, errors };
+    },
+  },
+  {
+    name: 'maintaining_entity_in_scope',
+    description: 'Entity maintaining register must be in entities scope',
+    severity: 'warning',
+    sourceTemplate: 'B_01.01',
+    targetTemplate: 'B_01.02',
+    sourceField: 'c0010',
+    targetField: 'c0010',
+    validate: (maintaining, entities) => {
+      const errors: string[] = [];
+      const entityLeis = new Set(entities.map(e => e.c0010 as string).filter(Boolean));
+
+      maintaining.forEach((m, i) => {
+        const lei = m.c0010 as string;
+        if (lei && !entityLeis.has(lei)) {
+          errors.push(
+            `B_01.01 Row ${i + 1}: Entity maintaining register (${lei}) should also be included in B_01.02 (Entities in Scope).`
+          );
+        }
+      });
+
+      return { valid: errors.length === 0, errors };
+    },
+  },
+];
+
 export const CROSS_FIELD_RULES: CrossFieldRule[] = [
   {
     templateId: 'B_02.02',

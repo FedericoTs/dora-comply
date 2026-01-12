@@ -158,8 +158,9 @@ export async function recordLoginAttempt(
 
 /**
  * Check if user role requires MFA
+ * (Must be async for Next.js Server Actions compatibility)
  */
-export function requiresMFA(role: string): boolean {
+export async function requiresMFA(role: string): Promise<boolean> {
   return ['owner', 'admin'].includes(role);
 }
 

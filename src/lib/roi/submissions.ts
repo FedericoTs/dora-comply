@@ -353,14 +353,18 @@ export async function fetchSubmissionApproval(
     return null;
   }
 
+  // Handle Supabase join types - may be array or single object
+  const reviewerData = Array.isArray(data.reviewer) ? data.reviewer[0] : data.reviewer;
+  const approverData = Array.isArray(data.approver) ? data.approver[0] : data.approver;
+
   return {
     approvalStatus: (data.approval_status || 'pending_review') as ApprovalStatus,
     reviewedBy: data.reviewed_by,
-    reviewedByName: data.reviewer?.full_name,
+    reviewedByName: reviewerData?.full_name,
     reviewedAt: data.reviewed_at ? new Date(data.reviewed_at) : undefined,
     reviewNotes: data.review_notes,
     approvedBy: data.approved_by,
-    approvedByName: data.approver?.full_name,
+    approvedByName: approverData?.full_name,
     approvedAt: data.approved_at ? new Date(data.approved_at) : undefined,
     approvalNotes: data.approval_notes,
   };

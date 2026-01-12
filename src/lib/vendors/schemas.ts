@@ -85,7 +85,16 @@ export const ctppSubstitutabilitySchema = z.enum([
  */
 export const leiSchema = z
   .string()
-  .regex(/^[A-Z0-9]{20}$/, 'LEI must be exactly 20 alphanumeric characters')
+  .transform((val) => val.toUpperCase().trim())
+  .pipe(
+    z
+      .string()
+      .regex(/^[A-Z0-9]{20}$/, 'LEI must be exactly 20 alphanumeric characters')
+      .refine(
+        (val) => validateLEIChecksum(val),
+        { message: 'Invalid LEI checksum - please verify the LEI code' }
+      )
+  )
   .optional()
   .or(z.literal(''));
 

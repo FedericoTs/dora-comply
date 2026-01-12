@@ -137,7 +137,7 @@ export async function login(formData: LoginInput): Promise<ActionResult<{ redire
 
   // Check if MFA is required for this role (admin/owner MUST have MFA)
   const userRole = userData?.role || 'viewer';
-  const mfaRequired = requiresMFA(userRole);
+  const mfaRequired = await requiresMFA(userRole);
 
   // Check current MFA status
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();

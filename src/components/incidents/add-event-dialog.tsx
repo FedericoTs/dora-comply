@@ -30,56 +30,66 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { createEventAction } from '@/lib/incidents/actions';
-import type { IncidentEventType } from '@/lib/incidents/types';
+import { addEventAction } from '@/lib/incidents/actions';
+import type { EventType } from '@/lib/incidents/types';
 
 interface AddEventDialogProps {
   incidentId: string;
 }
 
-const EVENT_TYPES: { value: IncidentEventType; label: string; description: string }[] = [
+const EVENT_TYPES: { value: EventType; label: string; description: string }[] = [
   {
-    value: 'detection',
+    value: 'created',
     label: 'Detection',
     description: 'Incident was first detected or reported',
   },
   {
-    value: 'classification',
+    value: 'classified',
     label: 'Classification',
     description: 'Incident severity was assessed and classified',
   },
   {
-    value: 'notification',
-    label: 'Notification',
-    description: 'Stakeholders or authorities were notified',
+    value: 'reclassified',
+    label: 'Reclassification',
+    description: 'Incident classification was updated',
   },
   {
-    value: 'containment',
-    label: 'Containment',
-    description: 'Actions taken to contain the incident',
+    value: 'escalated',
+    label: 'Escalation',
+    description: 'Incident was escalated to higher priority',
   },
   {
-    value: 'mitigation',
+    value: 'report_submitted',
+    label: 'Report Submitted',
+    description: 'Regulatory report was submitted',
+  },
+  {
+    value: 'report_acknowledged',
+    label: 'Report Acknowledged',
+    description: 'Regulatory report was acknowledged',
+  },
+  {
+    value: 'mitigation_started',
     label: 'Mitigation',
     description: 'Mitigation measures were implemented',
   },
   {
-    value: 'recovery',
-    label: 'Recovery',
-    description: 'Systems or services were restored',
+    value: 'service_restored',
+    label: 'Service Restored',
+    description: 'Affected services were restored',
   },
   {
-    value: 'resolution',
+    value: 'resolved',
     label: 'Resolution',
     description: 'Incident was fully resolved',
   },
   {
-    value: 'post_mortem',
-    label: 'Post Mortem',
-    description: 'Root cause analysis or lessons learned',
+    value: 'closed',
+    label: 'Closed',
+    description: 'Incident was closed after review',
   },
   {
-    value: 'update',
+    value: 'updated',
     label: 'Status Update',
     description: 'General status update or progress note',
   },
@@ -91,7 +101,7 @@ export function AddEventDialog({ incidentId }: AddEventDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
-  const [eventType, setEventType] = useState<IncidentEventType>('update');
+  const [eventType, setEventType] = useState<EventType>('updated');
   const [eventDate, setEventDate] = useState(new Date().toISOString().slice(0, 16));
   const [description, setDescription] = useState('');
 
@@ -104,7 +114,7 @@ export function AddEventDialog({ incidentId }: AddEventDialogProps) {
     setIsSubmitting(true);
 
     try {
-      const result = await createEventAction(incidentId, {
+      const result = await addEventAction(incidentId, {
         event_type: eventType,
         event_datetime: new Date(eventDate).toISOString(),
         description: description || undefined,
@@ -116,7 +126,7 @@ export function AddEventDialog({ incidentId }: AddEventDialogProps) {
         });
         setOpen(false);
         // Reset form
-        setEventType('update');
+        setEventType('updated');
         setEventDate(new Date().toISOString().slice(0, 16));
         setDescription('');
         router.refresh();
@@ -153,7 +163,7 @@ export function AddEventDialog({ incidentId }: AddEventDialogProps) {
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="event-type">Event Type *</Label>
-            <Select value={eventType} onValueChange={(v) => setEventType(v as IncidentEventType)}>
+            <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
               <SelectTrigger id="event-type">
                 <SelectValue placeholder="Select event type" />
               </SelectTrigger>

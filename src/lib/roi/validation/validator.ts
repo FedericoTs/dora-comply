@@ -13,7 +13,9 @@ import type {
 import {
   TEMPLATE_RULES,
   CROSS_FIELD_RULES,
+  CROSS_TEMPLATE_RULES,
   type FieldRules,
+  type CrossTemplateRule,
 } from './rules';
 
 // ============================================================================
@@ -178,6 +180,26 @@ export async function validateRoi(
     }
   }
 
+  // Run cross-template validation
+  const crossTemplateErrors = validateCrossTemplate(templateData);
+  totalErrors += crossTemplateErrors.errors.length;
+  totalWarnings += crossTemplateErrors.warnings.length;
+
+  // Add cross-template errors to relevant template results
+  crossTemplateErrors.errors.forEach(error => {
+    const result = templateResults[error.templateId];
+    if (result) {
+      result.errors.push(error);
+      result.isValid = false;
+    }
+  });
+  crossTemplateErrors.warnings.forEach(warning => {
+    const result = templateResults[warning.templateId];
+    if (result) {
+      result.warnings.push(warning);
+    }
+  });
+
   // Calculate overall score (100 - error penalty)
   const errorPenalty = Math.min(totalErrors * 5, 100); // Each error = 5% penalty, max 100%
   const warningPenalty = Math.min(totalWarnings * 1, 20); // Each warning = 1% penalty, max 20%
@@ -199,6 +221,55 @@ export async function validateRoi(
     totalWarnings,
     completeness: completeness as Record<RoiTemplateId, number>,
   };
+}
+
+// ============================================================================
+// Cross-Template Validation
+// ============================================================================
+
+interface CrossTemplateValidationResult {
+  errors: ValidationError[];
+  warnings: ValidationError[];
+}
+
+function validateCrossTemplate(
+  templateData: Record<RoiTemplateId, Record<string, unknown>[]>
+): CrossTemplateValidationResult {
+  const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
+
+  for (const rule of CROSS_TEMPLATE_RULES) {
+    const sourceData = templateData[rule.sourceTemplate] || [];
+    const targetData = templateData[rule.targetTemplate] || [];
+
+    // Skip if source template has no data
+    if (sourceData.length === 0) continue;
+
+    const result = rule.validate(sourceData, targetData);
+
+    if (!result.valid) {
+      result.errors.forEach((message) => {
+        const validationError: ValidationError = {
+          templateId: rule.sourceTemplate,
+          rowIndex: 0,
+          columnCode: rule.sourceField,
+          severity: rule.severity,
+          rule: rule.name,
+          message,
+          value: null,
+          suggestion: `Ensure ${rule.targetTemplate} contains the referenced data`,
+        };
+
+        if (rule.severity === 'error') {
+          errors.push(validationError);
+        } else {
+          warnings.push(validationError);
+        }
+      });
+    }
+  }
+
+  return { errors, warnings };
 }
 
 // ============================================================================
