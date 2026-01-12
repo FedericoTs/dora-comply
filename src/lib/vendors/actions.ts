@@ -30,24 +30,21 @@ import {
   type RiskScoreInput,
   type RiskScoreResult,
 } from './risk-scoring';
+import {
+  createAppError,
+  mapDomainDatabaseError,
+  type AppError,
+  type VendorErrorCode,
+} from '@/lib/errors';
+import { getCurrentUserOrganization } from '@/lib/auth/organization';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type VendorErrorCode =
-  | 'VALIDATION_ERROR'
-  | 'NOT_FOUND'
-  | 'UNAUTHORIZED'
-  | 'DUPLICATE_LEI'
-  | 'DATABASE_ERROR'
-  | 'UNKNOWN_ERROR';
+export type { VendorErrorCode } from '@/lib/errors';
 
-export interface VendorError {
-  code: VendorErrorCode;
-  message: string;
-  field?: string;
-}
+export type VendorError = AppError<VendorErrorCode>;
 
 export interface ActionResult<T = void> {
   success: boolean;
@@ -66,43 +63,11 @@ function createVendorError(
   message: string,
   field?: string
 ): VendorError {
-  return { code, message, field };
+  return createAppError(code, message, field);
 }
 
 function mapDatabaseError(error: { message: string; code?: string }): VendorError {
-  const message = error.message.toLowerCase();
-
-  if (message.includes('duplicate') || message.includes('unique')) {
-    if (message.includes('lei')) {
-      return createVendorError('DUPLICATE_LEI', 'A vendor with this LEI already exists');
-    }
-    return createVendorError('DATABASE_ERROR', 'A record with this value already exists');
-  }
-
-  if (message.includes('foreign key') || message.includes('violates')) {
-    return createVendorError('DATABASE_ERROR', 'Invalid reference to related record');
-  }
-
-  if (message.includes('permission') || message.includes('policy')) {
-    return createVendorError('UNAUTHORIZED', 'You do not have permission to perform this action');
-  }
-
-  return createVendorError('DATABASE_ERROR', error.message);
-}
-
-async function getCurrentUserOrganization(): Promise<string | null> {
-  const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('organization_id')
-    .eq('id', user.id)
-    .single();
-
-  return userData?.organization_id || null;
+  return mapDomainDatabaseError<VendorErrorCode>(error, 'vendor');
 }
 
 /**

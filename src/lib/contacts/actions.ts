@@ -14,23 +14,21 @@ import {
   type UpdateContactFormData,
 } from './schema';
 import type { VendorContact } from './types';
+import {
+  createAppError,
+  mapDatabaseError as mapBaseDatabaseError,
+  type AppError,
+  type ContactErrorCode,
+} from '@/lib/errors';
+import { getCurrentUserOrganization } from '@/lib/auth/organization';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type ContactErrorCode =
-  | 'VALIDATION_ERROR'
-  | 'NOT_FOUND'
-  | 'UNAUTHORIZED'
-  | 'DATABASE_ERROR'
-  | 'UNKNOWN_ERROR';
+export type { ContactErrorCode } from '@/lib/errors';
 
-export interface ContactError {
-  code: ContactErrorCode;
-  message: string;
-  field?: string;
-}
+export type ContactError = AppError<ContactErrorCode>;
 
 export interface ActionResult<T = void> {
   success: boolean;
@@ -47,36 +45,11 @@ function createContactError(
   message: string,
   field?: string
 ): ContactError {
-  return { code, message, field };
+  return createAppError(code, message, field);
 }
 
 function mapDatabaseError(error: { message: string; code?: string }): ContactError {
-  const message = error.message.toLowerCase();
-
-  if (message.includes('foreign key') || message.includes('violates')) {
-    return createContactError('DATABASE_ERROR', 'Invalid vendor reference');
-  }
-
-  if (message.includes('permission') || message.includes('policy')) {
-    return createContactError('UNAUTHORIZED', 'You do not have permission to perform this action');
-  }
-
-  return createContactError('DATABASE_ERROR', error.message);
-}
-
-async function getCurrentUserOrganization(): Promise<string | null> {
-  const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('organization_id')
-    .eq('id', user.id)
-    .single();
-
-  return userData?.organization_id || null;
+  return mapBaseDatabaseError<ContactErrorCode>(error, 'DATABASE_ERROR');
 }
 
 async function verifyVendorOwnership(vendorId: string, organizationId: string): Promise<boolean> {

@@ -18,24 +18,21 @@ import type {
   ContractWithVendor,
   DoraProvisions,
 } from './types';
+import {
+  createAppError,
+  mapDomainDatabaseError,
+  type AppError,
+  type ContractErrorCode,
+} from '@/lib/errors';
+import { getCurrentUserOrganization } from '@/lib/auth/organization';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type ContractErrorCode =
-  | 'VALIDATION_ERROR'
-  | 'NOT_FOUND'
-  | 'UNAUTHORIZED'
-  | 'DUPLICATE_REF'
-  | 'DATABASE_ERROR'
-  | 'UNKNOWN_ERROR';
+export type { ContractErrorCode } from '@/lib/errors';
 
-export interface ContractError {
-  code: ContractErrorCode;
-  message: string;
-  field?: string;
-}
+export type ContractError = AppError<ContractErrorCode>;
 
 export interface ActionResult<T = void> {
   success: boolean;
@@ -52,40 +49,11 @@ function createContractError(
   message: string,
   field?: string
 ): ContractError {
-  return { code, message, field };
+  return createAppError(code, message, field);
 }
 
 function mapDatabaseError(error: { message: string; code?: string }): ContractError {
-  const message = error.message.toLowerCase();
-
-  if (message.includes('duplicate') || message.includes('unique')) {
-    return createContractError('DUPLICATE_REF', 'A contract with this reference already exists');
-  }
-
-  if (message.includes('foreign key') || message.includes('violates')) {
-    return createContractError('DATABASE_ERROR', 'Invalid vendor reference');
-  }
-
-  if (message.includes('permission') || message.includes('policy')) {
-    return createContractError('UNAUTHORIZED', 'You do not have permission to perform this action');
-  }
-
-  return createContractError('DATABASE_ERROR', error.message);
-}
-
-async function getCurrentUserOrganization(): Promise<string | null> {
-  const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('organization_id')
-    .eq('id', user.id)
-    .single();
-
-  return userData?.organization_id || null;
+  return mapDomainDatabaseError<ContractErrorCode>(error, 'contract');
 }
 
 async function verifyVendorOwnership(vendorId: string, organizationId: string): Promise<boolean> {

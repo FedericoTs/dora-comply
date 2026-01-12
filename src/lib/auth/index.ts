@@ -74,3 +74,6 @@ export {
   getCurrentUser,
   checkAuthStatus,
 } from './actions';
+
+// Note: Organization utilities (getCurrentUserOrganization, etc.) are server-only
+// and must be imported directly from '@/lib/auth/organization' in server actions

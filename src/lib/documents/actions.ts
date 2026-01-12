@@ -26,27 +26,21 @@ import type {
   ParsingStatus,
 } from './types';
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from './types';
+import {
+  createAppError,
+  mapDatabaseError as mapBaseDatabaseError,
+  type AppError,
+  type DocumentErrorCode,
+} from '@/lib/errors';
+import { getCurrentUserOrganization, getCurrentUserId } from '@/lib/auth/organization';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type DocumentErrorCode =
-  | 'VALIDATION_ERROR'
-  | 'NOT_FOUND'
-  | 'UNAUTHORIZED'
-  | 'UPLOAD_ERROR'
-  | 'STORAGE_ERROR'
-  | 'DATABASE_ERROR'
-  | 'FILE_TOO_LARGE'
-  | 'INVALID_FILE_TYPE'
-  | 'UNKNOWN_ERROR';
+export type { DocumentErrorCode } from '@/lib/errors';
 
-export interface DocumentError {
-  code: DocumentErrorCode;
-  message: string;
-  field?: string;
-}
+export type DocumentError = AppError<DocumentErrorCode>;
 
 export interface ActionResult<T = void> {
   success: boolean;
@@ -63,42 +57,11 @@ function createDocumentError(
   message: string,
   field?: string
 ): DocumentError {
-  return { code, message, field };
+  return createAppError(code, message, field);
 }
 
 function mapDatabaseError(error: { message: string; code?: string }): DocumentError {
-  const message = error.message.toLowerCase();
-
-  if (message.includes('permission') || message.includes('policy')) {
-    return createDocumentError('UNAUTHORIZED', 'You do not have permission to perform this action');
-  }
-
-  if (message.includes('foreign key') || message.includes('violates')) {
-    return createDocumentError('DATABASE_ERROR', 'Invalid reference to related record');
-  }
-
-  return createDocumentError('DATABASE_ERROR', error.message);
-}
-
-async function getCurrentUserOrganization(): Promise<string | null> {
-  const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('organization_id')
-    .eq('id', user.id)
-    .single();
-
-  return userData?.organization_id || null;
-}
-
-async function getCurrentUserId(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.id || null;
+  return mapBaseDatabaseError<DocumentErrorCode>(error, 'DATABASE_ERROR');
 }
 
 /**
