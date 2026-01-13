@@ -17,6 +17,11 @@ import {
   getCompletionOrder,
 } from '@/lib/roi/template-relationships';
 
+// Convert template ID to URL-safe format (B_01.01 -> b_01_01)
+function templateIdToUrl(id: string): string {
+  return id.toLowerCase().replace('.', '_');
+}
+
 export const metadata = {
   title: 'Template Relationships | DORA Comply',
   description: 'Visualize RoI template dependencies and optimal completion order',
@@ -83,7 +88,7 @@ async function RelationshipsContent() {
               return (
                 <Link
                   key={template.id}
-                  href={`/roi/${template.id}`}
+                  href={`/roi/${templateIdToUrl(template.id)}`}
                   className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-sm">
