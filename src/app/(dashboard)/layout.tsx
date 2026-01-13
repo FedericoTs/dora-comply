@@ -8,6 +8,7 @@ import { NotificationDropdown } from '@/components/notifications/notification-dr
 import { checkAuthStatus, logout } from '@/lib/auth';
 import { ProductTour } from '@/components/onboarding/product-tour';
 import { GlobalSearch } from '@/components/search/global-search';
+import { getOnboardingProgress } from '@/lib/onboarding/progress';
 
 export default async function DashboardLayout({
   children,
@@ -23,6 +24,9 @@ export default async function DashboardLayout({
   if (needsOnboarding) {
     redirect('/onboarding');
   }
+
+  // Fetch onboarding progress for sidebar
+  const onboardingProgress = await getOnboardingProgress();
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,7 +44,7 @@ export default async function DashboardLayout({
           </div>
 
           {/* Navigation - Grouped with collapsible sections */}
-          <SidebarNav />
+          <SidebarNav onboardingSteps={onboardingProgress.steps} />
 
           {/* User */}
           <div className="p-4 border-t border-sidebar-border">

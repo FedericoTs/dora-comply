@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ChevronDown,
+  ChevronRight,
   LayoutDashboard,
   Building2,
   FileText,
@@ -16,6 +17,8 @@ import {
   Layers,
   Settings,
   CheckCircle2,
+  Circle,
+  Clock,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -38,7 +41,18 @@ interface NavGroup {
   collapsible?: boolean;
 }
 
+export interface OnboardingStep {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+  done: boolean;
+  time: string;
+}
+
 interface SidebarNavProps {
+  /** Onboarding steps with completion status */
+  onboardingSteps?: OnboardingStep[];
   /** Number of completed onboarding steps (0-4) */
   onboardingProgress?: number;
   /** Show advanced features or hide them */
@@ -164,21 +178,111 @@ function CollapsibleGroup({
   );
 }
 
-function OnboardingProgress({ completed, total }: { completed: number; total: number }) {
+function OnboardingProgress({
+  steps,
+  completed,
+  total
+}: {
+  steps?: OnboardingStep[];
+  completed: number;
+  total: number;
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
   if (completed >= total) return null;
 
   return (
-    <div className="px-3 py-3 mx-3 mb-2 rounded-lg bg-primary/5 border border-primary/10">
-      <div className="flex items-center justify-between text-xs mb-2">
-        <span className="font-medium text-primary">Setup Progress</span>
-        <span className="text-muted-foreground">{completed}/{total}</span>
-      </div>
-      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-500"
-          style={{ width: `${(completed / total) * 100}%` }}
+    <div className="mx-3 mb-2 rounded-lg bg-primary/5 border border-primary/10 overflow-hidden">
+      {/* Header - Clickable to expand/collapse */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-3 py-3 flex items-center justify-between hover:bg-primary/5 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-primary">Setup Progress</span>
+          <span className="text-xs text-muted-foreground">{completed}/{total}</span>
+        </div>
+        <ChevronDown
+          className={cn(
+            'h-4 w-4 text-muted-foreground transition-transform duration-200',
+            isExpanded ? 'rotate-0' : '-rotate-90'
+          )}
         />
+      </button>
+
+      {/* Progress Bar */}
+      <div className="px-3 pb-2">
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-500"
+            style={{ width: `${(completed / total) * 100}%` }}
+          />
+        </div>
       </div>
+
+      {/* Expandable Steps List */}
+      {isExpanded && steps && steps.length > 0 && (
+        <div className="px-2 pb-2 space-y-1">
+          {steps.map((step, index) => {
+            const isNext = !step.done && steps.slice(0, index).every(s => s.done);
+
+            return (
+              <Link
+                key={step.id}
+                href={step.href}
+                className={cn(
+                  'group flex items-start gap-2 px-2 py-2 rounded-md transition-colors',
+                  step.done
+                    ? 'opacity-60 hover:opacity-80'
+                    : isNext
+                      ? 'bg-primary/10 hover:bg-primary/15'
+                      : 'hover:bg-muted/50'
+                )}
+              >
+                {/* Status Icon */}
+                <div className="mt-0.5 flex-shrink-0">
+                  {step.done ? (
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                  ) : isNext ? (
+                    <Circle className="h-4 w-4 text-primary fill-primary/20" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={cn(
+                      'text-xs font-medium truncate',
+                      step.done ? 'line-through text-muted-foreground' : '',
+                      isNext ? 'text-primary' : ''
+                    )}>
+                      {step.label}
+                    </span>
+                    {!step.done && (
+                      <span className="flex-shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        {step.time}
+                      </span>
+                    )}
+                  </div>
+                  {isNext && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">
+                      {step.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Arrow for next step */}
+                {isNext && (
+                  <ChevronRight className="h-4 w-4 text-primary flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -187,15 +291,24 @@ function OnboardingProgress({ completed, total }: { completed: number; total: nu
 // Main Component
 // ============================================================================
 
-export function SidebarNav({ onboardingProgress = 0, showAdvanced = true }: SidebarNavProps) {
+export function SidebarNav({
+  onboardingSteps,
+  onboardingProgress = 0,
+  showAdvanced = true,
+}: SidebarNavProps) {
   const pathname = usePathname();
-  const isNewUser = onboardingProgress < 2;
+  const completed = onboardingSteps?.filter(s => s.done).length ?? onboardingProgress;
+  const isNewUser = completed < 2;
 
   return (
     <nav className="flex-1 p-4 space-y-4">
       {/* Onboarding Progress (only for new users) */}
       {isNewUser && (
-        <OnboardingProgress completed={onboardingProgress} total={4} />
+        <OnboardingProgress
+          steps={onboardingSteps}
+          completed={completed}
+          total={onboardingSteps?.length ?? 4}
+        />
       )}
 
       {/* Core Navigation - Always visible */}
