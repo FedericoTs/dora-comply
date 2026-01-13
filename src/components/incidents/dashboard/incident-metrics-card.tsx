@@ -6,6 +6,7 @@ import { AlertTriangle, Clock, CheckCircle, TrendingUp, TrendingDown, Minus } fr
 import { cn } from '@/lib/utils';
 import type { IncidentStatsEnhanced } from '@/lib/incidents/types';
 import { IncidentTrendSparkline } from './incident-trend-sparkline';
+import { HelpTooltip, KPI_HELP } from '@/components/ui/help-tooltip';
 
 interface IncidentMetricsCardProps {
   stats: IncidentStatsEnhanced;
@@ -49,7 +50,10 @@ export function IncidentMetricsCard({ stats, className }: IncidentMetricsCardPro
                 <p className="text-2xl font-bold">{activeIncidents}</p>
                 <TrendIndicator current={last7Total} previous={prev7Total} />
               </div>
-              <p className="text-xs text-muted-foreground">Active Incidents</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                Active Incidents
+                <HelpTooltip content={KPI_HELP.activeIncidents} iconClassName="h-3 w-3" />
+              </p>
             </div>
           </div>
 

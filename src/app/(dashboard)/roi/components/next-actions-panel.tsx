@@ -8,6 +8,7 @@ import { Target, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PriorityActionCard, PriorityActionCardCompact } from './priority-action-card';
 import type { NextAction } from '@/lib/roi/types';
+import { HelpTooltip, KPI_HELP } from '@/components/ui/help-tooltip';
 
 interface NextActionsPanelProps {
   actions: NextAction[];
@@ -51,6 +52,7 @@ export function NextActionsPanel({ actions }: NextActionsPanelProps) {
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
               High Priority
+              <HelpTooltip content={KPI_HELP.highPriorityActions} iconClassName="h-3 w-3" />
             </h4>
             <div className="grid gap-2">
               {highPriority.slice(0, 3).map(action => (
@@ -81,6 +83,7 @@ export function NextActionsPanel({ actions }: NextActionsPanelProps) {
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <Zap className="h-3 w-3 text-emerald-500" />
               Quick Wins ({quickWins.length})
+              <HelpTooltip content={KPI_HELP.quickWins} iconClassName="h-3 w-3" />
             </h4>
             <div className="grid gap-2">
               {quickWins.slice(0, 3).map(action => (

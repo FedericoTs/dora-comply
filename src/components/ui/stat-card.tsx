@@ -19,6 +19,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { TrendingUp, TrendingDown, Minus, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { HelpTooltip } from '@/components/ui/help-tooltip';
 
 // ============================================================================
 // Types
@@ -55,6 +56,8 @@ export interface StatCardProps {
   className?: string;
   /** Size variant */
   size?: 'default' | 'compact' | 'large';
+  /** Tooltip content explaining the KPI - shows info icon when provided */
+  tooltip?: React.ReactNode;
   /** Children for custom content in footer area */
   children?: React.ReactNode;
 }
@@ -141,6 +144,7 @@ export function StatCard({
   href,
   className,
   size = 'default',
+  tooltip,
   children,
 }: StatCardProps) {
   const styles = variantStyles[variant];
@@ -198,8 +202,9 @@ export function StatCard({
         <p className={cn('font-semibold tracking-tight', s.value)}>
           {value}
         </p>
-        <p className={cn('text-muted-foreground', s.label)}>
+        <p className={cn('text-muted-foreground flex items-center gap-1', s.label)}>
           {label}
+          {tooltip && <HelpTooltip content={tooltip} iconClassName="h-3.5 w-3.5" />}
         </p>
         {description && (
           <p className="text-xs text-muted-foreground mt-1">
@@ -296,14 +301,16 @@ interface QuickStatProps {
   value: string | number;
   label: string;
   href?: string;
+  tooltip?: React.ReactNode;
 }
 
-export function VendorStat({ value, label, href }: QuickStatProps) {
+export function VendorStat({ value, label, href, tooltip }: QuickStatProps) {
   return (
     <StatCard
       value={value}
       label={label}
       href={href}
+      tooltip={tooltip}
       size="compact"
     />
   );
@@ -314,6 +321,7 @@ export function ProgressStat({
   label,
   progress,
   href,
+  tooltip,
 }: QuickStatProps & { progress: number }) {
   return (
     <StatCard
@@ -321,6 +329,7 @@ export function ProgressStat({
       label={label}
       progress={progress}
       href={href}
+      tooltip={tooltip}
     />
   );
 }
@@ -331,6 +340,7 @@ export function TrendStat({
   trend,
   trendLabel,
   href,
+  tooltip,
 }: QuickStatProps & { trend: StatTrend; trendLabel?: string }) {
   return (
     <StatCard
@@ -339,6 +349,7 @@ export function TrendStat({
       trend={trend}
       trendLabel={trendLabel}
       href={href}
+      tooltip={tooltip}
     />
   );
 }

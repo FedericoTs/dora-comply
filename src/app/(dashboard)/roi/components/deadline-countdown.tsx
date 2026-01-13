@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { HelpTooltip, KPI_HELP } from '@/components/ui/help-tooltip';
 
 interface DeadlineCountdownProps {
   deadline: Date | string;
@@ -62,7 +63,10 @@ export function DeadlineCountdown({ deadline, daysRemaining }: DeadlineCountdown
     <Card className={cn('border-2', config.border, config.bg)}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardDescription>ESA Deadline</CardDescription>
+          <CardDescription className="flex items-center gap-1">
+            ESA Deadline
+            <HelpTooltip content={KPI_HELP.submissionDeadline} iconClassName="h-3 w-3" />
+          </CardDescription>
           <Icon className={cn('h-5 w-5', config.color)} />
         </div>
         <CardTitle className={cn('text-3xl font-bold', config.color)}>

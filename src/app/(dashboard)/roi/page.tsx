@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { HelpTooltip, KPI_HELP } from '@/components/ui/help-tooltip';
 
 export const metadata = {
   title: 'Register of Information | DORA Comply',
@@ -113,21 +114,33 @@ async function RoiDashboardContent({ populateDocId }: RoiDashboardContentProps) 
         <Card className="lg:col-span-2">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium">Overall Progress</h3>
+              <h3 className="font-medium flex items-center gap-1">
+                Overall Progress
+                <HelpTooltip content={KPI_HELP.completeness} iconClassName="h-3.5 w-3.5" />
+              </h3>
               <span className="text-2xl font-bold">{avgCompleteness}%</span>
             </div>
             <Progress value={avgCompleteness} className="h-3 mb-4" />
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Templates</p>
+                <p className="text-muted-foreground flex items-center gap-1">
+                  Templates
+                  <HelpTooltip content={KPI_HELP.templatesReady} iconClassName="h-3 w-3" />
+                </p>
                 <p className="font-medium">{templatesWithData} of {stats.length} ready</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Records</p>
+                <p className="text-muted-foreground flex items-center gap-1">
+                  Records
+                  <HelpTooltip content={KPI_HELP.totalRecords} iconClassName="h-3 w-3" />
+                </p>
                 <p className="font-medium">{totalRows} total</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Fields</p>
+                <p className="text-muted-foreground flex items-center gap-1">
+                  Fields
+                  <HelpTooltip content={KPI_HELP.fieldsCompleted} iconClassName="h-3 w-3" />
+                </p>
                 <p className="font-medium">~{completedFields} completed</p>
               </div>
             </div>

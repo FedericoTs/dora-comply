@@ -35,6 +35,7 @@ import { getDocumentStats } from '@/lib/documents/queries';
 import { BoardReportExport } from '@/components/reports/board-report-export';
 import { IncidentMetricsCard } from '@/components/incidents/dashboard';
 import { StatCard, StatCardGrid } from '@/components/ui/stat-card';
+import { HelpTooltip, KPI_HELP } from '@/components/ui/help-tooltip';
 
 // ============================================================================
 // Time-aware greeting
@@ -402,6 +403,7 @@ export default async function DashboardPage() {
           trendLabel={`${totalVendors} total`}
           href="/vendors"
           size="compact"
+          tooltip={KPI_HELP.totalVendors}
         />
         <StatCard
           label="RoI Readiness"
@@ -410,6 +412,7 @@ export default async function DashboardPage() {
           description={avgRoiCompleteness > 0 ? `${templatesWithData.length} templates` : 'No data yet'}
           href="/roi"
           size="compact"
+          tooltip={KPI_HELP.roiReadiness}
         />
         <StatCard
           label="Critical Risks"
@@ -419,6 +422,7 @@ export default async function DashboardPage() {
           trendLabel={criticalRisks === 0 ? 'None' : `${criticalRisks} vendors`}
           href="/vendors?risk=critical"
           size="compact"
+          tooltip={KPI_HELP.criticalRisks}
         />
         {incidentStats ? (
           <IncidentMetricsCard stats={incidentStats} />
@@ -442,6 +446,7 @@ export default async function DashboardPage() {
           variant={daysToDeadline <= 30 ? 'warning' : 'default'}
           href="/roi/submissions"
           size="compact"
+          tooltip={KPI_HELP.daysToDeadline}
         />
       </StatCardGrid>
 
@@ -826,7 +831,10 @@ function IncidentStatCard({
 
   return (
     <Link href="/incidents" className="stat-card group hover:border-primary/50 transition-colors">
-      <p className="stat-label mb-2">Active Incidents</p>
+      <p className="stat-label mb-2 flex items-center gap-1">
+        Active Incidents
+        <HelpTooltip content={KPI_HELP.activeIncidents} iconClassName="h-3.5 w-3.5" />
+      </p>
       <div className="flex items-baseline gap-2">
         <p className={`stat-value ${hasCritical ? 'text-destructive' : ''}`}>{total}</p>
         {hasCritical && (
@@ -942,7 +950,10 @@ function TestingStatCard({
 
   return (
     <Link href="/testing" className="stat-card group hover:border-primary/50 transition-colors">
-      <p className="stat-label mb-2">{tlptRequired ? 'Testing & TLPT' : 'Resilience Testing'}</p>
+      <p className="stat-label mb-2 flex items-center gap-1">
+        {tlptRequired ? 'Testing & TLPT' : 'Resilience Testing'}
+        <HelpTooltip content={KPI_HELP.testingCoverage} iconClassName="h-3.5 w-3.5" />
+      </p>
       <div className="flex items-baseline gap-2">
         <p className="stat-value">{testTypeCoverage}%</p>
         <span className="text-xs text-muted-foreground">coverage</span>

@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import type { ConcentrationMetrics } from '@/lib/concentration/types';
 import { SERVICE_TYPE_LABELS } from '@/lib/concentration/types';
+import { HelpTooltip, KPI_HELP } from '@/components/ui/help-tooltip';
 
 interface MetricsGridProps {
   metrics: ConcentrationMetrics;
@@ -33,6 +34,7 @@ interface MetricCardProps {
     onClick: () => void;
   };
   className?: string;
+  tooltip?: string;
 }
 
 function MetricCard({
@@ -42,6 +44,7 @@ function MetricCard({
   children,
   action,
   className,
+  tooltip,
 }: MetricCardProps) {
   return (
     <div
@@ -56,7 +59,10 @@ function MetricCard({
           <div className={cn('p-2 rounded-lg bg-muted/50')}>
             <Icon className={cn('h-4 w-4', iconColor)} />
           </div>
-          <h4 className="font-medium text-sm text-muted-foreground">{title}</h4>
+          <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-1">
+            {title}
+            {tooltip && <HelpTooltip content={tooltip} iconClassName="h-3.5 w-3.5" />}
+          </h4>
         </div>
       </div>
 
@@ -87,6 +93,7 @@ export function MetricsGrid({ metrics, className }: MetricsGridProps) {
         title="Vendor Distribution"
         icon={Building2}
         iconColor="text-blue-500"
+        tooltip={KPI_HELP.totalVendors}
       >
         <div className="space-y-2">
           <div className="flex justify-between items-baseline">
@@ -125,6 +132,7 @@ export function MetricsGrid({ metrics, className }: MetricsGridProps) {
         title="Service Diversity"
         icon={Layers}
         iconColor="text-purple-500"
+        tooltip={KPI_HELP.hhi}
       >
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
@@ -169,6 +177,7 @@ export function MetricsGrid({ metrics, className }: MetricsGridProps) {
         title="Geographic Spread"
         icon={Globe2}
         iconColor="text-emerald-500"
+        tooltip={KPI_HELP.geographicSpread}
       >
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -204,6 +213,7 @@ export function MetricsGrid({ metrics, className }: MetricsGridProps) {
         title="Substitutability"
         icon={Link2}
         iconColor={metrics.substitutability_coverage_percentage < 50 ? 'text-orange-500' : 'text-green-500'}
+        tooltip={KPI_HELP.substitutability}
         action={{
           label: 'Start Assessment',
           onClick: () => {},
@@ -246,6 +256,7 @@ export function MetricsGrid({ metrics, className }: MetricsGridProps) {
         title="Fourth-Party Depth"
         icon={TrendingUp}
         iconColor="text-indigo-500"
+        tooltip={KPI_HELP.fourthPartyDepth}
       >
         <div className="space-y-3">
           <div className="flex items-baseline gap-3">
@@ -279,6 +290,7 @@ export function MetricsGrid({ metrics, className }: MetricsGridProps) {
         title="Single Points of Failure"
         icon={AlertTriangle}
         iconColor={metrics.spof_count > 0 ? 'text-red-500' : 'text-green-500'}
+        tooltip={KPI_HELP.spof}
       >
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">

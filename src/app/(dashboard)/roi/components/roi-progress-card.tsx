@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { HelpTooltip } from '@/components/ui/help-tooltip';
 
 interface RoiProgressCardProps {
   title: string;
@@ -9,6 +10,7 @@ interface RoiProgressCardProps {
   suffix?: string;
   description: string;
   variant?: 'default' | 'progress' | 'warning' | 'highlight';
+  tooltip?: string;
 }
 
 const variantStyles = {
@@ -36,6 +38,7 @@ export function RoiProgressCard({
   suffix,
   description,
   variant = 'default',
+  tooltip,
 }: RoiProgressCardProps) {
   const getProgressColor = (val: number) => {
     if (val >= 80) return 'text-success';
@@ -49,7 +52,10 @@ export function RoiProgressCard({
   return (
     <Card className={cn(styles.card)}>
       <CardHeader className="pb-2">
-        <CardDescription>{title}</CardDescription>
+        <CardDescription className="flex items-center gap-1">
+          {title}
+          {tooltip && <HelpTooltip content={tooltip} iconClassName="h-3.5 w-3.5" />}
+        </CardDescription>
         <CardTitle className={cn('text-3xl font-bold', valueClass)}>
           {value.toLocaleString()}
           {suffix && <span className="text-lg font-normal text-muted-foreground">{suffix}</span>}

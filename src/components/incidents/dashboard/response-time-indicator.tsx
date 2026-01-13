@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ResponseMetrics } from '@/lib/incidents/types';
+import { HelpTooltip, KPI_HELP } from '@/components/ui/help-tooltip';
 
 interface ResponseTimeIndicatorProps {
   metrics: ResponseMetrics;
@@ -53,6 +54,7 @@ export function ResponseTimeIndicator({ metrics, className }: ResponseTimeIndica
             <span className="text-muted-foreground flex items-center gap-1.5">
               <Zap className="h-3.5 w-3.5" />
               Mean Time to Detect
+              <HelpTooltip content={KPI_HELP.mttd} iconClassName="h-3 w-3" />
             </span>
             <Badge variant="outline" className={cn('text-xs', detectionStatus.color)}>
               {detectionStatus.label}
@@ -72,6 +74,7 @@ export function ResponseTimeIndicator({ metrics, className }: ResponseTimeIndica
             <span className="text-muted-foreground flex items-center gap-1.5">
               <CheckCircle className="h-3.5 w-3.5" />
               Mean Time to Resolve
+              <HelpTooltip content={KPI_HELP.mttr} iconClassName="h-3 w-3" />
             </span>
             <Badge variant="outline" className={cn('text-xs', resolutionStatus.color)}>
               {resolutionStatus.label}
@@ -88,7 +91,10 @@ export function ResponseTimeIndicator({ metrics, className }: ResponseTimeIndica
         {/* Report Compliance */}
         <div className="pt-3 border-t">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Report Compliance (DORA Art. 19)</span>
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
+              Report Compliance (DORA Art. 19)
+              <HelpTooltip content={KPI_HELP.reportCompliance} iconClassName="h-3 w-3" />
+            </span>
             <span
               className={cn(
                 'text-sm font-medium',
