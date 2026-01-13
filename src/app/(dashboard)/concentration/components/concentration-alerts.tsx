@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, AlertTriangle, Bell, Info, X, ChevronRight } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Bell, Info, X } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -54,12 +54,10 @@ const ALERT_CONFIG: Record<RiskLevel, {
 function AlertBanner({
   alert,
   onDismiss,
-  onViewDetails,
   onTakeAction,
 }: {
   alert: ConcentrationAlert;
   onDismiss: (id: string) => void;
-  onViewDetails: (alert: ConcentrationAlert) => void;
   onTakeAction: (alert: ConcentrationAlert) => void;
 }) {
   const config = ALERT_CONFIG[alert.severity];
@@ -105,22 +103,11 @@ function AlertBanner({
           <div className="flex items-center gap-2">
             <Button
               size="sm"
-              variant="outline"
               className="h-7 text-xs"
-              onClick={() => onViewDetails(alert)}
+              onClick={() => onTakeAction(alert)}
             >
-              View Details
-              <ChevronRight className="ml-1 h-3 w-3" />
+              Take Action
             </Button>
-            {alert.action_required && (
-              <Button
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => onTakeAction(alert)}
-              >
-                Take Action
-              </Button>
-            )}
             <Button
               size="sm"
               variant="ghost"
@@ -158,13 +145,7 @@ export function ConcentrationAlerts({ alerts, className }: ConcentrationAlertsPr
     toast.success('Alert dismissed for 7 days');
   };
 
-  const handleViewDetails = (alert: ConcentrationAlert) => {
-    setSelectedAlert(alert);
-    setDialogOpen(true);
-  };
-
   const handleTakeAction = (alert: ConcentrationAlert) => {
-    // Open the workflow dialog directly for action
     setSelectedAlert(alert);
     setDialogOpen(true);
   };
@@ -187,7 +168,6 @@ export function ConcentrationAlerts({ alerts, className }: ConcentrationAlertsPr
             <AlertBanner
               alert={alert}
               onDismiss={handleDismiss}
-              onViewDetails={handleViewDetails}
               onTakeAction={handleTakeAction}
             />
           </div>
@@ -221,12 +201,7 @@ export function ConcentrationAlertBanner({
   const config = ALERT_CONFIG[topAlert.severity];
   const Icon = config.icon;
 
-  const handleViewDetails = () => {
-    setDialogOpen(true);
-  };
-
-  const handleCreateMitigation = () => {
-    // Open the workflow dialog for mitigation
+  const handleTakeAction = () => {
     setDialogOpen(true);
   };
 
@@ -276,11 +251,8 @@ export function ConcentrationAlertBanner({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Button size="sm" variant="outline" onClick={handleViewDetails}>
-              View Details
-            </Button>
-            <Button size="sm" onClick={handleCreateMitigation}>
-              Create Mitigation Plan
+            <Button size="sm" onClick={handleTakeAction}>
+              Take Action
             </Button>
             <Button
               variant="ghost"
