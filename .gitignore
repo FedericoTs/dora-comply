@@ -194,3 +194,6 @@ test-documents/*.pdf
 __pycache__/
 *.pyc
 *.pyo
+
+# E2E test debug artifacts
+tests/e2e/debug-*.png
