@@ -89,10 +89,15 @@ import {
   type PaginatedResult,
   type DocumentType,
   type ParsingStatus,
+  type StatusFilter,
+  type SortField,
+  type SortDirection,
+  type ViewMode,
+  type GroupBy,
   DOCUMENT_TYPE_INFO,
+  SORT_OPTIONS,
   formatFileSize,
-  isDocumentExpiring,
-  isDocumentExpired,
+  getDocumentStatus,
 } from '@/lib/documents/types';
 import {
   uploadDocument,
@@ -118,12 +123,6 @@ interface DocumentsClientProps {
   initialVendors?: SimpleVendor[];
 }
 
-type SortField = 'filename' | 'created_at' | 'file_size' | 'type' | 'vendor';
-type SortDirection = 'asc' | 'desc';
-type ViewMode = 'table' | 'card';
-type GroupBy = 'none' | 'vendor' | 'type' | 'status';
-type StatusFilter = 'all' | 'active' | 'expiring' | 'expired' | 'processing' | 'failed';
-
 // ============================================================================
 // Constants
 // ============================================================================
@@ -145,25 +144,9 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: React.ElementT
   { value: 'failed', label: 'Failed', icon: X, color: 'text-destructive' },
 ];
 
-const SORT_OPTIONS: { value: SortField; label: string }[] = [
-  { value: 'created_at', label: 'Upload Date' },
-  { value: 'filename', label: 'Filename' },
-  { value: 'file_size', label: 'File Size' },
-  { value: 'type', label: 'Document Type' },
-  { value: 'vendor', label: 'Vendor Name' },
-];
-
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-function getDocumentStatus(doc: DocumentWithVendor): StatusFilter {
-  if (doc.parsing_status === 'processing' || doc.parsing_status === 'pending') return 'processing';
-  if (doc.parsing_status === 'failed') return 'failed';
-  if (isDocumentExpired(doc)) return 'expired';
-  if (isDocumentExpiring(doc)) return 'expiring';
-  return 'active';
-}
 
 function getStatusBadge(status: StatusFilter, doc?: DocumentWithVendor) {
   switch (status) {

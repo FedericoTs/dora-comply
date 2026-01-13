@@ -10,22 +10,25 @@ import {
   LayoutDashboard,
   Moon,
   Sun,
-  TrendingUp,
-  TrendingDown,
-  Clock,
   Search,
   Bell,
-  ChevronRight,
   Plus,
   ArrowUpRight,
-  CheckCircle2,
-  AlertCircle,
   MoreHorizontal,
   Filter,
   Calendar,
   BarChart3,
   Zap,
 } from "lucide-react";
+
+import {
+  NavItem,
+  StatCard,
+  ActivityItem,
+  RiskRow,
+  VendorRow,
+  ColorSwatch,
+} from "./components";
 
 export default function ThemePage() {
   const [darkMode, setDarkMode] = useState(false);
@@ -405,211 +408,6 @@ export default function ThemePage() {
             </div>
           </div>
         </main>
-      </div>
-    </div>
-  );
-}
-
-/* ============================================
-   COMPONENTS
-   ============================================ */
-
-function NavItem({
-  icon: Icon,
-  label,
-  active = false,
-  count,
-  badge,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  active?: boolean;
-  count?: number;
-  badge?: string;
-}) {
-  return (
-    <div className={`nav-item ${active ? "active" : ""}`}>
-      <Icon className="h-5 w-5" />
-      <span className="flex-1 text-sm">{label}</span>
-      {count && (
-        <span className="text-xs text-muted-foreground">{count}</span>
-      )}
-      {badge && (
-        <span className="text-xs font-medium text-primary bg-accent px-2 py-0.5 rounded-full">
-          {badge}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  change,
-  trend,
-  period,
-  subtitle,
-}: {
-  label: string;
-  value: string;
-  change?: string;
-  trend?: "up" | "down";
-  period?: string;
-  subtitle?: string;
-}) {
-  return (
-    <div className="stat-card">
-      <p className="stat-label mb-2">{label}</p>
-      <p className="stat-value">{value}</p>
-      {change && (
-        <div className="flex items-center gap-1.5 mt-2">
-          {trend === "up" ? (
-            <TrendingUp className="h-4 w-4 text-success" />
-          ) : (
-            <TrendingDown className="h-4 w-4 text-success" />
-          )}
-          <span className="text-sm text-success font-medium">{change}</span>
-          <span className="text-sm text-muted-foreground">{period}</span>
-        </div>
-      )}
-      {subtitle && (
-        <p className="text-sm text-muted-foreground mt-2">{subtitle}</p>
-      )}
-    </div>
-  );
-}
-
-function ActivityItem({
-  title,
-  vendor,
-  time,
-  type,
-}: {
-  title: string;
-  vendor: string;
-  time: string;
-  type: "success" | "warning" | "info";
-}) {
-  const icons = {
-    success: CheckCircle2,
-    warning: AlertCircle,
-    info: FileText,
-  };
-  const colors = {
-    success: "text-success",
-    warning: "text-warning",
-    info: "text-info",
-  };
-  const Icon = icons[type];
-
-  return (
-    <div className="flex items-center gap-4 py-4 border-b border-border last:border-0">
-      <div className={`${colors[type]}`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">{title}</p>
-        <p className="text-sm text-muted-foreground">{vendor}</p>
-      </div>
-      <p className="text-sm text-muted-foreground whitespace-nowrap">{time}</p>
-    </div>
-  );
-}
-
-function RiskRow({
-  label,
-  count,
-  total,
-  color,
-}: {
-  label: string;
-  count: number;
-  total: number;
-  color: string;
-}) {
-  const percentage = (count / total) * 100;
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div className={`w-2.5 h-2.5 rounded-full ${color}`} />
-          <span className="text-sm font-medium">{label}</span>
-        </div>
-        <span className="text-sm text-muted-foreground">{count}</span>
-      </div>
-      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-        <div
-          className={`h-full rounded-full ${color} transition-all duration-500`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function VendorRow({
-  name,
-  type,
-  priority,
-  due,
-}: {
-  name: string;
-  type: string;
-  priority: "High" | "Medium" | "Low";
-  due: string;
-}) {
-  const priorityStyles = {
-    High: "badge-error",
-    Medium: "badge-warning",
-    Low: "badge-default",
-  };
-
-  return (
-    <tr className="group cursor-pointer">
-      <td>
-        <div className="flex items-center gap-3">
-          <div className="avatar-primary">
-            <span className="text-xs font-semibold">
-              {name
-                .split(" ")
-                .map((w) => w[0])
-                .join("")}
-            </span>
-          </div>
-          <span className="font-medium">{name}</span>
-        </div>
-      </td>
-      <td className="text-muted-foreground">{type}</td>
-      <td>
-        <span className={`badge ${priorityStyles[priority]}`}>{priority}</span>
-      </td>
-      <td className="text-muted-foreground">{due}</td>
-      <td>
-        <button className="opacity-0 group-hover:opacity-100 transition-opacity">
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </button>
-      </td>
-    </tr>
-  );
-}
-
-function ColorSwatch({
-  name,
-  color,
-  value,
-}: {
-  name: string;
-  color: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className={`w-10 h-10 rounded-lg ${color}`} />
-      <div>
-        <p className="text-sm font-medium">{name}</p>
-        <p className="text-xs text-muted-foreground font-mono">{value}</p>
       </div>
     </div>
   );

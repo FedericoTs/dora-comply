@@ -262,3 +262,32 @@ export function isDocumentExpired(document: Document): boolean {
 
   return new Date(expiryDate) < new Date();
 }
+
+// ============================================
+// UI FILTER & SORT CONSTANTS
+// ============================================
+
+export type StatusFilter = 'all' | 'active' | 'expiring' | 'expired' | 'processing' | 'failed';
+export type SortField = 'filename' | 'created_at' | 'file_size' | 'type' | 'vendor';
+export type SortDirection = 'asc' | 'desc';
+export type ViewMode = 'table' | 'card';
+export type GroupBy = 'none' | 'vendor' | 'type' | 'status';
+
+export const SORT_OPTIONS: { value: SortField; label: string }[] = [
+  { value: 'created_at', label: 'Upload Date' },
+  { value: 'filename', label: 'Filename' },
+  { value: 'file_size', label: 'File Size' },
+  { value: 'type', label: 'Document Type' },
+  { value: 'vendor', label: 'Vendor Name' },
+];
+
+/**
+ * Determine the display status of a document based on parsing status and expiry
+ */
+export function getDocumentStatus(doc: Document | DocumentWithVendor): StatusFilter {
+  if (doc.parsing_status === 'processing' || doc.parsing_status === 'pending') return 'processing';
+  if (doc.parsing_status === 'failed') return 'failed';
+  if (isDocumentExpired(doc)) return 'expired';
+  if (isDocumentExpiring(doc)) return 'expiring';
+  return 'active';
+}
