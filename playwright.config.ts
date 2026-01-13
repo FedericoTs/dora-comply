@@ -10,6 +10,9 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests/e2e',
 
+  // Increase timeout for auth setup (Next.js cold start can be slow)
+  timeout: 60000,
+
   // Run tests in parallel
   fullyParallel: true,
 
