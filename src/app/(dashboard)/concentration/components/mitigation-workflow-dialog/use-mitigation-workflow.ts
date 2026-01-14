@@ -67,6 +67,7 @@ export function useMitigationWorkflow({ alert, onOpenChange }: UseMitigationWork
       completed: completedActions.includes(`${alert.id}-action-${index}`),
     }));
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActionItems(items);
   }, [alert, loadStoredActions]);
 

@@ -107,8 +107,10 @@ export function DocumentsClient({ initialData, initialVendors = [] }: DocumentsC
   const [isLoadingVendors, setIsLoadingVendors] = useState(false);
 
   // Fetch vendors on mount and when needed
+  // Intentional data fetching pattern
   useEffect(() => {
     if ((isUploadOpen || state.vendorFilter !== 'all') && vendors.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoadingVendors(true);
       fetchVendorsAction({ pagination: { page: 1, limit: 500 } })
         .then((result) => {

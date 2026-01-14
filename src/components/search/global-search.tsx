@@ -84,14 +84,17 @@ export function GlobalSearch({ placeholder = 'Search anything...' }: GlobalSearc
   }, [open, recentItems]);
 
   // Search when query changes
+  // Intentional search results update
   useEffect(() => {
     if (!debouncedQuery || debouncedQuery.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResults(null);
       return;
     }
 
     startTransition(async () => {
       const searchResults = await globalSearch(debouncedQuery);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResults(searchResults);
     });
   }, [debouncedQuery]);

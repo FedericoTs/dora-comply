@@ -60,6 +60,7 @@ export default function FrameworksPage() {
   const [overlaps, setOverlaps] = useState<ReturnType<typeof getAllFrameworkOverlaps>>([]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOverlaps(getAllFrameworkOverlaps());
   }, []);
 

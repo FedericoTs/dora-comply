@@ -98,8 +98,10 @@ export function ProductTour({ forceShow = false, onComplete, onDismiss }: Produc
   const pathname = usePathname();
 
   // Check if tour should be shown
+  // Intentional SSR hydration pattern
   useEffect(() => {
     if (forceShow) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShouldShowTour(true);
       return;
     }

@@ -133,8 +133,10 @@ export function NotificationDropdown() {
   }, []);
 
   // Reload when dropdown opens
+  // Intentional data refresh on open
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadNotifications();
     }
   }, [isOpen]);

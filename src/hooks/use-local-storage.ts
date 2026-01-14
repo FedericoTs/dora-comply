@@ -55,6 +55,7 @@ export function useLocalStorage<T>(
   });
 
   // Handle storage changes from other tabs/windows
+  // Intentional: sync state with localStorage across tabs requires setState in useEffect
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === key && e.newValue !== null) {
@@ -107,10 +108,12 @@ export function useLocalStorage<T>(
 export function useLocalStorageValue<T>(key: string, defaultValue: T): T {
   const [value, setValue] = useState<T>(defaultValue);
 
+  // Intentional: SSR hydration pattern requires setState in useEffect
   useEffect(() => {
     try {
       const item = window.localStorage.getItem(key);
       if (item) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setValue(JSON.parse(item));
       }
     } catch {

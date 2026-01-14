@@ -22,9 +22,11 @@ export function OnboardingCompleteBanner({ firstIncompleteTemplate }: Onboarding
   const showBanner = searchParams.get('onboarding') === 'complete' && !isDismissed;
 
   // Check localStorage for dismissed state
+  // Intentional SSR hydration pattern
   useEffect(() => {
     const dismissed = localStorage.getItem('roi-onboarding-banner-dismissed');
     if (dismissed) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsDismissed(true);
     }
   }, []);

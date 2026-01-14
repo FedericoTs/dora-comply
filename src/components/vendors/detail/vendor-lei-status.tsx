@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
@@ -76,6 +77,17 @@ export function VendorLEIStatus({
   leiNextRenewal,
   entityStatus,
 }: VendorLEIStatusProps) {
+  // Hook must be called unconditionally (before any returns)
+  // Calculate renewal check - this runs on every render but is lightweight
+  const isRenewalSoon = useMemo(() => {
+    if (!leiNextRenewal) return false;
+    // Using a stable reference point (midnight today) to avoid Date.now() impurity
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysFromToday = today.getTime() + 30 * 24 * 60 * 60 * 1000;
+    return new Date(leiNextRenewal).getTime() < thirtyDaysFromToday;
+  }, [leiNextRenewal]);
+
   if (!lei) {
     return (
       <TooltipProvider>
@@ -96,9 +108,6 @@ export function VendorLEIStatus({
 
   const config = leiStatus ? STATUS_CONFIG[leiStatus] : null;
   const Icon = config?.icon || HelpCircle;
-
-  // Check if renewal is coming up
-  const isRenewalSoon = leiNextRenewal && new Date(leiNextRenewal) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   return (
     <div className="flex items-center gap-2">

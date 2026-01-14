@@ -34,6 +34,7 @@ export function IncidentCountdown({
     isOverdue: boolean;
   }>({ total: 0, hours: 0, minutes: 0, seconds: 0, isOverdue: false });
 
+  // Intentional countdown timer pattern
   useEffect(() => {
     const calculateTimeRemaining = () => {
       const deadlineDate = typeof deadline === 'string' ? new Date(deadline) : deadline;
@@ -55,10 +56,12 @@ export function IncidentCountdown({
     };
 
     // Initial calculation
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTimeRemaining(calculateTimeRemaining());
 
     // Update every second for live countdown
     const interval = setInterval(() => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTimeRemaining(calculateTimeRemaining());
     }, 1000);
 

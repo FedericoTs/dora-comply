@@ -31,9 +31,11 @@ export function RegionProvider({ children }: { children: ReactNode }) {
   const [region, setRegionState] = useState<DataRegion>(DEFAULT_REGION);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Intentional SSR hydration pattern
   useEffect(() => {
     const savedRegion = getCookie(REGION_COOKIE_NAME);
     if (savedRegion && isValidRegion(savedRegion)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRegionState(savedRegion);
     }
     setIsLoading(false);

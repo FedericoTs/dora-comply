@@ -26,7 +26,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 export function useMounted(): boolean {
   const [mounted, setMounted] = useState(false);
 
+  // Intentional: SSR hydration pattern requires setState in useEffect
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -102,6 +104,7 @@ export function useSafeStateValue<T>(
   initialValue: T | (() => T)
 ): [T, React.Dispatch<React.SetStateAction<T>>, boolean] {
   const [value, setValue] = useState<T>(initialValue);
+  const isMounted = useMounted();
   const mountedRef = useMountedRef();
 
   const safeSetValue = useCallback(
@@ -113,5 +116,6 @@ export function useSafeStateValue<T>(
     [mountedRef]
   );
 
-  return [value, safeSetValue, mountedRef.current];
+  // Return state-based isMounted instead of ref.current to avoid reading ref during render
+  return [value, safeSetValue, isMounted];
 }

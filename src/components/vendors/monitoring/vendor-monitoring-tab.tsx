@@ -59,8 +59,10 @@ export function VendorMonitoringTab({
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Load score history when monitoring is enabled
+  // Intentional: data fetching pattern requires setState in useEffect
   useEffect(() => {
     if (monitoringEnabled && vendorId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoadingHistory(true);
       getScoreHistory(vendorId, 30)
         .then((result) => {

@@ -103,6 +103,31 @@ const defaultIcons: Record<EmptyStateVariant, LucideIcon> = {
   info: Info,
 };
 
+// Action button component - extracted to avoid creating during render
+interface ActionButtonProps {
+  actionProps: EmptyStateAction;
+  isPrimary: boolean;
+  compact?: boolean;
+}
+
+function ActionButton({ actionProps, isPrimary, compact }: ActionButtonProps) {
+  const buttonContent = (
+    <Button
+      variant={actionProps.variant || (isPrimary ? 'default' : 'outline')}
+      size={compact ? 'sm' : 'default'}
+      onClick={actionProps.onClick}
+    >
+      {actionProps.label}
+    </Button>
+  );
+
+  if (actionProps.href) {
+    return <Link href={actionProps.href}>{buttonContent}</Link>;
+  }
+
+  return buttonContent;
+}
+
 // ============================================================================
 // Illustrations - Lightweight SVG decorations
 // ============================================================================
@@ -201,24 +226,6 @@ export function EmptyState({
   const styles = variantStyles[variant];
   const Icon = icon || defaultIcons[variant];
 
-  const ActionButton = ({ actionProps, isPrimary }: { actionProps: EmptyStateAction; isPrimary: boolean }) => {
-    const buttonContent = (
-      <Button
-        variant={actionProps.variant || (isPrimary ? 'default' : 'outline')}
-        size={compact ? 'sm' : 'default'}
-        onClick={actionProps.onClick}
-      >
-        {actionProps.label}
-      </Button>
-    );
-
-    if (actionProps.href) {
-      return <Link href={actionProps.href}>{buttonContent}</Link>;
-    }
-
-    return buttonContent;
-  };
-
   if (compact) {
     return (
       <div className={cn('flex items-center gap-4 py-6 px-4', className)}>
@@ -231,7 +238,7 @@ export function EmptyState({
             <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
           )}
         </div>
-        {action && <ActionButton actionProps={action} isPrimary />}
+        {action && <ActionButton actionProps={action} isPrimary compact />}
       </div>
     );
   }

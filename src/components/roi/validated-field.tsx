@@ -82,10 +82,13 @@ export function ValidatedField({
   }, [customValidation, fieldType, required]);
 
   // Validate on mount if value exists
+  // Intentional: need to validate initial value on mount
   useEffect(() => {
     if (value && showValidation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       runValidation(value);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

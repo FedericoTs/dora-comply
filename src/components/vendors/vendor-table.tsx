@@ -32,6 +32,28 @@ import {
 } from '@/lib/vendors/types';
 import { getCountryFlag } from '@/lib/external/gleif';
 
+// Extracted to avoid creating component during render
+interface SortableHeaderProps {
+  field: VendorSortOptions['field'];
+  sortOptions?: VendorSortOptions;
+  onSort: (field: VendorSortOptions['field']) => void;
+  children: React.ReactNode;
+}
+
+function SortableHeader({ field, sortOptions, onSort, children }: SortableHeaderProps) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-3 h-8 hover:bg-transparent"
+      onClick={() => onSort(field)}
+    >
+      {children}
+      <ArrowUpDown className="ml-2 h-4 w-4" />
+    </Button>
+  );
+}
+
 interface VendorTableProps {
   vendors: Vendor[];
   selectedIds?: string[];
@@ -80,24 +102,6 @@ export function VendorTable({
     }
   };
 
-  const SortableHeader = ({
-    field,
-    children,
-  }: {
-    field: VendorSortOptions['field'];
-    children: React.ReactNode;
-  }) => (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="-ml-3 h-8 hover:bg-transparent"
-      onClick={() => handleSort(field)}
-    >
-      {children}
-      <ArrowUpDown className="ml-2 h-4 w-4" />
-    </Button>
-  );
-
   const riskColors: Record<string, string> = {
     low: 'text-success',
     medium: 'text-warning',
@@ -139,18 +143,18 @@ export function VendorTable({
               </TableHead>
             )}
             <TableHead className="min-w-[200px]">
-              {onSort ? <SortableHeader field="name">Vendor</SortableHeader> : 'Vendor'}
+              {onSort ? <SortableHeader field="name" sortOptions={sortOptions} onSort={handleSort}>Vendor</SortableHeader> : 'Vendor'}
             </TableHead>
             <TableHead className="w-[100px]">
-              {onSort ? <SortableHeader field="tier">Tier</SortableHeader> : 'Tier'}
+              {onSort ? <SortableHeader field="tier" sortOptions={sortOptions} onSort={handleSort}>Tier</SortableHeader> : 'Tier'}
             </TableHead>
             <TableHead className="w-[100px]">
-              {onSort ? <SortableHeader field="status">Status</SortableHeader> : 'Status'}
+              {onSort ? <SortableHeader field="status" sortOptions={sortOptions} onSort={handleSort}>Status</SortableHeader> : 'Status'}
             </TableHead>
             <TableHead className="hidden md:table-cell">Provider Type</TableHead>
             <TableHead className="hidden lg:table-cell w-[80px]">Country</TableHead>
             <TableHead className="hidden xl:table-cell w-[100px]">
-              {onSort ? <SortableHeader field="risk_score">Risk</SortableHeader> : 'Risk'}
+              {onSort ? <SortableHeader field="risk_score" sortOptions={sortOptions} onSort={handleSort}>Risk</SortableHeader> : 'Risk'}
             </TableHead>
             <TableHead className="w-[50px]" />
           </TableRow>

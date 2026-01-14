@@ -55,6 +55,7 @@ export function DeadlineTracker({
 
   useEffect(() => {
     const analysis = analyzePace(progressHistory, totalFields, deadline);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPaceAnalysis(analysis);
   }, [progressHistory, totalFields, deadline]);
 

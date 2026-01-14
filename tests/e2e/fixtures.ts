@@ -186,6 +186,7 @@ export const test = base.extend({
       await dismissAllDialogs(page);
     });
 
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- 'use' is a Playwright fixture function, not a React hook
     await use(page);
   },
 });

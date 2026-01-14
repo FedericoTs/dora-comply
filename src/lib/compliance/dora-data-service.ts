@@ -12,6 +12,7 @@
 
 import { calculateDORACompliance } from './dora-calculator';
 import type { DORAComplianceResult } from './dora-types';
+import { DORA_REQUIREMENTS } from './dora-requirements-data';
 
 // =============================================================================
 // Database Schema Types (matches parsed_soc2 table exactly)
@@ -213,8 +214,6 @@ export function getSOC2CoverageByRequirement(
 
   // For requirements not in gaps, assume full coverage
   // We need to get all requirement IDs and mark covered ones
-  // This requires importing DORA_REQUIREMENTS
-  const { DORA_REQUIREMENTS } = require('./dora-requirements-data');
   for (const req of DORA_REQUIREMENTS) {
     if (!(req.id in coverageMap)) {
       // If not in gaps, it's covered
