@@ -6,43 +6,24 @@
 
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import {
-  ChevronLeft,
-  AlertTriangle,
-  Shield,
-  Info,
-  Calendar,
-  Clock,
-  Building2,
-  Users,
-  Globe,
-  FileText,
-  Activity,
-  Edit,
-  Plus,
-  Database,
-  DollarSign,
-} from 'lucide-react';
+import { ChevronLeft, Edit, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
 import { getIncidentById, getIncidentReports, getIncidentEvents } from '@/lib/incidents/queries';
-import {
-  getClassificationLabel,
-  getStatusLabel,
-  getIncidentTypeLabel,
-  getReportTypeLabel,
-  calculateDeadline,
-} from '@/lib/incidents/types';
-import { DeadlineBadgeStatic } from '@/components/incidents/deadline-badge';
+import { getReportTypeLabel, calculateDeadline } from '@/lib/incidents/types';
 import { DeleteIncidentButton } from '@/components/incidents/delete-incident-button';
 import { IncidentExportButton } from '@/components/incidents/incident-export-button';
 import { IncidentLifecycle } from '@/components/incidents/incident-lifecycle';
 import { IncidentStatusDropdown } from '@/components/incidents/incident-status-dropdown';
-import { AddEventDialog } from '@/components/incidents/add-event-dialog';
+import {
+  IncidentHeroCard,
+  ImpactAssessmentCard,
+  AffectedSystemsCard,
+  AnalysisResponseCard,
+  TimelineTab,
+  ReportsTab,
+} from './components';
 
 interface IncidentDetailPageProps {
   params: Promise<{ id: string }>;
@@ -58,46 +39,6 @@ export async function generateMetadata({ params }: IncidentDetailPageProps) {
     title: `${incident.incident_ref} - ${incident.title} | DORA Comply`,
     description: `Incident details for ${incident.incident_ref}`,
   };
-}
-
-function getClassificationIcon(classification: string) {
-  switch (classification) {
-    case 'major':
-      return AlertTriangle;
-    case 'significant':
-      return Shield;
-    default:
-      return Info;
-  }
-}
-
-function getClassificationStyles(classification: string) {
-  switch (classification) {
-    case 'major':
-      return 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400';
-    case 'significant':
-      return 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400';
-    default:
-      return 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400';
-  }
-}
-
-function getStatusStyles(status: string) {
-  switch (status) {
-    case 'draft':
-      return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
-    case 'detected':
-      return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
-    case 'initial_submitted':
-    case 'intermediate_submitted':
-      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-    case 'final_submitted':
-      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-    case 'closed':
-      return 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400';
-    default:
-      return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
-  }
 }
 
 export default async function IncidentDetailPage({ params }: IncidentDetailPageProps) {
@@ -116,7 +57,6 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
     notFound();
   }
 
-  const ClassificationIcon = getClassificationIcon(incident.classification);
   const detectionDate = new Date(incident.detection_datetime);
 
   const deadlines = {
@@ -192,87 +132,11 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
       </div>
 
       {/* Hero Card */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-            {/* Classification Badge */}
-            <div
-              className={cn(
-                'flex h-16 w-16 shrink-0 items-center justify-center rounded-full',
-                incident.classification === 'major'
-                  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                  : incident.classification === 'significant'
-                  ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-              )}
-            >
-              <ClassificationIcon className="h-8 w-8" />
-            </div>
-
-            {/* Main Info */}
-            <div className="flex-1 space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Badge
-                  variant="outline"
-                  className={cn('text-sm', getClassificationStyles(incident.classification))}
-                >
-                  {getClassificationLabel(incident.classification)}
-                </Badge>
-                <Badge variant="outline">{getIncidentTypeLabel(incident.incident_type)}</Badge>
-                {incident.data_breach && <Badge variant="destructive">Data Breach</Badge>}
-              </div>
-
-              {incident.description && (
-                <p className="text-muted-foreground">{incident.description}</p>
-              )}
-
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>
-                    Detected:{' '}
-                    {detectionDate.toLocaleString('en-GB', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                </div>
-                {incident.vendor && (
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <Link
-                      href={`/vendors/${incident.vendor.id}`}
-                      className="text-primary hover:underline"
-                    >
-                      {incident.vendor.name}
-                    </Link>
-                  </div>
-                )}
-                {incident.duration_hours && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{incident.duration_hours}h duration</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Next Deadline */}
-            {nextReport && (
-              <div className="lg:text-right">
-                <p className="text-xs text-muted-foreground mb-1">Next Deadline</p>
-                <DeadlineBadgeStatic deadline={nextReport.deadline} />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {getReportTypeLabel(nextReport.type as 'initial' | 'intermediate' | 'final')}
-                </p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <IncidentHeroCard
+        incident={incident}
+        detectionDate={detectionDate}
+        nextReport={nextReport}
+      />
 
       {/* Lifecycle Diagram */}
       <Card>
@@ -301,271 +165,23 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            {/* Impact Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Impact Assessment
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {incident.clients_affected_count !== null && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Clients Affected</span>
-                    <span className="font-medium">
-                      {incident.clients_affected_count.toLocaleString()}
-                      {incident.clients_affected_percentage !== null &&
-                        ` (${incident.clients_affected_percentage}%)`}
-                    </span>
-                  </div>
-                )}
-                {incident.transactions_affected_count !== null && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Transactions</span>
-                    <span className="font-medium">
-                      {incident.transactions_affected_count.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {incident.transactions_value_affected !== null && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Value Affected</span>
-                    <span className="font-medium">
-                      €{incident.transactions_value_affected.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {incident.economic_impact !== null && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Economic Impact</span>
-                    <span className="font-medium">
-                      €{incident.economic_impact.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {incident.data_breach && incident.data_records_affected !== null && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Data Records</span>
-                    <span className="font-medium text-destructive">
-                      {incident.data_records_affected.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {incident.reputational_impact && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Reputational</span>
-                    <Badge variant="outline" className="capitalize">
-                      {incident.reputational_impact}
-                    </Badge>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Services & Functions Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Activity className="h-4 w-4" />
-                  Affected Systems
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {incident.services_affected.length > 0 && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Services</p>
-                    <div className="flex flex-wrap gap-1">
-                      {incident.services_affected.map((service) => (
-                        <Badge key={service} variant="secondary">
-                          {service}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {incident.critical_functions_affected.length > 0 && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Critical Functions</p>
-                    <div className="flex flex-wrap gap-1">
-                      {incident.critical_functions_affected.map((fn) => (
-                        <Badge key={fn} variant="outline" className="border-amber-500">
-                          {fn}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {incident.geographic_spread.length > 0 && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Geographic Spread</p>
-                    <div className="flex flex-wrap gap-1">
-                      {incident.geographic_spread.map((region) => (
-                        <Badge key={region} variant="outline">
-                          <Globe className="h-3 w-3 mr-1" />
-                          {region}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Root Cause & Remediation */}
-            {(incident.root_cause || incident.remediation_actions) && (
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle className="text-base">Analysis & Response</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {incident.root_cause && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">Root Cause</p>
-                      <p className="text-sm text-muted-foreground">{incident.root_cause}</p>
-                    </div>
-                  )}
-                  {incident.remediation_actions && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">Remediation Actions</p>
-                      <p className="text-sm text-muted-foreground">
-                        {incident.remediation_actions}
-                      </p>
-                    </div>
-                  )}
-                  {incident.lessons_learned && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">Lessons Learned</p>
-                      <p className="text-sm text-muted-foreground">{incident.lessons_learned}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+            <ImpactAssessmentCard incident={incident} />
+            <AffectedSystemsCard incident={incident} />
+            <AnalysisResponseCard incident={incident} />
           </div>
         </TabsContent>
 
         <TabsContent value="timeline" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Incident Timeline</CardTitle>
-                <CardDescription>Chronological events for this incident</CardDescription>
-              </div>
-              <AddEventDialog incidentId={incident.id} />
-            </CardHeader>
-            <CardContent>
-              {events.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No timeline events recorded yet.
-                </p>
-              ) : (
-                <div className="relative pl-6 border-l-2 border-muted space-y-6">
-                  {events.map((event, index) => (
-                    <div key={event.id} className="relative">
-                      <div
-                        className={cn(
-                          'absolute -left-[25px] h-4 w-4 rounded-full border-2',
-                          index === 0
-                            ? 'border-primary bg-primary'
-                            : 'border-muted bg-background'
-                        )}
-                      />
-                      <div>
-                        <p className="text-sm font-medium capitalize">
-                          {event.event_type.replace(/_/g, ' ')}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(event.event_datetime).toLocaleString('en-GB')}
-                        </p>
-                        {event.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {event.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <TimelineTab incidentId={incident.id} events={events} />
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-medium">Regulatory Reports</h3>
-            {nextReport && (
-              <Button size="sm" asChild>
-                <Link href={`/incidents/${id}/reports/new?type=${nextReport.type}`}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Report
-                </Link>
-              </Button>
-            )}
-          </div>
-
-          {reports.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="font-medium">No Reports Yet</h3>
-                <p className="text-sm text-muted-foreground text-center mt-1 max-w-sm">
-                  {incident.classification === 'major'
-                    ? 'Major incidents require initial, intermediate, and final reports.'
-                    : 'Minor incidents do not require regulatory reporting.'}
-                </p>
-                {nextReport && (
-                  <Button className="mt-4" asChild>
-                    <Link href={`/incidents/${id}/reports/new?type=${nextReport.type}`}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create {getReportTypeLabel(nextReport.type as 'initial' | 'intermediate' | 'final')}
-                    </Link>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-3">
-              {reports.map((report) => (
-                <Card key={report.id}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">
-                        {getReportTypeLabel(report.report_type)}
-                      </CardTitle>
-                      <Badge
-                        variant={
-                          report.status === 'submitted' || report.status === 'acknowledged'
-                            ? 'default'
-                            : 'secondary'
-                        }
-                      >
-                        {report.status}
-                      </Badge>
-                    </div>
-                    <CardDescription>Version {report.version}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Deadline</span>
-                        <span>{new Date(report.deadline).toLocaleDateString('en-GB')}</span>
-                      </div>
-                      {report.submitted_at && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Submitted</span>
-                          <span>
-                            {new Date(report.submitted_at).toLocaleDateString('en-GB')}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          <ReportsTab
+            incidentId={id}
+            incident={incident}
+            reports={reports}
+            nextReport={nextReport}
+          />
         </TabsContent>
       </Tabs>
     </div>
