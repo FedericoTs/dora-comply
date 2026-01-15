@@ -101,7 +101,7 @@ export function SnapshotSettingsDialog({
       } else {
         toast.error(result.error || 'Failed to save settings');
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to save settings');
     } finally {
       setSaving(false);

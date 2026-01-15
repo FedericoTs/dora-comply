@@ -183,8 +183,8 @@ function calculateDORACoverage(controls: Array<{
 
   const overall = Object.values(coverageByPillar).reduce((a, b) => a + b, 0) / 5;
   const gaps = Object.entries(coverageByPillar)
-    .filter(([_, score]) => score < 50)
-    .map(([pillar]) => pillar);
+    .filter((entry) => entry[1] < 50)
+    .map((entry) => entry[0]);
 
   return { overall: Math.round(overall), byPillar: coverageByPillar, gaps };
 }

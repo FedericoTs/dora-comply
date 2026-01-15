@@ -4,9 +4,8 @@
  * Handles CSV parsing, validation, and mapping for vendor imports.
  */
 
-import { z } from 'zod';
 import { bulkImportRowSchema, type BulkImportRow } from './schemas';
-import type { VendorTier, ProviderType, ServiceType } from './types';
+import type { VendorTier, ProviderType } from './types';
 
 // ============================================================================
 // Types

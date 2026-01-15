@@ -5,8 +5,6 @@
  */
 
 import type {
-  ParsedSOC2Report,
-  ExtractedSubserviceOrg,
   SOC2ReportType,
   SOC2Opinion,
 } from '@/lib/ai/parsers/types';

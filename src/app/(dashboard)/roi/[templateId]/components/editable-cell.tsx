@@ -11,7 +11,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react';
-import { Check, X, Loader2, AlertCircle } from 'lucide-react';
+import { Check, Loader2, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';

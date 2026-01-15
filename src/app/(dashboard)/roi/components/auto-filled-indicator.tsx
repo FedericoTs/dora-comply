@@ -6,7 +6,7 @@
  * Visual indicator for fields populated by AI from SOC2 reports
  */
 
-import { Sparkles, Info } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,

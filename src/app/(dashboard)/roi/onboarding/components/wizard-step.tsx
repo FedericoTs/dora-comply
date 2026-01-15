@@ -31,6 +31,7 @@ interface WizardStepProps {
 }
 
 export function WizardStep({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future use (analytics, step tracking)
   stepId,
   title,
   description,

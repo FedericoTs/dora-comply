@@ -435,6 +435,7 @@ interface CountrySelectFieldProps extends CountrySelectProps {
 export const CountrySelectField = React.forwardRef<
   HTMLButtonElement,
   CountrySelectFieldProps
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 >(({ onBlur, ...props }, ref) => {
   return <CountrySelect {...props} />;
 });

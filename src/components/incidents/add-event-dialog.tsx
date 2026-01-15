@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Loader2, Calendar, Clock } from 'lucide-react';
+import { Plus, Loader2, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

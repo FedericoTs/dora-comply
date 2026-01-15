@@ -21,7 +21,6 @@ import {
   useRef,
   useEffect,
   type ReactNode,
-  Suspense,
 } from 'react';
 import dynamic from 'next/dynamic';
 import { GripVertical, PanelLeftClose, PanelRightClose, FileText, Maximize2, Minimize2, Loader2 } from 'lucide-react';

@@ -102,7 +102,7 @@ export function useEditableTable({
       setTimeout(() => {
         setCellSaveStates(prev => ({ ...prev, [cellKey]: 'idle' }));
       }, 1500);
-    } catch (error) {
+    } catch {
       // Revert optimistic update
       setLocalData(prev => {
         const newData = [...prev];

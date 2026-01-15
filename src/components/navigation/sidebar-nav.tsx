@@ -34,13 +34,6 @@ interface NavItem {
   badge?: string | number;
 }
 
-interface NavGroup {
-  title: string;
-  items: NavItem[];
-  defaultOpen?: boolean;
-  collapsible?: boolean;
-}
-
 export interface OnboardingStep {
   id: string;
   label: string;

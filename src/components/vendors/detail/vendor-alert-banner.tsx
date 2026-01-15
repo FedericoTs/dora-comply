@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Clock, XCircle, Info } from 'lucide-react';
+import { AlertTriangle, XCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Vendor } from '@/lib/vendors/types';
 

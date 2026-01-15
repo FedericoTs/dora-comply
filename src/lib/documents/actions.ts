@@ -11,7 +11,6 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import {
   createDocumentSchema,
   updateDocumentSchema,
-  type CreateDocumentFormData,
   type UpdateDocumentFormData,
 } from './schemas';
 import type {

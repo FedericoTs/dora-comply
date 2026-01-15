@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ClassificationBadge } from '../threshold-indicator';
-import type { ClassificationResult, IncidentClassification, UpdateIncidentInput } from '@/lib/incidents/types';
+import type { ClassificationResult, UpdateIncidentInput } from '@/lib/incidents/types';
 
 interface ClassificationBannerProps {
   classificationResult: ClassificationResult;

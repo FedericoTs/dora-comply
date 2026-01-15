@@ -8,7 +8,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import type { ConcentrationAlert } from '@/lib/concentration/types';
 
 interface AffectedVendorsSectionProps {
   vendors: string[];

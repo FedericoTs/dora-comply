@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Clock, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface IncidentCountdownProps {
@@ -20,49 +20,39 @@ interface IncidentCountdownProps {
  * Updates every second when < 1 hour, every minute otherwise.
  * Shows urgency colors based on time remaining.
  */
+// Calculate time remaining helper
+function calculateTimeRemaining(deadline: string | Date) {
+  const deadlineDate = typeof deadline === 'string' ? new Date(deadline) : deadline;
+  const now = new Date();
+  const diff = deadlineDate.getTime() - now.getTime();
+
+  if (diff <= 0) {
+    const absDiff = Math.abs(diff);
+    const hours = Math.floor(absDiff / (1000 * 60 * 60));
+    const minutes = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((absDiff % (1000 * 60)) / 1000);
+    return { total: diff, hours, minutes, seconds, isOverdue: true };
+  }
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  return { total: diff, hours, minutes, seconds, isOverdue: false };
+}
+
 export function IncidentCountdown({
   deadline,
   label,
   compact = false,
   className,
 }: IncidentCountdownProps) {
-  const [timeRemaining, setTimeRemaining] = useState<{
-    total: number;
-    hours: number;
-    minutes: number;
-    seconds: number;
-    isOverdue: boolean;
-  }>({ total: 0, hours: 0, minutes: 0, seconds: 0, isOverdue: false });
+  // Initialize with calculated value to avoid setState in effect
+  const [timeRemaining, setTimeRemaining] = useState(() => calculateTimeRemaining(deadline));
 
-  // Intentional countdown timer pattern
+  // Update countdown every second
   useEffect(() => {
-    const calculateTimeRemaining = () => {
-      const deadlineDate = typeof deadline === 'string' ? new Date(deadline) : deadline;
-      const now = new Date();
-      const diff = deadlineDate.getTime() - now.getTime();
-
-      if (diff <= 0) {
-        const absDiff = Math.abs(diff);
-        const hours = Math.floor(absDiff / (1000 * 60 * 60));
-        const minutes = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((absDiff % (1000 * 60)) / 1000);
-        return { total: diff, hours, minutes, seconds, isOverdue: true };
-      }
-
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      return { total: diff, hours, minutes, seconds, isOverdue: false };
-    };
-
-    // Initial calculation
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTimeRemaining(calculateTimeRemaining());
-
-    // Update every second for live countdown
     const interval = setInterval(() => {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTimeRemaining(calculateTimeRemaining());
+      setTimeRemaining(calculateTimeRemaining(deadline));
     }, 1000);
 
     return () => {

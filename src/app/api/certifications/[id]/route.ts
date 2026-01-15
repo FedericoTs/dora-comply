@@ -68,6 +68,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
 
     // Remove fields that shouldn't be updated directly
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _id, vendor_id: _vid, organization_id: _oid, created_at: _ca, created_by: _cb, ...updateData } = body;
 
     const { data, error } = await supabase

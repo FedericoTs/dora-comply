@@ -400,7 +400,7 @@ export function validateRoIPackage(
 }
 
 // Export for use in API routes
-export default {
+const roiExportValidator = {
   validateLEI,
   validateDate,
   validateTemplate,
@@ -410,3 +410,5 @@ export default {
   ESA_TEMPLATE_COLUMNS,
   REQUIRED_FIELDS
 };
+
+export default roiExportValidator;

@@ -141,8 +141,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
+    // Note: validateFirst is reserved for future pre-export validation
     const body = await request.json().catch(() => ({}));
-    const { reportingDate, validateFirst = true } = body;
+    const { reportingDate } = body;
 
     // Get organization LEI - query users table (not profiles)
     const { data: userRecord, error: userError } = await supabase

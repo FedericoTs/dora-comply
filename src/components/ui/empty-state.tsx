@@ -16,8 +16,6 @@ import * as React from 'react';
 import Link from 'next/link';
 import {
   Inbox,
-  FileText,
-  Search,
   Filter,
   CheckCircle2,
   AlertTriangle,

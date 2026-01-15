@@ -7,10 +7,10 @@
  * Highlights pages that contain evidence markers.
  */
 
-import { memo, useRef, useEffect, useState, useCallback } from 'react';
+import { memo, useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { PDFThumbnailBarProps, PDFPageProxy } from './types';
+import type { PDFThumbnailBarProps } from './types';
 
 interface ThumbnailProps {
   pdfDocument: PDFThumbnailBarProps['pdfDocument'];

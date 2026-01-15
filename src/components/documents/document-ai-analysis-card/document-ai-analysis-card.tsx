@@ -26,7 +26,6 @@ import type { DocumentAIAnalysisCardProps } from './types';
 
 export function DocumentAIAnalysisCard({
   documentId,
-  documentType,
   mimeType,
   vendorId,
   vendorName,

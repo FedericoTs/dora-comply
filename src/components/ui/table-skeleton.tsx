@@ -36,7 +36,6 @@ export function TableSkeleton({
   showActions = false,
   className,
 }: TableSkeletonProps) {
-  const totalColumns = columns + (showCheckbox ? 1 : 0) + (showActions ? 1 : 0);
   const displayHeaders = headers || Array(columns).fill('');
 
   return (

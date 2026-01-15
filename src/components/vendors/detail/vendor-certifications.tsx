@@ -59,6 +59,8 @@ const CERTIFICATION_OPTIONS = Object.entries(ISO_STANDARDS).map(([key, value]) =
   relevance: value.relevance,
 }));
 
+// Status options for future use in dropdown
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const STATUS_OPTIONS: { value: CertificationStatus; label: string }[] = [
   { value: 'valid', label: 'Valid' },
   { value: 'pending', label: 'Pending' },

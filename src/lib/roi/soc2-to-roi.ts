@@ -11,7 +11,7 @@
  * - Audit metadata to update the existing vendor
  */
 
-import type { ParsedSOC2Report, ExtractedSubserviceOrg } from '@/lib/ai/parsers/types';
+import type { ParsedSOC2Report } from '@/lib/ai/parsers/types';
 import type {
   SOC2ToRoiMappingResult,
   VendorUpdateData,
@@ -78,7 +78,7 @@ export function mapSOC2ToRoi(
   const subcontractors = extractSubcontractorData(parsedSoc2, documentId, fieldsExtracted, fieldsMissing, warnings);
 
   // Calculate confidence scores
-  const confidenceFactors = calculateConfidenceFactors(parsedSoc2, services, subcontractors);
+  const confidenceFactors = calculateConfidenceFactors(parsedSoc2);
   const confidenceScores = calculateConfidenceScores(confidenceFactors, vendorUpdate, services, subcontractors);
 
   // Generate RoI template suggestions
@@ -317,9 +317,7 @@ export function classifyServiceType(components: string[]): IctServiceType {
 // ============================================================================
 
 function calculateConfidenceFactors(
-  parsedSoc2: ParsedSOC2Report,
-  services: ExtractedServiceData[],
-  subcontractors: ExtractedSubcontractorData[]
+  parsedSoc2: ParsedSOC2Report
 ): ConfidenceFactors {
   return {
     hasSystemDescription: !!parsedSoc2.systemDescription,

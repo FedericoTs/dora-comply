@@ -17,7 +17,6 @@ import { google } from '@ai-sdk/google';
 import {
   analyzeSOC2Structure,
   createExtractionChunks,
-  type SOC2DocumentStructure,
 } from './soc2-structure-analyzer';
 import type {
   ParsedSOC2Report,

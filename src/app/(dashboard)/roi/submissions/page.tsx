@@ -16,7 +16,7 @@ import {
   Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,7 +24,6 @@ import {
   fetchSubmissions,
   generateSubmissionChecklist,
 } from '@/lib/roi/submissions';
-import type { Submission } from '@/lib/roi/submissions-types';
 import { fetchAllTemplateStats } from '@/lib/roi';
 import {
   SubmissionCard,
@@ -32,7 +31,6 @@ import {
 } from './components/submission-card';
 import {
   SubmissionChecklistCard,
-  MiniChecklist,
 } from './components/submission-checklist';
 import { NewSubmissionButton } from './components/new-submission-button';
 

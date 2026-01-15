@@ -11,10 +11,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import {
-  handleSoc2ParsingComplete,
-  isAutoSnapshotEnabled,
-} from '@/lib/compliance/auto-snapshot';
 
 interface WebhookPayload {
   document_id: string;
@@ -44,7 +40,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const payload = await request.json() as WebhookPayload;
-    const { document_id, job_id, vendor_id, status, error_message } = payload;
+    // Note: error_message is available in payload for future error logging
+    const { document_id, job_id, vendor_id, status } = payload;
 
     console.log(`[webhook] Parsing complete webhook received:`, {
       document_id,

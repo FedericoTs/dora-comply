@@ -25,7 +25,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { enableMonitoring, disableMonitoring, updateMonitoringConfig } from '@/lib/vendors/monitoring-actions';
-import { isValidDomain, generateMockScorecard } from '@/lib/external/securityscorecard';
+import { isValidDomain } from '@/lib/external/securityscorecard';
 import { gradeToColor, gradeToLabel, type SSCGrade } from '@/lib/external/securityscorecard-types';
 
 interface MonitoringSetupDialogProps {
@@ -92,7 +92,7 @@ export function MonitoringSetupDialog({
         grade: data.data.scorecard.grade,
         mock: data.mock,
       });
-    } catch (err) {
+    } catch {
       setError('Failed to lookup domain');
       setPreview(null);
     } finally {

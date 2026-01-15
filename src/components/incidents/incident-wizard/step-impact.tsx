@@ -53,10 +53,9 @@ const IMPACT_LEVELS: Array<{ value: ImpactLevel; label: string; description: str
 export function StepImpact({
   data,
   updateData,
-  errors,
   services,
   criticalFunctions,
-}: StepImpactProps) {
+}: Omit<StepImpactProps, 'errors'>) {
   const [customRegion, setCustomRegion] = useState('');
 
   // Calculate classification in real-time based on current impact data

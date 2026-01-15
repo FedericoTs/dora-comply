@@ -10,7 +10,7 @@ interface ProvisionsListProps {
   article: '30.2' | '30.3';
 }
 
-export function ProvisionsList({ provisions, article }: ProvisionsListProps) {
+export function ProvisionsList({ provisions }: Omit<ProvisionsListProps, 'article'>) {
   const entries = Object.entries(provisions) as [string, ExtractedProvision][];
 
   // Count statuses

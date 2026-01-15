@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const supabase = createClient(
   'https://oipwlrhyzayuxgcabsvu.supabase.co',
   'sb_secret_7Y0-3Hd51CFZ0oGJ1rgnyw_Kb7hSa26',

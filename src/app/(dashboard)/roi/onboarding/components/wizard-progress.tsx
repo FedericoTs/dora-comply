@@ -6,7 +6,7 @@
  * Visual step indicator for the onboarding wizard
  */
 
-import { Check, Circle } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WIZARD_STEPS, type WizardStepId } from '@/lib/roi/onboarding-types';
 

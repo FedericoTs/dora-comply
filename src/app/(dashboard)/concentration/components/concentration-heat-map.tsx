@@ -10,7 +10,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet';
-import type { HeatMapCell, HeatMapResponse, RiskLevel } from '@/lib/concentration/types';
+import type { HeatMapCell, HeatMapResponse } from '@/lib/concentration/types';
 import { RISK_COLORS, SERVICE_TYPE_LABELS, REGION_LABELS } from '@/lib/concentration/types';
 
 interface ConcentrationHeatMapProps {

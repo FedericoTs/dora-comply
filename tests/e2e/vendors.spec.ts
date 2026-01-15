@@ -53,13 +53,7 @@ test.describe('Vendor Management', () => {
       await waitForPageReady(page);
 
       // Find view toggle buttons (may have icons rather than text)
-      const viewToggle = page.getByRole('button', { name: /grid|table|list|view/i })
-        .or(page.locator('[data-testid*="view"]'))
-        .or(page.locator('button svg').first());
-
-      // At least some view element should exist
-      const hasViewToggle = await viewToggle.first().isVisible().catch(() => false);
-      // Test passes as long as vendor page loads
+      // At least some view element should exist - test passes as long as vendor page loads
     });
   });
 
@@ -210,14 +204,6 @@ test.describe('Vendor Management', () => {
 
       // Verify we're on a vendor detail page
       const onDetailPage = /\/vendors\/[a-f0-9-]+/.test(page.url());
-
-      // Check for tabs or tab-like navigation on detail page
-      const tabs = page.getByRole('tablist')
-        .or(page.locator('[role="tablist"]'))
-        .or(page.getByRole('tab'));
-
-      // Tabs may or may not exist depending on the page layout
-      const hasTabs = await tabs.first().isVisible({ timeout: 3000 }).catch(() => false);
 
       // Test passes if we navigated to detail page (tabs are optional)
       expect(onDetailPage).toBeTruthy();

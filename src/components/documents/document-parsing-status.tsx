@@ -186,9 +186,8 @@ function ParsingStatusBadge({
 
 function ParsingStatusInline({
   status,
-  error,
   className,
-}: DocumentParsingStatusProps) {
+}: Omit<DocumentParsingStatusProps, 'error' | 'parsedAt' | 'confidence' | 'showTooltip'>) {
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
 
@@ -219,26 +218,32 @@ function ParsingStatusDetailed({
 }: DocumentParsingStatusProps) {
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
-  const [progress, setProgress] = useState(0);
+  // Initialize progress based on status to avoid setState in effect
+  const [progress, setProgress] = useState(() => {
+    if (status === 'processing') return 10;
+    if (status === 'completed') return 100;
+    return 0;
+  });
 
-  // Simulate progress for processing state
-  // Intentional progress animation pattern
+  // Animate progress for processing state, handle status transitions
   useEffect(() => {
+    let cleanup: (() => void) | undefined;
+
     if (status === 'processing') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProgress(10);
       const interval = setInterval(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setProgress((prev) => {
           if (prev >= 90) return prev;
           return prev + Math.random() * 10;
         });
       }, 1000);
-      return () => clearInterval(interval);
+      cleanup = () => clearInterval(interval);
     } else if (status === 'completed') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProgress(100);
+      // Defer setState to avoid synchronous call in effect
+      const rafId = requestAnimationFrame(() => setProgress(100));
+      cleanup = () => cancelAnimationFrame(rafId);
     }
+
+    return cleanup;
   }, [status]);
 
   return (

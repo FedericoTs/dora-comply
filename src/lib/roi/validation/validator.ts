@@ -15,7 +15,6 @@ import {
   CROSS_FIELD_RULES,
   CROSS_TEMPLATE_RULES,
   type FieldRules,
-  type CrossTemplateRule,
 } from './rules';
 
 // ============================================================================
@@ -204,12 +203,6 @@ export async function validateRoi(
   const errorPenalty = Math.min(totalErrors * 5, 100); // Each error = 5% penalty, max 100%
   const warningPenalty = Math.min(totalWarnings * 1, 20); // Each warning = 1% penalty, max 20%
   const overallScore = Math.max(0, 100 - errorPenalty - warningPenalty);
-
-  // Calculate overall completeness
-  const templateCompleteness = Object.values(completeness);
-  const overallCompleteness = templateCompleteness.length > 0
-    ? Math.round(templateCompleteness.reduce((a, b) => a + b, 0) / templateCompleteness.length)
-    : 0;
 
   const isValid = totalErrors === 0;
 

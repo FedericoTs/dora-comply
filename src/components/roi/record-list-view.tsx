@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { type ColumnMapping } from '@/lib/roi/mappings';
-import { getRecordSummary, getRecordIdentifier } from '@/hooks/use-data-entry-sheet';
+import { getRecordSummary } from '@/hooks/use-data-entry-sheet';
 
 interface RecordListViewProps {
   records: Record<string, unknown>[];

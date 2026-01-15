@@ -47,7 +47,8 @@ export function AiPopulationWrapper({ initialDocuments, highlightDocumentId }: A
         throw new Error(error.error || 'Failed to preview population');
       }
 
-      const preview = await previewResponse.json();
+      // Parse preview response (currently unused, but validating response)
+      await previewResponse.json();
 
       // If preview looks good, proceed with population
       const populateResponse = await fetch('/api/roi/populate-from-soc2', {

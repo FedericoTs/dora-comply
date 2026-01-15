@@ -412,7 +412,7 @@ export async function completeOnboarding(formData: OnboardingInput): Promise<Act
   }
 
   // Create organization using the stored function
-  const { data: orgId, error: orgError } = await supabase.rpc('create_organization_for_user', {
+  const { error: orgError } = await supabase.rpc('create_organization_for_user', {
     p_user_id: user.id,
     p_org_name: result.data.organizationName,
     p_lei: result.data.lei || null,

@@ -3,7 +3,7 @@
  * Shared types used across multiple modules in the application
  */
 
-import type { AppError, AppErrorCode } from '@/lib/errors';
+import type { AppError } from '@/lib/errors';
 
 // ============================================================================
 // Action Results

@@ -665,6 +665,7 @@ describe('Incident Reporting Deadlines (DORA)', () => {
 // Concentration Risk Calculation
 // ============================================================================
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface ConcentrationMetrics {
   herfindahlIndex: number;
   topVendorShare: number;

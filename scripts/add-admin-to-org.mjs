@@ -40,7 +40,7 @@ async function addAdminToOrg() {
   }
 
   // Check if admin user exists in users table
-  const { data: existingUser, error: userError } = await supabase
+  const { data: existingUser } = await supabase
     .from('users')
     .select('id, organization_id, role')
     .eq('id', adminUser.id)

@@ -17,11 +17,6 @@ import {
 } from '@/lib/documents/types';
 import { fetchDocumentsAction } from '@/lib/documents/actions';
 
-interface SimpleVendor {
-  id: string;
-  name: string;
-}
-
 interface UseDocumentsStateProps {
   initialData: PaginatedResult<DocumentWithVendor>;
 }

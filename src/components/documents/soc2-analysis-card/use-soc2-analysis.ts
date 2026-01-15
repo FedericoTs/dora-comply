@@ -29,7 +29,7 @@ export function useSOC2Analysis({ documentId, documentType, mimeType, existingAn
   const [isPolling, setIsPolling] = useState(false);
 
   // Poll for job completion - designed for Modal's async architecture
-  const pollJobStatus = useCallback(async (jobId: string) => {
+  const pollJobStatus = useCallback(async () => {
     setIsPolling(true);
     const maxAttempts = 120; // 10 minutes max (5s intervals) - Modal can take time
     let attempts = 0;
@@ -102,7 +102,7 @@ export function useSOC2Analysis({ documentId, documentType, mimeType, existingAn
             // Async case: Start polling for completion
             setProgress(10);
             try {
-              await pollJobStatus(result.jobId);
+              await pollJobStatus();
             } catch (pollErr) {
               setError(pollErr instanceof Error ? pollErr.message : 'Polling failed');
               setAnalysisState('failed');
@@ -141,7 +141,7 @@ export function useSOC2Analysis({ documentId, documentType, mimeType, existingAn
             // Parsing already in progress message
             if (result.message === 'Parsing already in progress' && result.jobId) {
               setProgress(result.progress || 20);
-              await pollJobStatus(result.jobId);
+              await pollJobStatus();
             } else {
               throw new Error('Unexpected response format');
             }

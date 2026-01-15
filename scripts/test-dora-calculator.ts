@@ -25,6 +25,7 @@ interface ParsedSOC2Exception {
   remediationVerified?: boolean;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface EvidenceSource {
   documentId: string;
   documentName: string;

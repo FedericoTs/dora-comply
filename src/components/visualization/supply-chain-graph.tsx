@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3';
-import { ZoomIn, ZoomOut, Maximize2, RefreshCw } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { DependencyGraph, DependencyNode, DependencyEdge } from '@/lib/concentration/types';
+import type { DependencyGraph, DependencyNode } from '@/lib/concentration/types';
 
 interface SupplyChainGraphProps {
   data: DependencyGraph;
@@ -145,7 +145,6 @@ export function SupplyChainGraph({
       .attr('stroke', (d) => (d.criticality === 'critical' ? '#ef4444' : '#94a3b8'))
       .attr('stroke-width', (d) => (d.criticality === 'critical' ? 2 : 1.5))
       .attr('stroke-dasharray', (d) => {
-        const source = d.source as SimulationNode;
         const target = d.target as SimulationNode;
         return target.type === 'fourth_party' ? '4,2' : 'none';
       })

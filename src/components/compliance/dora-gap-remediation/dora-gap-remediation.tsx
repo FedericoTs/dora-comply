@@ -24,7 +24,6 @@ import { PillarSection } from './pillar-section';
 
 export function DORAGapRemediation({
   vendorId,
-  vendorName,
   soc2CoverageByRequirement,
   className,
 }: DORAGapRemediationProps) {

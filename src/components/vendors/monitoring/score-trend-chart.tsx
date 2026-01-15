@@ -84,6 +84,7 @@ export function ScoreTrendChart({ history, className }: ScoreTrendChartProps) {
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { entries, min, max, range, change } = chartData;
 
   // Generate SVG path for the line chart

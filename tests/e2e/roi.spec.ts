@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { dismissAllDialogs, waitForPageReady, navigateToProtectedPage } from './fixtures';
+import { waitForPageReady, navigateToProtectedPage } from './fixtures';
 
 test.describe('Register of Information (ROI)', () => {
   test.describe('ROI Dashboard', () => {
@@ -152,11 +152,7 @@ test.describe('Register of Information (ROI)', () => {
       await navigateToProtectedPage(page, '/roi/b_01_01');
 
       // Look for validation messages, required indicators, or the template stats
-      const validation = page.getByText(/required|mandatory|\*|fields/i)
-        .or(page.locator('[data-testid*="validation"]'));
-
       // Validation UI may exist (not always visible until triggered)
-      const hasValidation = await validation.first().isVisible().catch(() => false);
       // This test passes as long as page loads correctly
     });
 
@@ -264,12 +260,7 @@ test.describe('Register of Information (ROI)', () => {
       await waitForPageReady(page);
 
       // Look for AI/auto-populate feature
-      const autoPopulate = page.getByText(/auto|populate|ai|soc|import/i)
-        .or(page.getByRole('button', { name: /populate|import/i }));
-
-      // This feature may not be visible on all pages
-      const hasAutoPopulate = await autoPopulate.first().isVisible().catch(() => false);
-      // Pass test as long as page loads
+      // This feature may not be visible on all pages - pass test as long as page loads
     });
   });
 });

@@ -31,7 +31,6 @@ import type { OnboardingStepData, WizardStepId } from '@/lib/roi/onboarding-type
 
 interface EntityStepProps {
   validation?: OnboardingStepData;
-  onBack?: () => void;
   onNext?: () => void;
 }
 
@@ -44,7 +43,7 @@ interface EntityFormData {
   registrationNumber: string;
 }
 
-export function EntityStep({ validation, onBack, onNext }: EntityStepProps) {
+export function EntityStep({ validation, onNext }: EntityStepProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSearchingLei, setIsSearchingLei] = useState(false);
   const [leiSuggestions, setLeiSuggestions] = useState<GLEIFEntity[]>([]);

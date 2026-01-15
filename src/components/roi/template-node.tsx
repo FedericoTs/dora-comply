@@ -6,7 +6,6 @@
  * Visual representation of a template in the relationship diagram
  */
 
-import { useState } from 'react';
 import { CheckCircle2, AlertCircle, Circle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {

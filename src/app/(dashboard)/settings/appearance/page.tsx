@@ -78,7 +78,7 @@ const LOCALE_OPTIONS: { value: Locale; label: string; flag: string }[] = [
 ];
 
 export default function AppearanceSettingsPage() {
-  const { setTheme, theme: currentTheme } = useTheme();
+  const { setTheme } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [preferences, setPreferences] = useState<AppearancePreferences>(

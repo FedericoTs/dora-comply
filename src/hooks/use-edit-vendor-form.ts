@@ -80,6 +80,7 @@ export function useEditVendorForm(vendor: VendorWithRelations) {
   };
 
   // Watch is_ctpp to show/hide CTPP section
+  // eslint-disable-next-line react-hooks/incompatible-library -- React Hook Form watch() is intentional
   const isCTPP = form.watch('is_ctpp') ?? false;
   const currentStatus = form.watch('status');
 

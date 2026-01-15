@@ -130,7 +130,7 @@ async function testDatabaseSchema(): Promise<void> {
 
   // Test RLS is enabled
   await runTest('RLS enabled on vendors', 'database', async () => {
-    const { data } = await supabase
+    await supabase
       .rpc('check_rls_enabled', { table_name: 'vendors' })
       .single();
     // Note: This would need a custom function, skip for now
@@ -143,7 +143,7 @@ async function testDatabaseIntegrity(): Promise<void> {
 
   // Test foreign key relationships
   await runTest('Vendor-Organization FK', 'integrity', async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('vendors')
       .select('id, organization_id, organizations(id)')
       .limit(10);
@@ -151,7 +151,7 @@ async function testDatabaseIntegrity(): Promise<void> {
   });
 
   await runTest('Document-Vendor FK', 'integrity', async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('documents')
       .select('id, vendor_id, vendors(id, name)')
       .not('vendor_id', 'is', null)
@@ -160,7 +160,7 @@ async function testDatabaseIntegrity(): Promise<void> {
   });
 
   await runTest('Incident-Organization FK', 'integrity', async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('incidents')
       .select('id, organization_id, organizations(id)')
       .limit(10);
@@ -177,7 +177,7 @@ async function testVendorFeatures(): Promise<void> {
   console.log('─'.repeat(50));
 
   await runTest('Vendor list query', 'vendors', async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('vendors')
       .select('*')
       .limit(100);
@@ -185,7 +185,7 @@ async function testVendorFeatures(): Promise<void> {
   });
 
   await runTest('Vendor with contacts', 'vendors', async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('vendors')
       .select('*, vendor_contacts(*)')
       .limit(10);
@@ -193,7 +193,7 @@ async function testVendorFeatures(): Promise<void> {
   });
 
   await runTest('Vendor risk scoring fields', 'vendors', async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('vendors')
       .select('id, risk_score, tier, criticality_level')
       .not('risk_score', 'is', null)
@@ -202,7 +202,7 @@ async function testVendorFeatures(): Promise<void> {
   });
 
   await runTest('Vendor ESA fields', 'vendors', async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('vendors')
       .select('id, lei, provider_type, headquarters_country')
       .limit(10);
@@ -247,7 +247,7 @@ async function testIncidentFeatures(): Promise<void> {
   console.log('─'.repeat(50));
 
   await runTest('Incident list query', 'incidents', async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('incidents')
       .select('*')
       .limit(50);
@@ -255,7 +255,7 @@ async function testIncidentFeatures(): Promise<void> {
   });
 
   await runTest('Incident with reports', 'incidents', async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('incidents')
       .select('*, incident_reports(*)')
       .limit(10);
@@ -263,7 +263,7 @@ async function testIncidentFeatures(): Promise<void> {
   });
 
   await runTest('Incident classification fields', 'incidents', async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('incidents')
       .select('id, classification, incident_type, status')
       .limit(20);
@@ -271,7 +271,7 @@ async function testIncidentFeatures(): Promise<void> {
   });
 
   await runTest('DORA Article 19 deadlines', 'incidents', async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('incident_reports')
       .select('id, report_type, deadline, submitted_at')
       .limit(20);
@@ -444,7 +444,8 @@ async function calculateKPIs(): Promise<KPIMetrics> {
     .from('activity_log')
     .select('*', { count: 'exact', head: true });
 
-  const { count: snapshotCount } = await supabase
+  // Maturity snapshot count fetched but not used in current KPI calculations
+  await supabase
     .from('maturity_snapshots')
     .select('*', { count: 'exact', head: true });
 

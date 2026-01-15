@@ -45,7 +45,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const body = await request.json() as SnapshotRequest;
-    const { type, vendorId, notes, documentId } = body;
+    // Note: documentId is declared in SnapshotRequest but not yet used (reserved for future SOC 2 upload association)
+    const { type, vendorId, notes } = body;
 
     // Validate type
     const validTypes: SnapshotType[] = [

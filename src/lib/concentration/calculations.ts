@@ -12,7 +12,6 @@ import {
   type GeographicSpread,
   type ConcentrationMetrics,
   type ConcentrationAlert,
-  type ConcentrationAlertType,
   type RiskLevelSummary,
   CONCENTRATION_THRESHOLDS,
   getRegionFromCountry,

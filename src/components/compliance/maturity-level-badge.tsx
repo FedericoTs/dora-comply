@@ -31,14 +31,6 @@ const levelColors: Record<MaturityLevel, string> = {
   [MaturityLevel.L4_QUANTITATIVE]: 'bg-blue-600 text-white hover:bg-blue-700',
 };
 
-const levelBorderColors: Record<MaturityLevel, string> = {
-  [MaturityLevel.L0_NOT_PERFORMED]: 'border-slate-500',
-  [MaturityLevel.L1_INFORMAL]: 'border-red-500',
-  [MaturityLevel.L2_PLANNED]: 'border-amber-500',
-  [MaturityLevel.L3_WELL_DEFINED]: 'border-emerald-500',
-  [MaturityLevel.L4_QUANTITATIVE]: 'border-blue-600',
-};
-
 const sizeClasses: Record<string, string> = {
   sm: 'text-[10px] px-1.5 py-0.5',
   md: 'text-xs px-2 py-1',

@@ -12,8 +12,6 @@ import Link from 'next/link';
 import {
   Target,
   ChevronRight,
-  AlertTriangle,
-  CheckCircle2,
   Loader2,
   ExternalLink,
 } from 'lucide-react';
@@ -21,7 +19,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 
 interface VendorGapSummary {
@@ -83,7 +80,7 @@ export function DORAGapsSummary() {
           // Real calculation would use dora-calculator, but this gives a quick estimate
           const parsedSoc2 = doc.parsed_soc2 as { controls: unknown[]; exceptions: unknown[] };
           const controlCount = parsedSoc2?.controls?.length || 0;
-          const exceptionCount = parsedSoc2?.exceptions?.length || 0;
+          // Note: exceptions are available in parsedSoc2.exceptions if needed for future use
 
           // Estimate coverage: more controls = better coverage
           // This is a simplified heuristic - actual coverage comes from dora-calculator

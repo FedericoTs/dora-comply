@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
-import { FileText, Upload, AlertTriangle, Clock } from 'lucide-react';
+import { FileText, AlertTriangle, Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { getDocuments, getDocumentStats } from '@/lib/documents/queries';
 import { DocumentsClient } from './documents-client';

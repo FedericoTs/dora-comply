@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, X, Globe, Users, DollarSign, Database, AlertCircle, Shield, AlertTriangle, CheckCircle2, AlertOctagon } from 'lucide-react';
+import { Globe, Users, DollarSign, Database, Shield, AlertTriangle, CheckCircle2, AlertOctagon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -60,7 +60,6 @@ export function StepImpactClassification({
   services,
   criticalFunctions,
 }: StepImpactClassificationProps) {
-  const [customRegion, setCustomRegion] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Calculate classification in real-time

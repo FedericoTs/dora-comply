@@ -453,7 +453,7 @@ const TABLES_WITH_CREATED_BY = ['incidents', 'roi_submissions', 'vendor_certific
 function extractDbValue(esaValue: string, enumeration?: Record<string, string>): string {
   // Try direct enum reverse lookup first (exact match)
   if (enumeration) {
-    const entry = Object.entries(enumeration).find(([_, ebaCode]) => ebaCode === esaValue);
+    const entry = Object.entries(enumeration).find((pair) => pair[1] === esaValue);
     if (entry) {
       return entry[0]; // Return the key (DB value)
     }
@@ -715,7 +715,7 @@ export async function PATCH(
     if (columnMapping.enumeration) {
       // Check if the value is an EBA code (e.g., "eba_GA:DE") and convert to key
       const enumEntry = Object.entries(columnMapping.enumeration).find(
-        ([_, ebaCode]) => ebaCode === value
+        (pair) => pair[1] === value
       );
       if (enumEntry) {
         dbValue = enumEntry[0]; // Use the key (e.g., "DE")

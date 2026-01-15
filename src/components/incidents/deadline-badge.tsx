@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -48,7 +48,10 @@ export function DeadlineBadge({
   showCountdown = true,
   className,
 }: DeadlineBadgeProps) {
-  const deadlineDate = typeof deadline === 'string' ? new Date(deadline) : deadline;
+  const deadlineDate = useMemo(
+    () => (typeof deadline === 'string' ? new Date(deadline) : deadline),
+    [deadline]
+  );
   const [timeRemaining, setTimeRemaining] = useState(() => getTimeRemaining(deadlineDate));
 
   useEffect(() => {

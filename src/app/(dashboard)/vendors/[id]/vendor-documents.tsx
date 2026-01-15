@@ -110,6 +110,7 @@ export function VendorDocuments({ vendorId, vendorName }: VendorDocumentsProps) 
 
   useEffect(() => {
     fetchDocuments();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId]);
 
   // Handle file selection

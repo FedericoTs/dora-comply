@@ -113,7 +113,7 @@ export function MaturityTrendsDashboard() {
       } else {
         toast.error(result.error || 'Failed to create snapshot');
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to create snapshot');
     } finally {
       setCreatingSnapshot(false);

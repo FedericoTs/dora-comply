@@ -13,7 +13,6 @@ import {
   TrendingDown,
   Minus,
   AlertTriangle,
-  CheckCircle2,
   Clock,
   Target,
 } from 'lucide-react';
@@ -29,7 +28,6 @@ import {
 import { cn } from '@/lib/utils';
 import {
   analyzePace,
-  formatDaysRemaining,
   getPaceStatusMessage,
   DORA_DEADLINE,
   type PaceAnalysis,

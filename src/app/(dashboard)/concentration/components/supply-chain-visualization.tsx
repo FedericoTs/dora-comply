@@ -46,7 +46,6 @@ interface SupplyChainVisualizationProps {
 
 export function SupplyChainVisualization({
   graph,
-  metrics,
 }: SupplyChainVisualizationProps) {
   const [selectedNode, setSelectedNode] = useState<DependencyNode | null>(null);
   const [filterTier, setFilterTier] = useState<string>('all');

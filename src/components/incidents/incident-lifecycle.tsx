@@ -132,9 +132,8 @@ export function IncidentLifecycle({
   classification,
   detectionDatetime,
   reports,
-  incidentStatus,
   compact = false,
-}: IncidentLifecycleProps) {
+}: Omit<IncidentLifecycleProps, 'incidentStatus'>) {
   // Non-major incidents don't require regulatory reporting
   if (classification !== 'major') {
     return (

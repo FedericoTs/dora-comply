@@ -96,7 +96,8 @@ async function runMigration() {
     // If RPC doesn't exist, try direct query via REST
     if (error && error.code === 'PGRST202') {
       // Fallback: Use raw SQL via Supabase's internal API
-      const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+      // Note: This is a placeholder - actual implementation would need SQL execution endpoint
+      await fetch(`${supabaseUrl}/rest/v1/`, {
         method: 'POST',
         headers: {
           'apikey': supabaseServiceKey,

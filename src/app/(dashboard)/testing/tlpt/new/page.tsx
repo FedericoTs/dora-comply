@@ -22,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { createTLPTAction } from '@/lib/testing/actions';
 import { TLPT_FRAMEWORKS, getTLPTFrameworkLabel } from '@/lib/testing/types';
@@ -73,13 +72,6 @@ export default function NewTLPTPage() {
         router.push(`/testing/tlpt/${result.tlpt.id}`);
       }
     });
-  };
-
-  // Calculate default due date (3 years from now)
-  const defaultDueDate = () => {
-    const date = new Date();
-    date.setFullYear(date.getFullYear() + 3);
-    return date.toISOString().split('T')[0];
   };
 
   return (

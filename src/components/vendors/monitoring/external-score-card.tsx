@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
@@ -100,6 +99,7 @@ function GradeBadge({ grade, size = 'default' }: { grade: SSCGrade; size?: 'defa
 
 export function ExternalScoreCard({
   vendorId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   vendorName,
   score,
   grade,

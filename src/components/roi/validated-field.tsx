@@ -14,7 +14,6 @@ import { cn } from '@/lib/utils';
 import {
   validateField,
   type ValidationResult,
-  type ValidationSeverity,
 } from '@/lib/roi/field-validators';
 
 interface ValidatedFieldProps {
@@ -56,7 +55,6 @@ export function ValidatedField({
 }: ValidatedFieldProps) {
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [touched, setTouched] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
 
   const runValidation = useCallback((val: string) => {
     if (customValidation) {
@@ -85,16 +83,14 @@ export function ValidatedField({
   // Intentional: need to validate initial value on mount
   useEffect(() => {
     if (value && showValidation) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       runValidation(value);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     onChange(newValue);
-    setIsDirty(true);
 
     if (validateOnChange && showValidation) {
       runValidation(newValue);

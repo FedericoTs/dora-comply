@@ -11,7 +11,6 @@ import {
   Building2,
   CheckCircle2,
   Loader2,
-  AlertCircle,
   ArrowRight,
   X,
 } from 'lucide-react';

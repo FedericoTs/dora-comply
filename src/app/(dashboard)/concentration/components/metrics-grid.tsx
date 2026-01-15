@@ -6,10 +6,7 @@ import {
   Layers,
   Link2,
   AlertTriangle,
-  CheckCircle2,
   TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';

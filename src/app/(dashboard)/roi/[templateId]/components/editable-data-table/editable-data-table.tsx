@@ -45,7 +45,6 @@ export function EditableDataTable({
     cellSaveStates,
     undoStack,
     allSelected,
-    someSelected,
     getCellKey,
     handleCellSelect,
     handleStartEdit,

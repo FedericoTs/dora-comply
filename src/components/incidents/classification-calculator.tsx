@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, FileText, Info, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { calculateClassification } from '@/lib/incidents/validation';
 import { ThresholdList, ClassificationBadge } from './threshold-indicator';
-import type { ImpactData, IncidentClassification, ClassificationResult } from '@/lib/incidents/types';
+import type { ImpactData, IncidentClassification } from '@/lib/incidents/types';
 
 interface ClassificationCalculatorProps {
   impactData: ImpactData;
@@ -51,11 +51,6 @@ export function ClassificationCalculator({
 
   const hasTriggeredThresholds = result.triggeredThresholds.length > 0;
   const classificationMismatch = isOverride && selectedClassification !== result.calculated;
-
-  // Filter to only show major thresholds that weren't triggered (for "close to major" warning)
-  const majorNotTriggered = result.notTriggeredThresholds.filter(
-    (t) => t.classification === 'major' && t.currentValue !== null
-  );
 
   return (
     <div className="space-y-6">

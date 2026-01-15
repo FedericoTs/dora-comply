@@ -41,6 +41,7 @@ export function VendorEnrichmentTab({ vendor }: VendorEnrichmentTabProps) {
   const [sanctionsResult, setSanctionsResult] = useState<SanctionsResult | null>(null);
   const [isCheckingSanctions, setIsCheckingSanctions] = useState(false);
   const [sanctionsError, setSanctionsError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [sanctionsConfig, setSanctionsConfig] = useState<SanctionsConfig | null>(null);
   const [certifications, setCertifications] = useState<VendorCertification[]>([]);
 

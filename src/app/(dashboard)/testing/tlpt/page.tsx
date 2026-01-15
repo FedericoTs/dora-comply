@@ -23,8 +23,6 @@ import { getTLPTEngagements } from '@/lib/testing/queries';
 import {
   getTLPTFrameworkLabel,
   getTLPTStatusLabel,
-  TLPT_FRAMEWORKS,
-  TLPT_STATUSES,
 } from '@/lib/testing/types';
 
 export const metadata = {

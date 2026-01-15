@@ -10,7 +10,6 @@ export const metadata: Metadata = {
 
 export default function TermsOfServicePage() {
   const lastUpdated = 'January 9, 2025';
-  const effectiveDate = 'January 9, 2025';
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">

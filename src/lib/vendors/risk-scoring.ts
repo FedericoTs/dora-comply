@@ -190,7 +190,7 @@ function calculateExternalRiskComponent(input: RiskScoreInput): RiskComponent {
  * Calculate compliance risk component (DORA, SOC2, etc.)
  */
 function calculateComplianceRiskComponent(input: RiskScoreInput): RiskComponent {
-  const { vendor, doraMaturityLevel, doraCompliancePercentage, hasSOC2Report, soc2Opinion, soc2ExceptionCount } = input;
+  const { doraMaturityLevel, doraCompliancePercentage, hasSOC2Report, soc2Opinion, soc2ExceptionCount } = input;
   const factors: string[] = [];
   let score = 50; // Default when no compliance data
 

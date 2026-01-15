@@ -11,7 +11,6 @@
  * - Change history
  */
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   FileText,
@@ -24,7 +23,6 @@ import {
   History,
   Eye,
   ExternalLink,
-  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +38,7 @@ import {
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import type { EvidenceSource, ReviewStatus, ExtractionMethod } from './evidence-source-badge';
+import type { EvidenceSource, ReviewStatus } from './evidence-source-badge';
 
 interface AuditLogEntry {
   id: string;
@@ -277,7 +275,7 @@ export function EvidenceDetailPanel({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {auditLog.map((entry, index) => {
+                    {auditLog.map((entry) => {
                       const config = actionConfig[entry.action] || actionConfig.accessed;
                       const Icon = config.Icon;
                       return (

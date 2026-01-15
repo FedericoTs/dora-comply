@@ -21,7 +21,6 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import {
   Tooltip,
@@ -53,7 +52,6 @@ import type {
   DORAComplianceResult,
   DORAPillar,
   PillarScore,
-  MaturityLevel,
 } from '@/lib/compliance/dora-types';
 import { DORAPillarLabels } from '@/lib/compliance/dora-types';
 

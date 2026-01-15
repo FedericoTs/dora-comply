@@ -90,7 +90,7 @@ export function ConcentrationDashboard({ showHeader = true }: ConcentrationDashb
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success('Report downloaded');
-    } catch (err) {
+    } catch {
       toast.error('Failed to export report');
     } finally {
       setExporting(false);

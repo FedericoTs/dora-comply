@@ -133,7 +133,7 @@ async function analyzeWithClaude(
       throw new Error('No JSON found in response');
     }
     return JSON.parse(jsonMatch[0]) as ClaudeAnalysisResponse;
-  } catch (parseError) {
+  } catch {
     console.error('[Claude Analysis] Failed to parse response:', textContent.text.slice(0, 1000));
     throw new Error('Failed to parse AI response as JSON');
   }

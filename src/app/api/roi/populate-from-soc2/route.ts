@@ -30,7 +30,6 @@ import type { ParsedSOC2Report } from '@/lib/ai/parsers/types';
 import type {
   SOC2ToRoiMappingResult,
   ExtractedServiceData,
-  ExtractedSubcontractorData,
   Soc2RoiMappingRecord,
 } from '@/lib/roi/soc2-to-roi-types';
 
@@ -213,8 +212,7 @@ export async function POST(request: NextRequest) {
     if (!profile?.organization_id) {
       return NextResponse.json({ error: 'User has no organization' }, { status: 400 });
     }
-
-    const organizationId = profile.organization_id;
+    // Note: profile.organization_id is validated above and used indirectly through document/vendor lookups
 
     // Fetch the document WITH its linked vendor
     const { data: document, error: docError } = await supabase

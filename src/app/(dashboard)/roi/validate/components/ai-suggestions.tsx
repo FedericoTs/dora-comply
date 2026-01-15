@@ -8,8 +8,6 @@ import { cn } from '@/lib/utils';
 import {
   Sparkles,
   CheckCircle2,
-  XCircle,
-  Loader2,
   ArrowRight,
   Copy,
   Check,

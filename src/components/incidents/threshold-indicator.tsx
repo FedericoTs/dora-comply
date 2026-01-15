@@ -2,7 +2,6 @@
 
 import { cn } from '@/lib/utils';
 import { CheckCircle2, Circle, AlertTriangle } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
 import type { ThresholdStatus } from '@/lib/incidents/types';
 import { formatThresholdValue } from '@/lib/incidents/validation';
 

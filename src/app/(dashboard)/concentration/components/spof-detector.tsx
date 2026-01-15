@@ -29,12 +29,6 @@ function SpofCard({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const tierColors = {
-    critical: 'bg-red-500',
-    important: 'bg-orange-500',
-    standard: 'bg-gray-400',
-  };
-
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div

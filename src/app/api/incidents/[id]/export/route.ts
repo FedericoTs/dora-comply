@@ -284,7 +284,8 @@ function buildExportData(
 
 async function generateIncidentPdf(
   data: ExportData,
-  _reportType: ReportType | null
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _reportType: ReportType | null // Reserved for future report type-specific formatting
 ): Promise<Buffer> {
   // Create PDF document (A4 size)
   const doc = new jsPDF({

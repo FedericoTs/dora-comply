@@ -394,7 +394,7 @@ export const QUICK_SCAN_OUTPUT_SCHEMA = {
 // Helper Functions
 // ============================================================================
 
-export function buildAnalysisPrompt(_contractText?: string): string {
+export function buildAnalysisPrompt(): string {
   // For direct PDF analysis, we don't need to insert contract text
   // The PDF is sent as a document attachment alongside this prompt
   return DORA_ANALYSIS_USER_PROMPT;

@@ -55,7 +55,7 @@ interface ProgressStepProps {
   label: string;
 }
 
-function ProgressStep({ isComplete, isActive, isPending, label }: ProgressStepProps) {
+function ProgressStep({ isComplete, isActive, label }: Omit<ProgressStepProps, 'isPending'>) {
   return (
     <div className="flex items-center gap-2 text-muted-foreground">
       {isComplete ? (

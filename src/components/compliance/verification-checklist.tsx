@@ -34,7 +34,7 @@ import {
   Edit3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { VerificationChecklistItem, VerificationResult } from '@/lib/compliance/dora-types';
+import type { VerificationResult } from '@/lib/compliance/dora-types';
 
 interface VerificationChecklistProps {
   documentId: string;

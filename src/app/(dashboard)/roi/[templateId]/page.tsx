@@ -19,10 +19,9 @@ import { ValidationPanel } from './components/validation-panel';
 import { FieldMapper } from './components/field-mapper';
 import { ExportButton } from './components/export-button';
 import { TemplateNavigation, TemplateProgressBar } from './components/template-navigation';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   ChevronLeft,
@@ -31,7 +30,6 @@ import {
   Wand2,
   Upload,
   PlusCircle,
-  ArrowRight,
 } from 'lucide-react';
 
 interface PageProps {
@@ -74,6 +72,7 @@ async function TemplateDetailContent({ templateId }: { templateId: RoiTemplateId
 
   // Strip non-serializable properties (transform functions) before passing to Client Components
   // Functions cannot be passed from Server Components to Client Components
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const columns = rawColumns.map(({ transform, ...rest }) => rest);
 
   // Fetch data

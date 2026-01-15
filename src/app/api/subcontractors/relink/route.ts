@@ -10,11 +10,11 @@
  *   { force?: boolean } - If true, re-processes all documents even if already linked
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { relinkAllDocuments, autoLinkSubserviceOrgs } from '@/lib/ai/parsers/subservice-linker';
+import { relinkAllDocuments } from '@/lib/ai/parsers/subservice-linker';
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(): Promise<NextResponse> {
   try {
     // Get authenticated Supabase client
     const supabase = await createClient();
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 // GET endpoint to check status of what can be re-linked
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   try {
     const supabase = await createClient();
 

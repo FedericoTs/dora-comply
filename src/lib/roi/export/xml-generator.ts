@@ -39,27 +39,12 @@ const TEMPLATE_CONCEPTS: Record<RoiTemplateId, string> = {
   'B_99.01': 'eba_tRT9901',
 };
 
-// Column code to dimension mapping
-const COLUMN_DIMENSIONS: Record<string, string> = {
-  c0010: 'eba_dim:BAS',
-  c0020: 'eba_dim:BAS',
-  c0030: 'eba_dim:BAS',
-  c0040: 'eba_dim:BAS',
-  c0050: 'eba_dim:BAS',
-  c0060: 'eba_dim:BAS',
-  c0070: 'eba_dim:BAS',
-  c0080: 'eba_dim:BAS',
-  c0090: 'eba_dim:BAS',
-  c0100: 'eba_dim:BAS',
-  c0110: 'eba_dim:BAS',
-  c0120: 'eba_dim:BAS',
-  c0130: 'eba_dim:BAS',
-  c0140: 'eba_dim:BAS',
-  c0150: 'eba_dim:BAS',
-  c0160: 'eba_dim:BAS',
-  c0170: 'eba_dim:BAS',
-  c0180: 'eba_dim:BAS',
-};
+// Column code to dimension mapping (reserved for future use with complex XBRL dimensions)
+// const COLUMN_DIMENSIONS: Record<string, string> = {
+//   c0010: 'eba_dim:BAS',
+//   c0020: 'eba_dim:BAS',
+//   ...
+// };
 
 // ============================================================================
 // Types

@@ -29,7 +29,6 @@ import {
 import { cn } from '@/lib/utils';
 import type { PDFControlsProps } from './types';
 
-const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 3.0;
 const ZOOM_STEP = 0.25;

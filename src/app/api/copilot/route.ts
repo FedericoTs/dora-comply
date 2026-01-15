@@ -13,7 +13,8 @@ import { askCopilot, getSuggestedQuestions, type CopilotMessage } from '@/lib/ai
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
-  const startTime = Date.now();
+  // Note: startTime can be used for performance logging if needed
+  // const startTime = Date.now();
 
   try {
     // Verify user is authenticated

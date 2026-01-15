@@ -23,11 +23,8 @@ import { getTests } from '@/lib/testing/queries';
 import {
   getTestTypeLabel,
   getTestStatusLabel,
-  getTestStatusColor,
   getTestResultLabel,
-  getTestResultColor,
   TEST_TYPES,
-  type TestType,
 } from '@/lib/testing/types';
 
 export const metadata = {

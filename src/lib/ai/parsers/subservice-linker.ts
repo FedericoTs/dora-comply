@@ -10,7 +10,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import type { ExtractedSubserviceOrg, InclusionMethod } from './types';
+import type { InclusionMethod } from './types';
 
 // Normalized subservice org structure (handles both old and new formats)
 interface NormalizedSubserviceOrg {

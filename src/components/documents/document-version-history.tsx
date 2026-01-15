@@ -26,7 +26,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -282,7 +281,7 @@ export function DocumentVersionHistory({
             </p>
           ) : (
             <div className="space-y-2">
-              {versions.map((version, index) => (
+              {versions.map((version) => (
                 <div
                   key={version.id}
                   className={cn(

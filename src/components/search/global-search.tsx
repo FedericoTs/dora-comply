@@ -84,17 +84,17 @@ export function GlobalSearch({ placeholder = 'Search anything...' }: GlobalSearc
   }, [open, recentItems]);
 
   // Search when query changes
-  // Intentional search results update
+  // Intentional search results update - clearing results is necessary when query is empty
   useEffect(() => {
     if (!debouncedQuery || debouncedQuery.length < 2) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional early return after clearing results
       setResults(null);
       return;
     }
 
     startTransition(async () => {
       const searchResults = await globalSearch(debouncedQuery);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setResults(searchResults);
     });
   }, [debouncedQuery]);

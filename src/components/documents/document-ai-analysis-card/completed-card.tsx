@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -66,8 +65,6 @@ export function CompletedCard({
   onSignOffComplete,
   onApplyToContract,
 }: CompletedCardProps) {
-  const router = useRouter();
-
   const complianceScore = analysis.overall_compliance_score || 0;
   const riskCount = analysis.risk_flags?.length || 0;
   const gapCount = analysis.compliance_gaps?.length || 0;

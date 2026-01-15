@@ -11,7 +11,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import type { ContractAnalysisResult, ExtractedParty } from '@/lib/ai/types';
+import type { ExtractedParty } from '@/lib/ai/types';
 
 // ============================================================================
 // Types
@@ -82,7 +82,6 @@ export async function previewRoiPopulation(
   // Extract provider from parties
   const parties = (analysis.identified_parties as ExtractedParty[]) || [];
   const provider = parties.find((p) => p.role === 'provider');
-  const customer = parties.find((p) => p.role === 'customer');
 
   // Check if vendor already exists
   let existingVendorId: string | undefined;

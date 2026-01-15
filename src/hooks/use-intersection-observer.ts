@@ -36,7 +36,7 @@ export function useIntersectionObserver(options?: UseIntersectionObserverOptions
     }
 
     return () => observer.disconnect();
-  }, [triggerOnce]);
+  }, [triggerOnce, observerOptions]);
 
   return { ref, isVisible };
 }

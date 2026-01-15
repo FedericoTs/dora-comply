@@ -12,7 +12,6 @@ import {
   Shield,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   FileText,
   Target,
   TrendingUp,
@@ -23,7 +22,6 @@ import {
   FRAMEWORK_DESCRIPTIONS,
   ALL_FRAMEWORK_CATEGORIES,
   FrameworkCode,
-  getComplianceStatusColor,
 } from '@/lib/compliance/framework-types';
 import { NIS2_REQUIREMENTS, NIS2_REQUIREMENT_COUNT } from '@/lib/compliance/nis2-requirements';
 import { GDPR_REQUIREMENTS, GDPR_REQUIREMENT_COUNT } from '@/lib/compliance/gdpr-requirements';

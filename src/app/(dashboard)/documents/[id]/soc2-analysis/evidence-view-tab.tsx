@@ -19,9 +19,8 @@ import {
   Users,
   ChevronRight,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -120,7 +119,7 @@ export function EvidenceViewTab({
     const controlsByPage: Record<number, number> = {};
 
     // Add controls as highlights
-    controls.forEach((control, idx) => {
+    controls.forEach((control) => {
       const pageNumber = getPageNumber(control.pageRef, control.location, 1);
 
       // Track position on this page

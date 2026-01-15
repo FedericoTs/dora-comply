@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { MoreVertical, ArrowUpDown, CheckCircle2, Clock, AlertTriangle, ExternalLink, Building2 } from 'lucide-react';
+import { MoreVertical, ArrowUpDown, CheckCircle2, Clock, ExternalLink, Building2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   Table,
@@ -23,7 +22,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import type { Vendor, VendorSortOptions } from '@/lib/vendors/types';
+import type { Vendor } from '@/lib/vendors/types';
+import type { VendorSortOptions } from '@/lib/vendors/types';
 import {
   TIER_INFO,
   STATUS_INFO,
@@ -40,6 +40,7 @@ interface SortableHeaderProps {
   children: React.ReactNode;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SortableHeader({ field, sortOptions, onSort, children }: SortableHeaderProps) {
   return (
     <Button

@@ -28,25 +28,25 @@ export function generateBoardReportPDF(data: BoardReportData): Blob {
   // PAGE 2: EXECUTIVE SUMMARY
   // ═══════════════════════════════════════════════════════════════════════════
   doc.addPage();
-  drawExecutiveSummary(doc, data, pageWidth);
+  drawExecutiveSummary(doc, data);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PAGE 3: DORA COMPLIANCE
   // ═══════════════════════════════════════════════════════════════════════════
   doc.addPage();
-  drawDORACompliance(doc, data, pageWidth);
+  drawDORACompliance(doc, data);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PAGE 4: CONCENTRATION RISK
   // ═══════════════════════════════════════════════════════════════════════════
   doc.addPage();
-  drawConcentrationRisk(doc, data, pageWidth);
+  drawConcentrationRisk(doc, data);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PAGE 5: VENDOR PORTFOLIO
   // ═══════════════════════════════════════════════════════════════════════════
   doc.addPage();
-  drawVendorPortfolio(doc, data, pageWidth);
+  drawVendorPortfolio(doc, data);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PAGE 6: ACTION ITEMS
@@ -139,8 +139,7 @@ function drawCoverPage(
  */
 function drawExecutiveSummary(
   doc: jsPDF,
-  data: BoardReportData,
-  pageWidth: number
+  data: BoardReportData
 ): void {
   let yPos = 25;
 
@@ -246,8 +245,7 @@ function drawExecutiveSummary(
  */
 function drawDORACompliance(
   doc: jsPDF,
-  data: BoardReportData,
-  pageWidth: number
+  data: BoardReportData
 ): void {
   let yPos = 25;
 
@@ -340,8 +338,7 @@ function drawDORACompliance(
  */
 function drawConcentrationRisk(
   doc: jsPDF,
-  data: BoardReportData,
-  pageWidth: number
+  data: BoardReportData
 ): void {
   let yPos = 25;
 
@@ -459,8 +456,7 @@ function drawConcentrationRisk(
  */
 function drawVendorPortfolio(
   doc: jsPDF,
-  data: BoardReportData,
-  pageWidth: number
+  data: BoardReportData
 ): void {
   let yPos = 25;
 

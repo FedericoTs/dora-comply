@@ -33,7 +33,6 @@ interface RoiPopulationSummaryProps {
 export function RoiPopulationSummary({
   vendorWillUpdate,
   servicesCount,
-  subcontractorsCount,
   createServices,
   selectedSubcontractorsCount,
   populating,

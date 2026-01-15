@@ -16,7 +16,6 @@ import { parseISO27001 } from './parsers/iso27001-parser';
 import { parsePentestReport } from './parsers/pentest-parser';
 import type { DocumentType } from '@/lib/documents/types';
 import type {
-  ContractAnalysisResult,
   ParsedContractRecord,
   ExtractedArticle30_2,
   ExtractedArticle30_3,

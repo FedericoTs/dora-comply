@@ -10,7 +10,7 @@
 import { createClient } from '@/lib/supabase/server';
 import type { RoiTemplateId, RoiPackageParameters } from './types';
 import { buildPackageZip, getDefaultParameters } from './export';
-import { generateXbrlInstance, generateXbrlPackage } from './export/xml-generator';
+import { generateXbrlPackage } from './export/xml-generator';
 import {
   fetchB_01_01,
   fetchB_01_02,

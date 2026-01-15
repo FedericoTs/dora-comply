@@ -15,8 +15,6 @@ import type {
   Incident,
   UpdateIncidentInput,
   IncidentClassification,
-  IncidentType,
-  ImpactLevel,
   ClassificationResult,
   ImpactData,
 } from '@/lib/incidents/types';
