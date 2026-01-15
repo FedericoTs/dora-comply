@@ -372,23 +372,39 @@ export function MaturityTrendsDashboard() {
           <CardContent>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold">
-                {latestSnapshot?.critical_gaps_count ?? 0}
+                {(latestSnapshot?.critical_gaps_count ?? 0) +
+                 (latestSnapshot?.high_gaps_count ?? 0) +
+                 (latestSnapshot?.medium_gaps_count ?? 0) +
+                 (latestSnapshot?.low_gaps_count ?? 0)}
               </span>
-              <span className="text-sm text-muted-foreground">critical gaps</span>
+              <span className="text-sm text-muted-foreground">open gaps</span>
             </div>
-            <div className="mt-2 text-sm">
-              {trends && trends.gaps_closed > 0 && (
-                <span className="text-emerald-600">
-                  {trends.gaps_closed} closed
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+              {(latestSnapshot?.critical_gaps_count ?? 0) > 0 && (
+                <span className="text-red-600 font-medium">
+                  {latestSnapshot?.critical_gaps_count} critical
                 </span>
               )}
-              {trends && trends.gaps_opened > 0 && (
-                <span className="text-red-600">
-                  {trends.gaps_opened} new
+              {(latestSnapshot?.high_gaps_count ?? 0) > 0 && (
+                <span className="text-orange-600 font-medium">
+                  {latestSnapshot?.high_gaps_count} high
                 </span>
               )}
-              {trends && trends.gaps_closed === 0 && trends.gaps_opened === 0 && (
-                <span className="text-muted-foreground">No change</span>
+              {(latestSnapshot?.medium_gaps_count ?? 0) > 0 && (
+                <span className="text-yellow-600 font-medium">
+                  {latestSnapshot?.medium_gaps_count} medium
+                </span>
+              )}
+              {(latestSnapshot?.low_gaps_count ?? 0) > 0 && (
+                <span className="text-blue-600 font-medium">
+                  {latestSnapshot?.low_gaps_count} low
+                </span>
+              )}
+              {((latestSnapshot?.critical_gaps_count ?? 0) +
+                (latestSnapshot?.high_gaps_count ?? 0) +
+                (latestSnapshot?.medium_gaps_count ?? 0) +
+                (latestSnapshot?.low_gaps_count ?? 0)) === 0 && (
+                <span className="text-emerald-600 font-medium">All clear!</span>
               )}
             </div>
           </CardContent>
