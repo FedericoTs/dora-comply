@@ -66,14 +66,14 @@ function scoreMTTR(mttr: number | null): number {
  * Calculate Mean Time To Detect (MTTD) from incidents
  * Returns average hours between occurrence and detection
  */
-function calculateMTTD(incidents: { occurred_at: string | null; detected_at: string | null }[]): number | null {
-  const incidentsWithDates = incidents.filter(i => i.occurred_at && i.detected_at);
+function calculateMTTD(incidents: { occurrence_datetime: string | null; detection_datetime: string | null }[]): number | null {
+  const incidentsWithDates = incidents.filter(i => i.occurrence_datetime && i.detection_datetime);
   if (incidentsWithDates.length === 0) return null;
 
   let totalHours = 0;
   for (const incident of incidentsWithDates) {
-    const occurred = new Date(incident.occurred_at!).getTime();
-    const detected = new Date(incident.detected_at!).getTime();
+    const occurred = new Date(incident.occurrence_datetime!).getTime();
+    const detected = new Date(incident.detection_datetime!).getTime();
     totalHours += Math.max(0, (detected - occurred) / (1000 * 60 * 60));
   }
 
@@ -400,14 +400,14 @@ async function getCurrentComplianceData(
       // Incidents for Incident Reporting pillar - extended for MTTR/MTTD
       supabase
         .from('incidents')
-        .select('id, classification, status, incident_type, duration_hours, occurred_at, detected_at')
+        .select('id, classification, status, incident_type, duration_hours, occurrence_datetime, detection_datetime')
         .eq('organization_id', organizationId),
 
-      // Incident reports for timeline compliance
+      // Incident reports for timeline compliance (via incident_id join)
       supabase
         .from('incident_reports')
-        .select('id, submitted_at, deadline, report_type')
-        .eq('organization_id', organizationId),
+        .select('id, submitted_at, deadline, report_type, incident_id, incidents!inner(organization_id)')
+        .eq('incidents.organization_id', organizationId),
 
       // Tests for Resilience Testing pillar - extended for tester qualifications
       supabase
@@ -616,7 +616,7 @@ function calculateICTRiskScore(
  * - Process maturity (10%): Complete incident records
  */
 function calculateIncidentReportingScore(
-  incidents: { classification: string; status: string; incident_type: string; duration_hours: number | null; occurred_at: string | null; detected_at: string | null }[],
+  incidents: { classification: string; status: string; incident_type: string; duration_hours: number | null; occurrence_datetime: string | null; detection_datetime: string | null }[],
   incidentReports: { submitted_at: string | null; deadline: string | null }[]
 ): { level: MaturityLevel; percent: number } {
   // Base score for having incident tracking capability
@@ -655,8 +655,8 @@ function calculateIncidentReportingScore(
     let fieldsComplete = 0;
     if (incident.classification) fieldsComplete++;
     if (incident.incident_type) fieldsComplete++;
-    if (incident.occurred_at) fieldsComplete++;
-    if (incident.detected_at) fieldsComplete++;
+    if (incident.occurrence_datetime) fieldsComplete++;
+    if (incident.detection_datetime) fieldsComplete++;
     completenessScore += (fieldsComplete / 4) * 100;
   }
   completenessScore = completenessScore / incidents.length;

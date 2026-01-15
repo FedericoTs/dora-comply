@@ -70,6 +70,19 @@ export const ctppSubstitutabilitySchema = z.enum([
   'no_alternatives',
 ]);
 
+export const currencySchema = z.enum([
+  'EUR',
+  'USD',
+  'GBP',
+  'CHF',
+  'JPY',
+  'AUD',
+  'CAD',
+  'SEK',
+  'NOK',
+  'DKK',
+]);
+
 // ============================================
 // LEI VALIDATION
 // ============================================
@@ -217,6 +230,18 @@ export const updateVendorSchema = z.object({
   ctpp_exit_strategy_documented: z.boolean().optional(),
   ctpp_exit_strategy_last_review: z.string().optional().nullable(),
   ctpp_substitutability_assessment: ctppSubstitutabilitySchema.optional().nullable(),
+
+  // Financial Exposure - for HHI concentration risk calculation
+  total_annual_expense: z.number().min(0).optional().nullable(),
+  expense_currency: currencySchema.optional().nullable(),
+
+  // External Risk Monitoring - SecurityScorecard/BitSight integration
+  external_risk_score: z.number().min(0).max(100).optional().nullable(),
+  external_risk_source: z.string().max(100).optional().nullable(),
+  external_risk_last_updated: z.string().optional().nullable(),
+  monitoring_enabled: z.boolean().optional(),
+  monitoring_domain: z.string().max(500).optional().nullable(),
+  monitoring_alert_threshold: z.number().min(0).max(100).optional().nullable(),
 });
 
 export type UpdateVendorFormData = z.infer<typeof updateVendorSchema>;

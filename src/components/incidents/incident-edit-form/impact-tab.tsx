@@ -187,6 +187,37 @@ export function ImpactTab({ formData, onUpdate }: ImpactTabProps) {
             )}
           </div>
 
+          {/* Duration - for MTTR calculation */}
+          <div className="space-y-4">
+            <h4 className="font-medium">Service Disruption Duration</h4>
+            <div className="space-y-2">
+              <Label htmlFor="duration_hours">
+                Duration (Hours)
+                {(formData.duration_hours ?? 0) >= 2 && (
+                  <Badge variant="destructive" className="ml-2 text-xs">
+                    Triggers Major if &ge;2h
+                  </Badge>
+                )}
+              </Label>
+              <Input
+                id="duration_hours"
+                type="number"
+                min={0}
+                step={0.5}
+                value={formData.duration_hours ?? ''}
+                onChange={(e) =>
+                  onUpdate({
+                    duration_hours: e.target.value ? parseFloat(e.target.value) : undefined,
+                  })
+                }
+                placeholder="e.g., 4.5"
+              />
+              <p className="text-xs text-muted-foreground">
+                DORA threshold: 2 hours for Major. Used for MTTR (Mean Time To Resolve) calculation.
+              </p>
+            </div>
+          </div>
+
           {/* Economic Impact */}
           <div className="space-y-2">
             <Label htmlFor="economic_impact">Economic Impact (EUR)</Label>
