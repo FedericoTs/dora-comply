@@ -1,23 +1,24 @@
-# DORA Comply - Project Configuration
+# DORA Comply - Project Documentation
 
-## Project Overview
+## Overview
 
-**DORA Comply** is an AI-powered Third-Party Risk Management platform for EU financial institutions facing DORA (Digital Operational Resilience Act) compliance. The platform automates vendor assessments, generates the Register of Information (RoI), and manages ICT incident reporting.
+**DORA Comply** is an AI-powered compliance platform for EU financial institutions facing DORA (Digital Operational Resilience Act) requirements. The platform automates vendor assessments, generates the Register of Information (RoI), manages ICT incident reporting, and provides resilience testing tracking.
 
-**Critical Deadline:** DORA enforcement January 17, 2026
+**DORA Enforcement Deadline:** January 17, 2026
 
 ## Tech Stack
 
 | Layer | Technology | Version |
 |-------|------------|---------|
-| Framework | Next.js (App Router) | 16.x |
+| Framework | Next.js (App Router) | 15.x |
 | Language | TypeScript | 5.x (strict mode) |
 | UI Library | shadcn/ui (New York style) | latest |
 | Styling | Tailwind CSS | 4.x |
 | Database | PostgreSQL (Supabase) | 15.x |
 | Auth | Supabase Auth | SSR package |
-| State | React Server Components + TanStack Query | - |
+| State | React Server Components + TanStack Query | v5 |
 | Forms | React Hook Form + Zod | - |
+| AI | Google Gemini | gemini-2.0-flash |
 | Hosting | Vercel (Edge) | - |
 
 ## Project Structure
@@ -30,52 +31,49 @@ compliance-app/
 │   │   ├── (dashboard)/        # Protected routes
 │   │   ├── (marketing)/        # Public marketing pages
 │   │   └── api/                # API routes
-│   ├── components/
-│   │   ├── ui/                 # shadcn/ui components
-│   │   ├── auth/               # Auth-specific components
-│   │   ├── marketing/          # Landing page components
-│   │   └── [feature]/          # Feature-specific components
-│   ├── lib/
-│   │   ├── supabase/           # Supabase client & config
-│   │   ├── auth/               # Auth utilities, hooks, actions
-│   │   ├── validation/         # Zod schemas
-│   │   └── utils.ts            # Shared utilities
-│   ├── hooks/                  # Custom React hooks
+│   ├── components/             # React components (270+ files)
+│   │   ├── ui/                 # shadcn/ui base components (39)
+│   │   ├── vendors/            # Vendor management (24)
+│   │   ├── documents/          # Document handling (15)
+│   │   ├── dashboard/          # Dashboard widgets (14)
+│   │   ├── incidents/          # Incident management (12)
+│   │   ├── soc2/               # SOC 2 analysis (11)
+│   │   ├── settings/           # Settings pages (9)
+│   │   ├── roi/                # Register of Information (9)
+│   │   ├── compliance/         # Compliance views (8)
+│   │   └── ...                 # Other feature components
+│   ├── hooks/                  # Custom React hooks (18)
+│   ├── lib/                    # Business logic (30+ modules)
 │   └── types/                  # TypeScript types
 ├── supabase/
-│   └── migrations/             # SQL migrations (001-004 applied)
-├── docs/
-│   ├── architecture/           # MASTER-SPEC.md, AUTH-SPECIFICATION.md
-│   ├── design/                 # LANDING-PAGE-SPECIFICATION.md
-│   └── ...
-├── data/
-│   └── esa/                    # Downloaded ESA regulatory files
-└── scripts/                    # Utility scripts
+│   └── migrations/             # SQL migrations (10 applied)
+├── docs/                       # Architecture & planning docs
+├── scripts/                    # Utility & sales scripts
+└── data/esa/                   # ESA regulatory reference files
 ```
 
-## Key Documentation
-
-Always reference these authoritative documents:
-
-- **Master Spec:** `docs/architecture/MASTER-SPEC.md` - Complete platform specification
-- **Auth Spec:** `docs/architecture/AUTH-SPECIFICATION.md` - Authentication workflow
-- **Landing Page:** `docs/design/LANDING-PAGE-SPECIFICATION.md` - Marketing page design
-- **Theme Preview:** `/theme` route - Live design system preview
+---
 
 ## Design System
 
-### Colors (Premium Coral Theme)
+### Brand Colors (Emerald Theme)
 
 ```css
-/* Primary - Warm Terracotta (Airbnb-inspired) */
---primary: #E07A5F;
+/* Primary - Emerald */
+--primary: #059669;           /* emerald-600 - main brand */
+--primary-light: #10B981;     /* emerald-500 */
+--primary-dark: #047857;      /* emerald-700 */
 --primary-foreground: #FFFFFF;
 
+/* Background */
+--dark: #111827;              /* gray-900 */
+--dark-secondary: #1F2937;    /* gray-800 */
+
 /* Semantic */
---success: #10B981;
---warning: #F59E0B;
---error: #EF4444;
---info: #3B82F6;
+--success: #10B981;           /* emerald-500 */
+--warning: #F59E0B;           /* amber-500 */
+--error: #EF4444;             /* red-500 */
+--info: #3B82F6;              /* blue-500 */
 
 /* Risk Levels */
 --risk-low: #10B981;
@@ -87,197 +85,389 @@ Always reference these authoritative documents:
 ### Typography
 
 - **Font:** Plus Jakarta Sans
-- **Headings:** font-semibold, tight tracking (-0.02em to -0.03em)
-- **Body:** font-normal, 1.6 line-height
+- **Headings:** font-semibold, tracking-tight (-0.02em)
+- **Body:** font-normal, leading-relaxed (1.6)
 
 ### Component Classes
 
-Use these premium utility classes from `globals.css`:
+Premium utility classes from `globals.css`:
 
-- `.card-premium` - Elevated card with hover shadow
-- `.card-elevated` - Card with border and hover effect
-- `.btn-primary` / `.btn-secondary` / `.btn-ghost` - Button variants
-- `.badge-*` - Status badges (success, warning, error, info)
-- `.input-premium` - Styled input fields
-- `.stat-card` / `.stat-value` / `.stat-label` - Metric displays
-- `.nav-item` / `.nav-item.active` - Navigation items
-- `.table-premium` - Styled data tables
-- `.status-dot-*` - Status indicators
+| Class | Purpose |
+|-------|---------|
+| `.card-premium` | Elevated card with hover shadow |
+| `.card-elevated` | Card with border and hover effect |
+| `.btn-primary` | Primary emerald button |
+| `.btn-secondary` | Secondary outlined button |
+| `.badge-success/warning/error/info` | Status badges |
+| `.stat-card` | Metric display card |
+| `.table-premium` | Styled data table |
+| `.status-dot-*` | Status indicators |
+| `.animate-in` | Fade in animation |
+| `.stagger > *` | Staggered children (50ms delay) |
 
-### Animation Classes
+---
 
-- `.animate-in` - Fade in with slight upward motion
-- `.animate-slide-up` - Slide up animation
-- `.stagger > *` - Staggered children animation (50ms delay each)
+## Component Library
+
+### UI Components (`/components/ui/`) - 39 files
+
+| Component | File | Usage |
+|-----------|------|-------|
+| Button | `button.tsx` | Primary actions |
+| Card | `card.tsx` | Content containers |
+| Dialog | `dialog.tsx` | Modal dialogs |
+| Form | `form.tsx` | Form handling with react-hook-form |
+| Input | `input.tsx` | Text inputs |
+| Select | `select.tsx` | Dropdown selects |
+| Table | `table.tsx` | Data tables |
+| Tabs | `tabs.tsx` | Tabbed interfaces |
+| Badge | `badge.tsx` | Status badges |
+| Alert | `alert.tsx` | Notifications |
+| Tooltip | `tooltip.tsx` | Hover tooltips |
+| Sheet | `sheet.tsx` | Side panels |
+| Skeleton | `skeleton.tsx` | Loading states |
+| Progress | `progress.tsx` | Progress bars |
+| Calendar | `calendar.tsx` | Date picker |
+| StatCard | `stat-card.tsx` | Metric displays |
+| StatusBadge | `status-badge.tsx` | Status indicators |
+| HelpTooltip | `help-tooltip.tsx` | Help icons |
+
+### Feature Components
+
+#### Vendors (`/components/vendors/`) - 24 files
+- `vendor-card.tsx` - Vendor list card
+- `vendor-filters.tsx` - Filter controls
+- `vendor-search.tsx` - Search input
+- `vendor-stats.tsx` - Summary statistics
+- `vendor-pagination.tsx` - List pagination
+- `vendor-empty-state.tsx` - Empty state view
+- `vendor-contracts.tsx` - Contract management
+- `vendor-contacts.tsx` - Contact management
+- `vendor-dora-dashboard.tsx` - DORA compliance view
+- `assessment-progress.tsx` - Assessment tracker
+- `detail/vendor-hero.tsx` - Vendor detail header
+- `detail/vendor-risk-gauge.tsx` - Risk visualization
+- `detail/vendor-gleif-status.tsx` - LEI validation
+- `detail/vendor-parent-hierarchy.tsx` - Corporate structure
+- `frameworks/vendor-frameworks-tab.tsx` - Framework mapping
+- `frameworks/framework-compliance-card.tsx` - Compliance cards
+- `monitoring/factor-breakdown.tsx` - Risk factors
+
+#### Documents (`/components/documents/`) - 15 files
+- `pdf-viewer/pdf-viewer.tsx` - PDF rendering
+- `pdf-viewer/pdf-highlight-layer.tsx` - AI highlights
+- `contract-analysis-button.tsx` - Analyze contracts
+- `populate-roi-button.tsx` - RoI population
+- `document-status-badge.tsx` - Document status
+- `soc2-analysis-card/` - SOC 2 analysis display
+- `contract-analysis-results/` - Contract findings
+
+#### Incidents (`/components/incidents/`) - 12 files
+- `incident-card.tsx` - Incident list item
+- `incident-list.tsx` - Incident listing
+- `incident-export-button.tsx` - PDF export
+- `delete-incident-button.tsx` - Delete action
+- `dashboard/incident-metrics-card.tsx` - Metrics display
+- `dashboard/incident-trend-sparkline.tsx` - Trend charts
+- `dashboard/response-time-indicator.tsx` - Response times
+- `incident-wizard/` - Multi-step incident form
+- `incident-detail/` - Incident detail views
+- `report-builder/` - Report generation
+
+#### Compliance (`/components/compliance/`) - 8 files
+- `dora-coverage-chart.tsx` - Coverage visualization
+- `dora-evidence-chart.tsx` - Evidence tracking
+- `dora-gap-analysis.tsx` - Gap identification
+- `dora-gap-remediation/` - Remediation workflow
+
+#### Dashboard (`/components/dashboard/`) - 14 files
+- Metric cards, charts, and widgets for the main dashboard
+
+---
+
+## Custom Hooks (`/hooks/`)
+
+| Hook | Purpose |
+|------|---------|
+| `use-async-action` | Async action with loading/error states |
+| `use-debounce` | Debounced values |
+| `use-dialog-state` | Dialog open/close state |
+| `use-filter-state` | URL-synced filter state |
+| `use-url-filters` | Query parameter management |
+| `use-local-storage` | Persisted local storage |
+| `use-mounted` | Component mount detection |
+| `use-intersection-observer` | Scroll-based visibility |
+| `use-documents-state` | Document list state |
+| `use-edit-vendor-form` | Vendor edit form state |
+| `use-incident-edit-form` | Incident edit form state |
+| `use-roi-population` | RoI population workflow |
+| `use-organization-settings` | Org settings state |
+| `use-team-settings` | Team management state |
+| `use-webhooks` | Webhook configuration |
+| `use-landing-auth` | Landing page auth flow |
+| `use-data-entry-sheet` | Data entry sheet state |
+
+---
+
+## Library Modules (`/lib/`)
+
+### Core Modules
+
+| Module | Purpose |
+|--------|---------|
+| `supabase/` | Supabase client configuration |
+| `auth/` | Authentication utilities |
+| `api/` | API client functions |
+| `actions/` | Server actions |
+| `utils.ts` | Shared utilities (cn, formatters) |
+| `constants/` | App-wide constants |
+
+### Feature Modules
+
+| Module | Purpose |
+|--------|---------|
+| `vendors/` | Vendor CRUD operations |
+| `documents/` | Document processing |
+| `incidents/` | Incident management |
+| `roi/` | Register of Information logic |
+| `compliance/` | Compliance calculations |
+| `concentration/` | Concentration risk (HHI) |
+| `certifications/` | Vendor certifications |
+| `contracts/` | Contract management |
+| `contacts/` | Contact management |
+| `testing/` | Resilience testing |
+| `soc2/` | SOC 2 report parsing |
+
+### AI & External
+
+| Module | Purpose |
+|--------|---------|
+| `ai/` | Gemini AI integration |
+| `external/` | External API clients |
+| `exports/` | PDF/Excel export utilities |
+| `exports/brand-colors.ts` | Centralized brand colors for exports |
+
+---
+
+## Database Schema
+
+### Supabase Configuration
+- **Region:** EU Frankfurt
+- **Project ID:** oipwlrhyzayuxgcabsvu
+- **Multi-tenant:** All tables use `organization_id`
+- **RLS:** Enabled on all tables
+
+### Migrations (10 applied)
+
+1. `001_initial_schema.sql` - Core entities (orgs, users, vendors)
+2. `002_incident_reporting.sql` - Incident management
+3. `003_enhanced_roi.sql` - Full RoI support (15 templates)
+4. `004_framework_mapping.sql` - Cross-framework controls
+5. `005_esa_field_additions.sql` - ESA regulatory fields
+6. `006_lei_enrichment.sql` - LEI/GLEIF integration
+7. `007_parsed_soc2_insert_policy.sql` - SOC 2 parsing
+8. `008_extraction_jobs.sql` - AI extraction jobs
+9. `009_dora_compliance_scoring.sql` - Compliance metrics
+10. `010_soc2_roi_mapping.sql` - SOC 2 to RoI mapping
+
+### Key Tables
+
+| Table | Purpose |
+|-------|---------|
+| `organizations` | Multi-tenant orgs |
+| `profiles` | User profiles |
+| `vendors` | Third-party providers |
+| `vendor_certifications` | Vendor certs (SOC 2, ISO) |
+| `vendor_contracts` | Contract details |
+| `vendor_contacts` | Vendor contacts |
+| `documents` | Uploaded documents |
+| `incidents` | ICT incidents |
+| `incident_reports` | Regulatory reports |
+| `resilience_tests` | Testing records |
+| `tlpt_engagements` | TLPT tracking |
+| `roi_entries` | RoI data entries |
+| `dora_control_mappings` | DORA article mappings |
+
+---
+
+## API Routes (`/app/api/`)
+
+| Route | Purpose |
+|-------|---------|
+| `/api/vendors` | Vendor CRUD |
+| `/api/documents` | Document upload/analysis |
+| `/api/incidents` | Incident management |
+| `/api/incidents/[id]/export` | PDF export |
+| `/api/roi` | Register of Information |
+| `/api/compliance` | Compliance data |
+| `/api/concentration` | Risk concentration |
+| `/api/certifications` | Certification tracking |
+| `/api/monitoring` | Vendor monitoring |
+| `/api/webhooks` | Webhook management |
+| `/api/settings` | Organization settings |
+| `/api/board` | Board reporting |
+| `/api/copilot` | AI copilot chat |
+| `/api/gleif` | LEI validation |
+| `/api/sanctions` | Sanctions screening |
+
+---
+
+## Key Features
+
+### 1. Vendor Management
+- Centralized vendor registry with risk tiering
+- LEI validation via GLEIF API
+- Contract and certification tracking
+- 4th party (subcontractor) detection
+
+### 2. AI Document Parsing
+- SOC 2 report analysis (60 seconds)
+- Contract clause extraction
+- Auto-population of RoI fields
+- Control mapping to DORA articles
+
+### 3. Register of Information (RoI)
+- All 15 ESA templates supported
+- Cross-reference validation
+- Export to regulatory format
+- Gap analysis and suggestions
+
+### 4. Incident Reporting
+- DORA Article 19 compliant
+- Timeline tracking (4h/72h/1m deadlines)
+- Classification (Critical/Major/Minor)
+- PDF report generation
+
+### 5. Resilience Testing
+- Test tracking across 10 types
+- TLPT engagement management
+- Finding remediation workflow
+- Tester certification tracking
+
+### 6. Compliance Dashboard
+- DORA coverage visualization
+- Maturity scoring (L0-L4)
+- Gap remediation tracking
+- Board-ready reports
+
+---
 
 ## Coding Standards
 
 ### TypeScript
-
-- **Strict mode enabled** - All code must pass strict type checking
-- Use `interface` for object shapes, `type` for unions/intersections
-- Prefer explicit return types on exported functions
-- Use `@/*` path aliases (maps to `./src/*`)
+- Strict mode enabled
+- Use `interface` for objects, `type` for unions
+- Explicit return types on exports
+- Path alias: `@/*` → `./src/*`
 
 ### React Patterns
-
 ```typescript
-// Server Components (default in app/)
+// Server Components (default)
 export default async function Page() {
-  const data = await fetchData(); // Direct async
+  const data = await fetchData();
   return <Component data={data} />;
 }
 
 // Client Components (when needed)
 'use client';
-import { useState } from 'react';
 export function InteractiveComponent() { ... }
 
 // Server Actions
 'use server';
-export async function submitForm(formData: FormData) { ... }
+export async function submitForm(data: FormData) { ... }
 ```
 
-### Component Guidelines
+### File Organization
+```typescript
+'use client'; // Only if needed
 
-1. **Prefer Server Components** - Only use 'use client' when necessary
-2. **Colocate related files** - Keep components with their types/utils
-3. **Use shadcn/ui** - Extend existing components, don't reinvent
-4. **Composition over props** - Use compound components pattern
-5. **Accessible by default** - All interactive elements keyboard-navigable
+import { ... } from 'react';
+import { ... } from 'next/...';
+import { ... } from '@/components/ui';
+import { ... } from '@/lib/...';
+import { cn } from '@/lib/utils';
+
+interface Props { ... }
+
+export function Component({ ... }: Props) { ... }
+```
 
 ### Naming Conventions
 
 | Type | Convention | Example |
 |------|------------|---------|
 | Components | PascalCase | `VendorCard.tsx` |
-| Hooks | camelCase, use prefix | `useAuth.ts` |
+| Hooks | camelCase, use- prefix | `useAuth.ts` |
 | Utils | camelCase | `formatDate.ts` |
 | Types | PascalCase | `Vendor`, `AuthState` |
 | Routes | kebab-case | `reset-password/` |
-| CSS classes | kebab-case | `card-premium` |
 
-### File Organization
-
-```typescript
-// Component file structure
-'use client'; // Only if needed
-
-import { ... } from 'react';           // React imports first
-import { ... } from 'next/...';        // Next.js imports
-import { ... } from '@/components/ui'; // Internal imports
-import { ... } from '@/lib/...';       // Lib imports
-import { cn } from '@/lib/utils';      // Utils last
-
-// Types (can be separate file if complex)
-interface ComponentProps { ... }
-
-// Component
-export function Component({ ... }: ComponentProps) { ... }
-
-// Subcomponents (if small)
-function SubComponent() { ... }
-```
-
-## Database
-
-### Supabase Configuration
-
-- **EU Region:** Frankfurt (oipwlrhyzayuxgcabsvu)
-- **Multi-tenant:** All tables use `organization_id` for isolation
-- **RLS Enabled:** All 30 tables have Row-Level Security
-
-### Key Helper Function
-
-```sql
--- Used in all RLS policies
-SELECT get_user_organization_id() -- Returns current user's org
-```
-
-### Migrations Applied
-
-1. `001_initial_schema.sql` - Core entities
-2. `002_incident_reporting.sql` - Incident management
-3. `003_enhanced_roi.sql` - Full RoI support (15 templates)
-4. `004_framework_mapping.sql` - Cross-framework controls
-
-## Authentication
-
-### Flows to Implement
-
-1. **Register** → Email verification → Onboarding
-2. **Login** → MFA challenge (if enabled) → Dashboard
-3. **Password Reset** → Email → New password
-4. **MFA Setup** → TOTP enrollment → Recovery codes
-
-### Security Requirements
-
-- Password: 12+ chars, zxcvbn score 3+, HIBP check
-- MFA: Mandatory for admins, recommended for all
-- Sessions: 1h access token, 7d refresh, max 5 concurrent
-- Rate limiting: 5 login attempts/15min
+---
 
 ## Commands
 
 ```bash
 # Development
-npm run dev          # Start dev server
+npm run dev          # Start dev server (port 3000)
 npm run build        # Production build
 npm run lint         # ESLint check
+npm run start        # Start production server
 
-# Supabase (via MCP)
-# Use mcp__supabase__* tools for database operations
+# Database (via Supabase MCP)
+# Use mcp__supabase__* tools for operations
 ```
 
-## MCP Servers
+---
 
-Connected MCP servers (see `.mcp.json`):
+## Documentation
 
-- **supabase** - Database operations, migrations, types
-- **vercel** - Deployment management
+| File | Purpose |
+|------|---------|
+| `docs/architecture/MASTER-SPEC.md` | Complete platform specification |
+| `docs/architecture/AUTH-SPECIFICATION.md` | Authentication flows |
+| `docs/architecture/tech-spec.md` | Technical architecture |
+| `docs/design/design-system.md` | Design tokens and patterns |
+| `docs/design/LANDING-PAGE-SPECIFICATION.md` | Marketing page spec |
+| `docs/planning/prd.md` | Product requirements |
+| `docs/planning/roadmap.md` | Development roadmap |
+| `docs/planning/decisions/` | Architecture Decision Records |
+| `docs/requirements/regulatory-requirements.md` | DORA requirements |
+| `docs/setup/SETUP-GUIDE.md` | Development setup |
 
-## Implementation Priority
+---
 
-Based on MASTER-SPEC Phase 1:
+## Sales Materials
 
-1. **Auth System** (current) - Foundation for all features
-2. **Landing Page** - Marketing with working CTAs
-3. **Dashboard** - Protected home for authenticated users
-4. **Vendors** - Core CRUD operations
-5. **Documents** - Upload and AI parsing
+Located in `/scripts/`:
+- `DORA-Comply-Sales-Presentation.pptx` - 10-slide deck
+- `DORA-Comply-Sales-Guide.pdf` - 8-page sales guide
+- `sales-deck/` - HTML slide templates
+- `create-sales-guide-pdf.js` - PDF generator
+- `sales-deck/create-presentation-direct.js` - PPTX generator
 
-## Skills
-
-Reference `.claude/skills.md` for detailed skill usage. Key skills for this project:
-
-| Domain | Skills |
-|--------|--------|
-| **Project Management** | `/project-orchestrator`, `/compliance-orchestrator` |
-| **Compliance** | `/dora-compliance`, `/soc2-reports`, `/tprm-domain` |
-| **Security** | `/cybersecurity-expert` |
-| **Frontend** | `/example-skills:frontend-design`, `/product-design`, `/user-experience` |
-| **Optimization** | `/nextjs-code-optimizer`, `/ultraoptimization-expert` |
-| **Documents** | `/example-skills:pdf`, `/example-skills:xlsx`, `/example-skills:docx` |
+---
 
 ## Quality Checklist
 
-Before completing any feature:
+Before completing features:
 
-- [ ] TypeScript compiles with no errors (`npm run build`)
-- [ ] ESLint passes (`npm run lint`)
-- [ ] Components use design system tokens
-- [ ] Server Components used where possible
-- [ ] Forms validated with Zod schemas
-- [ ] Accessible (keyboard nav, ARIA labels)
-- [ ] Mobile responsive (test at 640px, 1024px)
-- [ ] Error states handled gracefully
+- [ ] `npm run build` passes
+- [ ] `npm run lint` passes
+- [ ] Uses design system tokens (emerald colors)
+- [ ] Server Components where possible
+- [ ] Forms validated with Zod
+- [ ] Keyboard accessible
+- [ ] Mobile responsive (640px, 1024px)
+- [ ] Error states handled
 - [ ] Loading states implemented
 
-## Anti-Patterns to Avoid
+---
 
-- Don't use `any` type - use `unknown` and narrow
-- Don't fetch in useEffect - use Server Components or TanStack Query
-- Don't hardcode colors - use CSS variables
-- Don't create one-off components - extend shadcn/ui
-- Don't skip error boundaries - wrap feature sections
-- Don't ignore TypeScript errors - fix them properly
+## Anti-Patterns
+
+- ❌ Don't use `any` - use `unknown` and narrow
+- ❌ Don't fetch in useEffect - use Server Components
+- ❌ Don't hardcode colors - use CSS variables
+- ❌ Don't create one-off components - extend shadcn/ui
+- ❌ Don't skip error handling - wrap with boundaries
+- ❌ Don't use old Coral colors (#E07A5F) - use Emerald (#059669)
