@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+html { background: #ffffff; }
+body {
+  width: 720pt; height: 405pt; margin: 0; padding: 0;
+  background: #FFFFFF; font-family: Arial, sans-serif;
+  display: flex; flex-direction: column;
+}
+.header {
+  background: #111827;
+  padding: 24pt 40pt;
+}
+.title {
+  color: #FFFFFF;
+  font-size: 28pt;
+  font-weight: bold;
+  margin: 0;
+}
+.subtitle {
+  color: #059669;
+  font-size: 14pt;
+  margin-top: 4pt;
+}
+.content {
+  flex: 1;
+  padding: 24pt 40pt;
+  display: flex;
+  gap: 30pt;
+}
+.left-col {
+  flex: 1;
+}
+.section-title {
+  color: #111827;
+  font-size: 14pt;
+  font-weight: bold;
+  margin-bottom: 12pt;
+}
+.doc-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8pt;
+  margin-bottom: 20pt;
+}
+.doc-badge {
+  background: #F1F5F9;
+  border: 1pt solid #E2E8F0;
+  border-radius: 4pt;
+  padding: 6pt 12pt;
+}
+.badge-text {
+  color: #475569;
+  font-size: 10pt;
+  margin: 0;
+}
+.process-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10pt;
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12pt;
+}
+.step-num {
+  background: #059669;
+  color: #FFFFFF;
+  width: 24pt;
+  height: 24pt;
+  border-radius: 12pt;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.num-text {
+  font-size: 12pt;
+  font-weight: bold;
+  margin: 0;
+  line-height: 24pt;
+}
+.step-text {
+  color: #334155;
+  font-size: 11pt;
+  margin: 0;
+}
+.right-col {
+  width: 280pt;
+}
+.output-card {
+  background: #F8FAFC;
+  border: 1pt solid #E2E8F0;
+  border-radius: 8pt;
+  padding: 16pt;
+  margin-bottom: 16pt;
+}
+.output-title {
+  color: #111827;
+  font-size: 12pt;
+  font-weight: bold;
+  margin-bottom: 10pt;
+}
+.output-list {
+  margin: 0;
+  padding-left: 16pt;
+}
+.output-item {
+  color: #475569;
+  font-size: 10pt;
+  margin-bottom: 4pt;
+}
+.highlight-box {
+  background: #059669;
+  border-radius: 8pt;
+  padding: 16pt;
+  text-align: center;
+}
+.highlight-value {
+  color: #FFFFFF;
+  font-size: 28pt;
+  font-weight: bold;
+  margin: 0;
+}
+.highlight-label {
+  color: rgba(255,255,255,0.9);
+  font-size: 11pt;
+  margin-top: 4pt;
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <p class="title">AI-Powered Document Analysis</p>
+  <p class="subtitle">Claude AI extracts compliance data in seconds, not hours</p>
+</div>
+<div class="content">
+  <div class="left-col">
+    <p class="section-title">Supported Document Types</p>
+    <div class="doc-types">
+      <div class="doc-badge"><p class="badge-text">SOC 2 Type I/II</p></div>
+      <div class="doc-badge"><p class="badge-text">ISO 27001</p></div>
+      <div class="doc-badge"><p class="badge-text">ISO 22301</p></div>
+      <div class="doc-badge"><p class="badge-text">PCI DSS</p></div>
+      <div class="doc-badge"><p class="badge-text">Vendor Contracts</p></div>
+      <div class="doc-badge"><p class="badge-text">SLAs</p></div>
+    </div>
+    <p class="section-title">How It Works</p>
+    <div class="process-steps">
+      <div class="step">
+        <div class="step-num"><p class="num-text">1</p></div>
+        <p class="step-text">Upload PDF document (drag and drop)</p>
+      </div>
+      <div class="step">
+        <div class="step-num"><p class="num-text">2</p></div>
+        <p class="step-text">AI reads and understands document structure</p>
+      </div>
+      <div class="step">
+        <div class="step-num"><p class="num-text">3</p></div>
+        <p class="step-text">Extracts controls mapped to DORA articles</p>
+      </div>
+      <div class="step">
+        <div class="step-num"><p class="num-text">4</p></div>
+        <p class="step-text">Populates vendor profile automatically</p>
+      </div>
+      <div class="step">
+        <div class="step-num"><p class="num-text">5</p></div>
+        <p class="step-text">Flags gaps and risks for review</p>
+      </div>
+    </div>
+  </div>
+  <div class="right-col">
+    <div class="output-card">
+      <p class="output-title">Extracted Information</p>
+      <ul class="output-list">
+        <li class="output-item">Control objectives and coverage</li>
+        <li class="output-item">Audit opinion and exceptions</li>
+        <li class="output-item">Certification validity dates</li>
+        <li class="output-item">Subservice organizations (4th parties)</li>
+        <li class="output-item">Complementary user controls</li>
+        <li class="output-item">DORA Article 30 clause mapping</li>
+      </ul>
+    </div>
+    <div class="highlight-box">
+      <p class="highlight-value">60 sec</p>
+      <p class="highlight-label">Average document processing time</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+html { background: #ffffff; }
+body {
+  width: 720pt; height: 405pt; margin: 0; padding: 0;
+  background: #F8FAFC; font-family: Arial, sans-serif;
+  display: flex; flex-direction: column;
+}
+.header {
+  background: #111827;
+  padding: 24pt 40pt;
+}
+.title {
+  color: #FFFFFF;
+  font-size: 28pt;
+  font-weight: bold;
+  margin: 0;
+}
+.subtitle {
+  color: #059669;
+  font-size: 14pt;
+  margin-top: 4pt;
+}
+.content {
+  flex: 1;
+  padding: 24pt 40pt;
+  display: flex;
+  gap: 20pt;
+  justify-content: center;
+}
+.plan-card {
+  background: #FFFFFF;
+  border: 1pt solid #E2E8F0;
+  border-radius: 12pt;
+  width: 200pt;
+  overflow: hidden;
+}
+.plan-popular {
+  border: 2pt solid #059669;
+}
+.plan-header {
+  background: #F8FAFC;
+  padding: 16pt;
+  text-align: center;
+}
+.popular-header {
+  background: #059669;
+}
+.plan-name {
+  color: #111827;
+  font-size: 16pt;
+  font-weight: bold;
+  margin: 0;
+}
+.popular-name { color: #FFFFFF; }
+.plan-price {
+  color: #059669;
+  font-size: 28pt;
+  font-weight: bold;
+  margin: 8pt 0 0 0;
+}
+.popular-price { color: #FFFFFF; }
+.plan-period {
+  color: #64748B;
+  font-size: 10pt;
+  margin: 0;
+}
+.popular-period { color: rgba(255,255,255,0.9); }
+.plan-body {
+  padding: 16pt;
+}
+.feature-list {
+  margin: 0;
+  padding: 0 0 0 16pt;
+}
+.feature-item {
+  color: #475569;
+  font-size: 10pt;
+  margin-bottom: 8pt;
+}
+.plan-footer {
+  padding: 0 16pt 16pt 16pt;
+}
+.plan-btn {
+  display: block;
+  background: #111827;
+  color: #FFFFFF;
+  text-align: center;
+  padding: 10pt;
+  border-radius: 6pt;
+  text-decoration: none;
+}
+.btn-text {
+  font-size: 11pt;
+  font-weight: bold;
+  margin: 0;
+}
+.popular-btn {
+  background: #059669;
+}
+.enterprise-note {
+  text-align: center;
+  margin-top: 16pt;
+}
+.note-text {
+  color: #64748B;
+  font-size: 10pt;
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <p class="title">Simple, Transparent Pricing</p>
+  <p class="subtitle">Scale with your compliance needs</p>
+</div>
+<div class="content">
+  <div class="plan-card">
+    <div class="plan-header">
+      <p class="plan-name">Starter</p>
+      <p class="plan-price">$499</p>
+      <p class="plan-period">/month</p>
+    </div>
+    <div class="plan-body">
+      <ul class="feature-list">
+        <li class="feature-item">Up to 25 vendors</li>
+        <li class="feature-item">5 AI document parses/mo</li>
+        <li class="feature-item">Basic RoI export</li>
+        <li class="feature-item">Incident tracking</li>
+        <li class="feature-item">Email support</li>
+      </ul>
+    </div>
+    <div class="plan-footer">
+      <div class="plan-btn">
+        <p class="btn-text">Start Free Trial</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="plan-card plan-popular">
+    <div class="plan-header popular-header">
+      <p class="plan-name popular-name">Professional</p>
+      <p class="plan-price popular-price">$1,499</p>
+      <p class="plan-period popular-period">/month</p>
+    </div>
+    <div class="plan-body">
+      <ul class="feature-list">
+        <li class="feature-item">Up to 100 vendors</li>
+        <li class="feature-item">Unlimited AI parsing</li>
+        <li class="feature-item">Full 15-template RoI</li>
+        <li class="feature-item">4th party detection</li>
+        <li class="feature-item">Cross-framework mapping</li>
+        <li class="feature-item">Priority support</li>
+      </ul>
+    </div>
+    <div class="plan-footer">
+      <div class="plan-btn popular-btn">
+        <p class="btn-text">Most Popular</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="plan-card">
+    <div class="plan-header">
+      <p class="plan-name">Enterprise</p>
+      <p class="plan-price">Custom</p>
+      <p class="plan-period">contact us</p>
+    </div>
+    <div class="plan-body">
+      <ul class="feature-list">
+        <li class="feature-item">Unlimited vendors</li>
+        <li class="feature-item">Unlimited AI parsing</li>
+        <li class="feature-item">Custom integrations</li>
+        <li class="feature-item">SSO / SAML</li>
+        <li class="feature-item">Dedicated CSM</li>
+        <li class="feature-item">On-premise option</li>
+      </ul>
+    </div>
+    <div class="plan-footer">
+      <div class="plan-btn">
+        <p class="btn-text">Contact Sales</p>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

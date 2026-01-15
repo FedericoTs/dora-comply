@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+html { background: #ffffff; }
+body {
+  width: 720pt; height: 405pt; margin: 0; padding: 0;
+  background: #F8FAFC; font-family: Arial, sans-serif;
+  display: flex; flex-direction: column;
+}
+.header {
+  background: #111827;
+  padding: 24pt 40pt;
+}
+.title {
+  color: #FFFFFF;
+  font-size: 28pt;
+  font-weight: bold;
+  margin: 0;
+}
+.subtitle {
+  color: #059669;
+  font-size: 14pt;
+  margin-top: 4pt;
+}
+.content {
+  flex: 1;
+  padding: 20pt 40pt;
+}
+.table-container {
+  background: #FFFFFF;
+  border-radius: 8pt;
+  overflow: hidden;
+  border: 1pt solid #E2E8F0;
+}
+.table-header {
+  display: flex;
+  background: #111827;
+  padding: 12pt;
+}
+.col-feature { width: 200pt; }
+.col-us { width: 130pt; text-align: center; }
+.col-others { width: 130pt; text-align: center; }
+.col-manual { width: 130pt; text-align: center; }
+.header-text {
+  color: #FFFFFF;
+  font-size: 11pt;
+  font-weight: bold;
+  margin: 0;
+}
+.header-coral { color: #059669; }
+.table-row {
+  display: flex;
+  padding: 10pt 12pt;
+  border-bottom: 1pt solid #E2E8F0;
+}
+.table-row:last-child { border-bottom: none; }
+.row-alt { background: #F8FAFC; }
+.feature-text {
+  color: #334155;
+  font-size: 10pt;
+  margin: 0;
+}
+.yes-badge {
+  background: #DCFCE7;
+  color: #166534;
+  padding: 3pt 8pt;
+  border-radius: 4pt;
+  font-size: 10pt;
+  font-weight: bold;
+}
+.partial-badge {
+  background: #FEF3C7;
+  color: #92400E;
+  padding: 3pt 8pt;
+  border-radius: 4pt;
+  font-size: 10pt;
+}
+.no-badge {
+  background: #FEE2E2;
+  color: #DC2626;
+  padding: 3pt 8pt;
+  border-radius: 4pt;
+  font-size: 10pt;
+}
+.badge-text { margin: 0; }
+.footer-note {
+  color: #64748B;
+  font-size: 9pt;
+  margin-top: 12pt;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <p class="title">Why DORA Comply?</p>
+  <p class="subtitle">Purpose-built for DORA vs. generic GRC platforms</p>
+</div>
+<div class="content">
+  <div class="table-container">
+    <div class="table-header">
+      <div class="col-feature"><p class="header-text">Feature</p></div>
+      <div class="col-us"><p class="header-text header-coral">DORA Comply</p></div>
+      <div class="col-others"><p class="header-text">Generic GRC</p></div>
+      <div class="col-manual"><p class="header-text">Manual Process</p></div>
+    </div>
+    <div class="table-row">
+      <div class="col-feature"><p class="feature-text">AI Document Parsing</p></div>
+      <div class="col-us"><p class="yes-badge badge-text">Yes - 60s</p></div>
+      <div class="col-others"><p class="no-badge badge-text">No</p></div>
+      <div class="col-manual"><p class="no-badge badge-text">No</p></div>
+    </div>
+    <div class="table-row row-alt">
+      <div class="col-feature"><p class="feature-text">15 ESA RoI Templates</p></div>
+      <div class="col-us"><p class="yes-badge badge-text">All 15</p></div>
+      <div class="col-others"><p class="partial-badge badge-text">Partial</p></div>
+      <div class="col-manual"><p class="partial-badge badge-text">Manual</p></div>
+    </div>
+    <div class="table-row">
+      <div class="col-feature"><p class="feature-text">4th Party Detection</p></div>
+      <div class="col-us"><p class="yes-badge badge-text">Automatic</p></div>
+      <div class="col-others"><p class="no-badge badge-text">No</p></div>
+      <div class="col-manual"><p class="no-badge badge-text">No</p></div>
+    </div>
+    <div class="table-row row-alt">
+      <div class="col-feature"><p class="feature-text">DORA Article Mapping</p></div>
+      <div class="col-us"><p class="yes-badge badge-text">Native</p></div>
+      <div class="col-others"><p class="partial-badge badge-text">Generic</p></div>
+      <div class="col-manual"><p class="no-badge badge-text">No</p></div>
+    </div>
+    <div class="table-row">
+      <div class="col-feature"><p class="feature-text">Incident Timeline Tracking</p></div>
+      <div class="col-us"><p class="yes-badge badge-text">4h/72h/1m</p></div>
+      <div class="col-others"><p class="partial-badge badge-text">Basic</p></div>
+      <div class="col-manual"><p class="no-badge badge-text">No</p></div>
+    </div>
+    <div class="table-row row-alt">
+      <div class="col-feature"><p class="feature-text">Time to Value</p></div>
+      <div class="col-us"><p class="yes-badge badge-text">Days</p></div>
+      <div class="col-others"><p class="partial-badge badge-text">Months</p></div>
+      <div class="col-manual"><p class="no-badge badge-text">Years</p></div>
+    </div>
+  </div>
+  <p class="footer-note">Based on comparison with leading GRC platforms as of Q4 2024</p>
+</div>
+</body>
+</html>

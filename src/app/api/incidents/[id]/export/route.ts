@@ -299,10 +299,10 @@ async function generateIncidentPdf(
   const contentWidth = pageWidth - 2 * margin;
   let y = margin;
 
-  // Colors
-  const primaryColor: [number, number, number] = [224, 122, 95]; // #E07A5F
-  const darkColor: [number, number, number] = [26, 26, 26];
-  const grayColor: [number, number, number] = [107, 114, 128];
+  // Colors - Emerald Brand Theme (matches board-report-types.ts)
+  const primaryColor: [number, number, number] = [5, 150, 105]; // #059669 (emerald-600)
+  const darkColor: [number, number, number] = [17, 24, 39]; // #111827
+  const grayColor: [number, number, number] = [107, 114, 128]; // #6B7280
 
   // Helper function to add a new page if needed
   const checkPage = (requiredSpace: number = 40): void => {

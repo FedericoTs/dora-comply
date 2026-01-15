@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+html { background: #ffffff; }
+body {
+  width: 720pt; height: 405pt; margin: 0; padding: 0;
+  background: #FFFFFF; font-family: Arial, sans-serif;
+  display: flex; flex-direction: column;
+}
+.header {
+  background: #111827;
+  padding: 24pt 40pt;
+}
+.title {
+  color: #FFFFFF;
+  font-size: 28pt;
+  font-weight: bold;
+  margin: 0;
+}
+.subtitle {
+  color: #059669;
+  font-size: 14pt;
+  margin-top: 4pt;
+}
+.content {
+  flex: 1;
+  padding: 24pt 40pt;
+  display: flex;
+  gap: 30pt;
+}
+.left-col {
+  flex: 1;
+}
+.section-title {
+  color: #111827;
+  font-size: 14pt;
+  font-weight: bold;
+  margin-bottom: 12pt;
+}
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12pt;
+}
+.timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 12pt;
+}
+.time-badge {
+  background: #FEE2E2;
+  border: 1pt solid #FECACA;
+  border-radius: 4pt;
+  padding: 6pt 10pt;
+  width: 50pt;
+  text-align: center;
+}
+.time-text {
+  color: #DC2626;
+  font-size: 12pt;
+  font-weight: bold;
+  margin: 0;
+}
+.time-desc {
+  flex: 1;
+  background: #F8FAFC;
+  border-radius: 4pt;
+  padding: 10pt 14pt;
+}
+.desc-text {
+  color: #334155;
+  font-size: 11pt;
+  margin: 0;
+}
+.classification {
+  margin-top: 20pt;
+}
+.class-grid {
+  display: flex;
+  gap: 8pt;
+}
+.class-item {
+  flex: 1;
+  border-radius: 6pt;
+  padding: 10pt;
+  text-align: center;
+}
+.class-critical { background: #FEE2E2; border: 1pt solid #FECACA; }
+.class-major { background: #FFEDD5; border: 1pt solid #FED7AA; }
+.class-minor { background: #FEF3C7; border: 1pt solid #FDE68A; }
+.class-label {
+  font-size: 10pt;
+  font-weight: bold;
+  margin: 0;
+}
+.class-critical .class-label { color: #DC2626; }
+.class-major .class-label { color: #EA580C; }
+.class-minor .class-label { color: #CA8A04; }
+.right-col {
+  width: 240pt;
+}
+.feature-card {
+  background: #F8FAFC;
+  border: 1pt solid #E2E8F0;
+  border-radius: 8pt;
+  padding: 14pt;
+  margin-bottom: 12pt;
+}
+.card-title {
+  color: #111827;
+  font-size: 12pt;
+  font-weight: bold;
+  margin: 0 0 8pt 0;
+}
+.card-text {
+  color: #64748B;
+  font-size: 10pt;
+  line-height: 1.4;
+}
+.compliance-badge {
+  background: #10B981;
+  border-radius: 8pt;
+  padding: 16pt;
+  text-align: center;
+}
+.badge-title {
+  color: #FFFFFF;
+  font-size: 12pt;
+  font-weight: bold;
+  margin: 0;
+}
+.badge-text {
+  color: rgba(255,255,255,0.9);
+  font-size: 10pt;
+  margin-top: 4pt;
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <p class="title">ICT Incident Reporting</p>
+  <p class="subtitle">Article 19 compliant with automated deadline tracking</p>
+</div>
+<div class="content">
+  <div class="left-col">
+    <p class="section-title">DORA Reporting Deadlines</p>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="time-badge"><p class="time-text">4h</p></div>
+        <div class="time-desc"><p class="desc-text">Initial notification to competent authority</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="time-badge"><p class="time-text">72h</p></div>
+        <div class="time-desc"><p class="desc-text">Intermediate report with root cause analysis</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="time-badge"><p class="time-text">1m</p></div>
+        <div class="time-desc"><p class="desc-text">Final report with remediation actions</p></div>
+      </div>
+    </div>
+    <div class="classification">
+      <p class="section-title">Classification Levels</p>
+      <div class="class-grid">
+        <div class="class-item class-critical">
+          <p class="class-label">Critical</p>
+        </div>
+        <div class="class-item class-major">
+          <p class="class-label">Major</p>
+        </div>
+        <div class="class-item class-minor">
+          <p class="class-label">Minor</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="right-col">
+    <div class="feature-card">
+      <p class="card-title">Smart Classification</p>
+      <p class="card-text">AI suggests incident severity based on impact metrics and affected systems</p>
+    </div>
+    <div class="feature-card">
+      <p class="card-title">Report Templates</p>
+      <p class="card-text">Pre-built forms matching ESA reporting requirements</p>
+    </div>
+    <div class="feature-card">
+      <p class="card-title">Deadline Alerts</p>
+      <p class="card-text">Automated notifications at critical milestones</p>
+    </div>
+    <div class="compliance-badge">
+      <p class="badge-title">Article 19 Compliant</p>
+      <p class="badge-text">Full regulatory alignment guaranteed</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

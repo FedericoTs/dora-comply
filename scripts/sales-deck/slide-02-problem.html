@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+html { background: #ffffff; }
+body {
+  width: 720pt; height: 405pt; margin: 0; padding: 0;
+  background: #F8FAFC; font-family: Arial, sans-serif;
+  display: flex; flex-direction: column;
+}
+.header {
+  background: #111827;
+  padding: 24pt 40pt;
+}
+.title {
+  color: #FFFFFF;
+  font-size: 28pt;
+  font-weight: bold;
+  margin: 0;
+}
+.subtitle {
+  color: #059669;
+  font-size: 14pt;
+  margin-top: 4pt;
+}
+.content {
+  flex: 1;
+  padding: 30pt 40pt;
+  display: flex;
+  gap: 24pt;
+}
+.pain-points {
+  flex: 1;
+}
+.pain-title {
+  color: #111827;
+  font-size: 16pt;
+  font-weight: bold;
+  margin-bottom: 16pt;
+}
+.pain-item {
+  background: #FFFFFF;
+  border-left: 4pt solid #EF4444;
+  padding: 12pt 16pt;
+  margin-bottom: 12pt;
+  border-radius: 0 6pt 6pt 0;
+  box-shadow: 0 1pt 3pt rgba(0,0,0,0.1);
+}
+.pain-text {
+  color: #334155;
+  font-size: 12pt;
+  margin: 0;
+}
+.stats {
+  width: 200pt;
+  display: flex;
+  flex-direction: column;
+  gap: 16pt;
+}
+.stat-box {
+  background: #111827;
+  border-radius: 8pt;
+  padding: 20pt;
+  text-align: center;
+}
+.stat-value {
+  color: #059669;
+  font-size: 32pt;
+  font-weight: bold;
+  margin: 0;
+}
+.stat-label {
+  color: #94A3B8;
+  font-size: 10pt;
+  margin-top: 4pt;
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <p class="title">The DORA Compliance Challenge</p>
+  <p class="subtitle">Financial institutions face unprecedented regulatory pressure</p>
+</div>
+<div class="content">
+  <div class="pain-points">
+    <p class="pain-title">Key Pain Points</p>
+    <div class="pain-item">
+      <p class="pain-text">Manual vendor assessments take 40+ hours each</p>
+    </div>
+    <div class="pain-item">
+      <p class="pain-text">Register of Information requires 15 complex ESA templates</p>
+    </div>
+    <div class="pain-item">
+      <p class="pain-text">Incident reports due within 4 hours of detection</p>
+    </div>
+    <div class="pain-item">
+      <p class="pain-text">No visibility into 4th party (subcontractor) risks</p>
+    </div>
+    <div class="pain-item">
+      <p class="pain-text">Concentration risk across critical ICT providers</p>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat-box">
+      <p class="stat-value">250+</p>
+      <p class="stat-label">Hours per vendor<br>for manual compliance</p>
+    </div>
+    <div class="stat-box">
+      <p class="stat-value">15</p>
+      <p class="stat-label">ESA templates<br>mandatory for RoI</p>
+    </div>
+    <div class="stat-box">
+      <p class="stat-value">4h</p>
+      <p class="stat-label">Deadline for initial<br>incident notification</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
