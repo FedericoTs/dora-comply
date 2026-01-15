@@ -355,7 +355,7 @@ export function scoreRemediationByCVSS(findings: FindingForRemediation[]): numbe
 
   for (const finding of findings) {
     // Use CVSS score if available, otherwise estimate from severity
-    let weight = finding.cvss_score ?? getSeverityWeight(finding.severity);
+    const weight = finding.cvss_score ?? getSeverityWeight(finding.severity);
 
     totalWeight += weight;
 
