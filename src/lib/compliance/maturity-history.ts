@@ -34,6 +34,203 @@ interface ActionResult<T = void> {
 }
 
 // =============================================================================
+// HELPER FUNCTIONS FOR IMPROVED KPI CALCULATIONS
+// =============================================================================
+
+/**
+ * Calculate Mean Time To Resolve (MTTR) from incidents
+ * Returns average hours to resolve incidents
+ */
+function calculateMTTR(incidents: { duration_hours: number | null }[]): number | null {
+  const incidentsWithDuration = incidents.filter(i => i.duration_hours !== null && i.duration_hours > 0);
+  if (incidentsWithDuration.length === 0) return null;
+
+  const totalHours = incidentsWithDuration.reduce((sum, i) => sum + (i.duration_hours || 0), 0);
+  return totalHours / incidentsWithDuration.length;
+}
+
+/**
+ * Score MTTR on 0-100 scale based on DORA requirements
+ * L4: < 4h, L3: < 24h, L2: < 72h, L1: < 168h, L0: >= 168h
+ */
+function scoreMTTR(mttr: number | null): number {
+  if (mttr === null) return 40; // Base score if no data
+  if (mttr < 4) return 100;     // L4: Excellent
+  if (mttr < 24) return 80;     // L3: Good (DORA minimum)
+  if (mttr < 72) return 60;     // L2: Adequate
+  if (mttr < 168) return 40;    // L1: Basic
+  return 20;                     // L0: Initial
+}
+
+/**
+ * Calculate Mean Time To Detect (MTTD) from incidents
+ * Returns average hours between occurrence and detection
+ */
+function calculateMTTD(incidents: { occurred_at: string | null; detected_at: string | null }[]): number | null {
+  const incidentsWithDates = incidents.filter(i => i.occurred_at && i.detected_at);
+  if (incidentsWithDates.length === 0) return null;
+
+  let totalHours = 0;
+  for (const incident of incidentsWithDates) {
+    const occurred = new Date(incident.occurred_at!).getTime();
+    const detected = new Date(incident.detected_at!).getTime();
+    totalHours += Math.max(0, (detected - occurred) / (1000 * 60 * 60));
+  }
+
+  return totalHours / incidentsWithDates.length;
+}
+
+/**
+ * Score MTTD on 0-100 scale
+ */
+function scoreMTTD(mttd: number | null): number {
+  if (mttd === null) return 40; // Base score if no data
+  if (mttd < 1) return 100;     // < 1 hour - excellent
+  if (mttd < 4) return 80;      // < 4 hours - good
+  if (mttd < 24) return 60;     // < 24 hours - adequate
+  if (mttd < 72) return 40;     // < 72 hours - basic
+  return 20;                     // >= 72 hours - poor
+}
+
+/**
+ * Check timeline compliance for incident reports
+ * DORA requires: 4h initial, 72h intermediate, 1 month final
+ */
+function checkTimelineCompliance(
+  reports: { submitted_at: string | null; deadline: string | null }[]
+): number {
+  const reportsWithDeadlines = reports.filter(r => r.submitted_at && r.deadline);
+  if (reportsWithDeadlines.length === 0) return 50; // Base score if no reports
+
+  let onTimeCount = 0;
+  for (const report of reportsWithDeadlines) {
+    const submitted = new Date(report.submitted_at!).getTime();
+    const deadline = new Date(report.deadline!).getTime();
+    if (submitted <= deadline) onTimeCount++;
+  }
+
+  return (onTimeCount / reportsWithDeadlines.length) * 100;
+}
+
+/**
+ * Calculate Herfindahl-Hirschman Index for concentration risk
+ * Returns 0-100 score (100 = well diversified, 0 = single vendor)
+ */
+function calculateHHI(vendors: { total_annual_expense?: number | null }[]): number {
+  const vendorsWithSpend = vendors.filter(v => v.total_annual_expense && v.total_annual_expense > 0);
+  if (vendorsWithSpend.length === 0) return 50; // Base score if no spend data
+  if (vendorsWithSpend.length === 1) return 20; // Single vendor = high concentration
+
+  const totalSpend = vendorsWithSpend.reduce((sum, v) => sum + (v.total_annual_expense || 0), 0);
+  if (totalSpend === 0) return 50;
+
+  // HHI = sum of squared market shares (as percentages)
+  const hhi = vendorsWithSpend.reduce((sum, v) => {
+    const share = ((v.total_annual_expense || 0) / totalSpend) * 100;
+    return sum + share * share;
+  }, 0);
+
+  // HHI ranges: 10000 (monopoly) to ~0 (perfect competition)
+  // Convert to 0-100 score where 100 = low concentration
+  // HHI < 1500 = unconcentrated, 1500-2500 = moderate, > 2500 = concentrated
+  if (hhi < 1500) return 100;
+  if (hhi < 2500) return Math.round(80 - ((hhi - 1500) / 1000) * 30);
+  return Math.max(20, Math.round(50 - ((hhi - 2500) / 7500) * 30));
+}
+
+/**
+ * Score certifications by type and validity
+ * SOC2 Type II > SOC2 Type I > ISO 27001 > Others
+ */
+function scoreCertifications(
+  certifications: { certification_type: string; expiry_date: string | null; status: string }[],
+  vendorCount: number
+): number {
+  if (vendorCount === 0) return 50;
+  if (certifications.length === 0) return 20;
+
+  const now = new Date();
+  let score = 0;
+
+  for (const cert of certifications) {
+    // Check validity
+    const isValid = cert.status === 'valid' || cert.status === 'active';
+    const notExpired = !cert.expiry_date || new Date(cert.expiry_date) > now;
+    if (!isValid || !notExpired) continue;
+
+    const type = cert.certification_type?.toLowerCase() || '';
+
+    // Score by certification type
+    if (type.includes('soc 2 type ii') || type.includes('soc2 type ii')) {
+      score += 25; // Best
+    } else if (type.includes('soc 2') || type.includes('soc2')) {
+      score += 18; // Good
+    } else if (type.includes('27001') || type.includes('iso')) {
+      score += 15; // Good
+    } else {
+      score += 8; // Other certs have some value
+    }
+  }
+
+  // Normalize to 0-100 based on vendor count
+  // Expect ~1 cert per vendor for full score
+  const maxExpectedScore = vendorCount * 20;
+  return Math.min(100, Math.round((score / Math.max(maxExpectedScore, 1)) * 100));
+}
+
+/**
+ * Check TLPT (Threat-Led Penetration Testing) compliance
+ * DORA requires TLPT at least every 3 years
+ */
+function checkTLPTCompliance(
+  tlptEngagements: { next_tlpt_due: string | null; status: string }[]
+): number {
+  if (tlptEngagements.length === 0) return 0; // No TLPT = non-compliant
+
+  const now = new Date();
+  const threeYearsAgo = new Date(now.getFullYear() - 3, now.getMonth(), now.getDate());
+
+  // Check for completed TLPT in last 3 years
+  const completedRecently = tlptEngagements.some(t =>
+    t.status === 'completed' && t.next_tlpt_due && new Date(t.next_tlpt_due) > threeYearsAgo
+  );
+
+  // Check for scheduled TLPT
+  const hasScheduled = tlptEngagements.some(t =>
+    ['scheduled', 'in_progress'].includes(t.status)
+  );
+
+  if (completedRecently) return 100;
+  if (hasScheduled) return 60;
+  return 30; // Has historical TLPT but not current
+}
+
+/**
+ * Score test findings by CVSS-weighted remediation rate
+ */
+function scoreRemediationByCVSS(
+  findings: { cvss_score: number | null; remediation_status: string }[]
+): number {
+  if (findings.length === 0) return 80; // No findings is good
+
+  let totalWeight = 0;
+  let remediatedWeight = 0;
+
+  for (const finding of findings) {
+    // Use CVSS if available, default severity-based weights otherwise
+    const weight = finding.cvss_score || 5.0;
+    totalWeight += weight;
+
+    if (['remediated', 'risk_accepted', 'fixed'].includes(finding.remediation_status)) {
+      remediatedWeight += weight;
+    }
+  }
+
+  if (totalWeight === 0) return 80;
+  return Math.round((remediatedWeight / totalWeight) * 100);
+}
+
+// =============================================================================
 // CREATE SNAPSHOT
 // =============================================================================
 
@@ -173,6 +370,7 @@ export async function createMaturitySnapshot(
 /**
  * Get current compliance data calculated from live data sources
  * Calculates KPIs from: vendors, incidents, tests, documents, certifications
+ * Uses DORA-aligned metrics: MTTR, HHI concentration risk, timeline compliance, etc.
  */
 async function getCurrentComplianceData(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -180,38 +378,47 @@ async function getCurrentComplianceData(
   vendorId?: string
 ): Promise<SnapshotData | null> {
   try {
-    // Fetch all relevant data in parallel
+    // Fetch all relevant data in parallel with extended fields for improved KPIs
     const [
       vendorsResult,
       incidentsResult,
+      incidentReportsResult,
       testsResult,
       findingsResult,
       documentsResult,
       certificationsResult,
+      tlptResult,
+      contractsResult,
     ] = await Promise.all([
-      // Vendors for TPRM pillar
+      // Vendors for TPRM pillar - extended fields for HHI and monitoring
       supabase
         .from('vendors')
-        .select('id, tier, status, risk_score, lei, supports_critical_function, last_assessment_date')
+        .select('id, tier, status, risk_score, lei, supports_critical_function, last_assessment_date, total_annual_expense, external_risk_score, updated_at')
         .eq('organization_id', organizationId)
         .is('deleted_at', null),
 
-      // Incidents for Incident Reporting pillar
+      // Incidents for Incident Reporting pillar - extended for MTTR/MTTD
       supabase
         .from('incidents')
-        .select('id, classification, status, incident_type')
+        .select('id, classification, status, incident_type, duration_hours, occurred_at, detected_at')
         .eq('organization_id', organizationId),
 
-      // Tests for Resilience Testing pillar
+      // Incident reports for timeline compliance
+      supabase
+        .from('incident_reports')
+        .select('id, submitted_at, deadline, report_type')
+        .eq('organization_id', organizationId),
+
+      // Tests for Resilience Testing pillar - extended for tester qualifications
       supabase
         .from('resilience_tests')
-        .select('id, status, test_type')
+        .select('id, status, test_type, tester_certifications, tester_independence_verified, scheduled_date, completed_date')
         .eq('organization_id', organizationId),
 
-      // Findings for gap analysis
+      // Findings for gap analysis - extended for CVSS
       supabase
         .from('test_findings')
-        .select('id, severity, status')
+        .select('id, severity, status, cvss_score, remediation_status')
         .eq('organization_id', organizationId),
 
       // Documents for evidence
@@ -220,19 +427,34 @@ async function getCurrentComplianceData(
         .select('id, type, parsing_status')
         .eq('organization_id', organizationId),
 
-      // Certifications for ICT Risk Management
+      // Certifications for ICT Risk Management - extended for type scoring
       supabase
         .from('vendor_certifications')
-        .select('id, standard, status, vendor_id')
+        .select('id, standard, status, vendor_id, certification_type, expiry_date')
+        .eq('organization_id', organizationId),
+
+      // TLPT engagements for resilience testing
+      supabase
+        .from('tlpt_engagements')
+        .select('id, status, next_tlpt_due')
+        .eq('organization_id', organizationId),
+
+      // Vendor contracts for contractual coverage
+      supabase
+        .from('vendor_contracts')
+        .select('id, vendor_id, exit_strategy, audit_rights')
         .eq('organization_id', organizationId),
     ]);
 
     const vendors = vendorsResult.data || [];
     const incidents = incidentsResult.data || [];
+    const incidentReports = incidentReportsResult.data || [];
     const tests = testsResult.data || [];
     const findings = findingsResult.data || [];
     const documents = documentsResult.data || [];
     const certifications = certificationsResult.data || [];
+    const tlptEngagements = tlptResult.data || [];
+    const contracts = contractsResult.data || [];
 
     // If vendor-specific, filter data
     const relevantVendors = vendorId
@@ -241,14 +463,17 @@ async function getCurrentComplianceData(
     const relevantCerts = vendorId
       ? certifications.filter(c => c.vendor_id === vendorId)
       : certifications;
+    const relevantContracts = vendorId
+      ? contracts.filter(c => c.vendor_id === vendorId)
+      : contracts;
 
-    // Calculate pillar scores from real data
+    // Calculate pillar scores from real data with improved algorithms
     const pillarScores = {
       ict_risk_management: calculateICTRiskScore(relevantVendors, relevantCerts, documents),
-      incident_reporting: calculateIncidentReportingScore(incidents),
-      resilience_testing: calculateResilienceTestingScore(tests, findings),
-      third_party_risk: calculateTPRMScore(relevantVendors, relevantCerts),
-      information_sharing: calculateInfoSharingScore(documents),
+      incident_reporting: calculateIncidentReportingScore(incidents, incidentReports),
+      resilience_testing: calculateResilienceTestingScore(tests, findings, tlptEngagements),
+      third_party_risk: calculateTPRMScore(relevantVendors, relevantCerts, relevantContracts),
+      information_sharing: calculateInfoSharingScore(documents, incidentReports),
     };
 
     // Calculate overall maturity (weighted average)
@@ -300,40 +525,82 @@ async function getCurrentComplianceData(
 
 /**
  * Calculate ICT Risk Management score
- * Based on: vendor risk assessments, certifications, documented policies
+ * Improved algorithm based on DORA requirements:
+ * - Certification quality (30%): SOC2 II > SOC2 I > ISO27001
+ * - Assessment currency (25%): Recent assessments with recency decay
+ * - Control effectiveness (25%): Based on documented controls
+ * - Policy maturity (20%): Documented policies and procedures
  */
 function calculateICTRiskScore(
-  vendors: { risk_score: number | null; last_assessment_date: string | null }[],
-  certifications: { standard: string; status: string }[],
+  vendors: { risk_score: number | null; last_assessment_date: string | null; updated_at: string }[],
+  certifications: { standard: string; status: string; certification_type?: string; expiry_date?: string | null }[],
   documents: { type: string; parsing_status: string }[]
 ): { level: MaturityLevel; percent: number } {
   let score = 0;
 
-  // Vendor risk assessments (40% weight)
+  // 1. Certification Quality (30% weight) - using improved scoring
+  const certScore = scoreCertifications(
+    certifications.map(c => ({
+      certification_type: c.certification_type || c.standard,
+      expiry_date: c.expiry_date || null,
+      status: c.status,
+    })),
+    Math.max(vendors.length, 1)
+  );
+  score += (certScore / 100) * 30;
+
+  // 2. Assessment Currency (25% weight) - with recency decay
   if (vendors.length > 0) {
-    const assessedVendors = vendors.filter(v => v.risk_score !== null);
-    const assessmentRate = (assessedVendors.length / vendors.length) * 100;
-    score += (assessmentRate / 100) * 40;
+    const now = new Date();
+    let currencyScore = 0;
+
+    for (const vendor of vendors) {
+      if (vendor.risk_score !== null) {
+        // Check recency of assessment
+        const lastAssessment = vendor.last_assessment_date || vendor.updated_at;
+        if (lastAssessment) {
+          const daysSinceAssessment = (now.getTime() - new Date(lastAssessment).getTime()) / (1000 * 60 * 60 * 24);
+          // Full score if < 90 days, decay to 50% at 365 days
+          if (daysSinceAssessment < 90) {
+            currencyScore += 100;
+          } else if (daysSinceAssessment < 365) {
+            currencyScore += 100 - ((daysSinceAssessment - 90) / 275) * 50;
+          } else {
+            currencyScore += 50; // Stale but exists
+          }
+        } else {
+          currencyScore += 70; // Has score but unknown date
+        }
+      }
+    }
+    score += (currencyScore / vendors.length / 100) * 25;
   } else {
-    score += 20; // Base score if no vendors yet
+    score += 12.5; // Base score if no vendors
   }
 
-  // Valid certifications (30% weight)
-  const validCerts = certifications.filter(c => c.status === 'valid');
-  const soc2Certs = validCerts.filter(c => c.standard.toLowerCase().includes('soc'));
-  const isoCerts = validCerts.filter(c => c.standard.toLowerCase().includes('27001'));
-  if (soc2Certs.length > 0 || isoCerts.length > 0) {
-    const certScore = Math.min(100, (validCerts.length / Math.max(vendors.length, 1)) * 100);
-    score += (certScore / 100) * 30;
+  // 3. Control Effectiveness (25% weight) - based on documentation
+  const policyDocs = documents.filter(d =>
+    d.type === 'policy' || d.type === 'procedure' || d.type === 'control'
+  );
+  const completedPolicyDocs = policyDocs.filter(d => d.parsing_status === 'completed');
+
+  if (policyDocs.length > 0) {
+    const effectivenessScore = (completedPolicyDocs.length / policyDocs.length) * 100;
+    score += (effectivenessScore / 100) * 25;
+  } else {
+    // No policy docs - check for any completed docs as evidence
+    const parsedDocs = documents.filter(d => d.parsing_status === 'completed');
+    score += Math.min(15, parsedDocs.length * 2.5);
   }
 
-  // Documented policies (30% weight)
+  // 4. Policy Maturity (20% weight) - breadth of documentation
   const parsedDocs = documents.filter(d => d.parsing_status === 'completed');
-  if (parsedDocs.length > 0) {
-    score += Math.min(30, parsedDocs.length * 5);
-  }
+  const docTypes = new Set(parsedDocs.map(d => d.type));
+  // More diverse documentation = more mature
+  const diversityScore = Math.min(100, docTypes.size * 20);
+  score += (diversityScore / 100) * 20;
 
-  const percent = Math.round(score);
+  const percent = Math.round(Math.min(100, score));
   const level = percentToMaturityLevel(percent);
 
   return { level, percent };
@@ -341,37 +608,61 @@ function calculateICTRiskScore(
 
 /**
  * Calculate Incident Reporting score
- * Based on: incident tracking, classification, resolution
+ * Improved algorithm based on DORA requirements:
+ * - Timeline compliance (35%): Reports submitted within 4h/72h/1m deadlines
+ * - MTTR (25%): Mean Time To Resolve
+ * - MTTD (20%): Mean Time To Detect
+ * - Classification accuracy (10%): Proper incident classification
+ * - Process maturity (10%): Complete incident records
  */
 function calculateIncidentReportingScore(
-  incidents: { classification: string; status: string; incident_type: string }[]
+  incidents: { classification: string; status: string; incident_type: string; duration_hours: number | null; occurred_at: string | null; detected_at: string | null }[],
+  incidentReports: { submitted_at: string | null; deadline: string | null }[]
 ): { level: MaturityLevel; percent: number } {
   // Base score for having incident tracking capability
-  let score = 25;
+  let score = 15;
 
   if (incidents.length === 0) {
     // No incidents - could be good (no problems) or bad (not tracking)
     // Give moderate score for having capability even without incidents
-    return { level: 1 as MaturityLevel, percent: 40 };
+    return { level: 1 as MaturityLevel, percent: 45 };
   }
 
-  // Proper classification (25% weight)
+  // 1. Timeline Compliance (35% weight) - DORA 4h/72h/1m requirements
+  const timelineScore = checkTimelineCompliance(incidentReports);
+  score += (timelineScore / 100) * 35;
+
+  // 2. MTTR (25% weight) - Mean Time To Resolve
+  const mttr = calculateMTTR(incidents);
+  const mttrScore = scoreMTTR(mttr);
+  score += (mttrScore / 100) * 25;
+
+  // 3. MTTD (20% weight) - Mean Time To Detect
+  const mttd = calculateMTTD(incidents);
+  const mttdScore = scoreMTTD(mttd);
+  score += (mttdScore / 100) * 20;
+
+  // 4. Classification Accuracy (10% weight)
   const classifiedIncidents = incidents.filter(i =>
     i.classification && ['major', 'significant', 'minor'].includes(i.classification)
   );
-  score += (classifiedIncidents.length / incidents.length) * 25;
+  const classificationRate = (classifiedIncidents.length / incidents.length) * 100;
+  score += (classificationRate / 100) * 10;
 
-  // Resolution rate (25% weight)
-  const resolvedIncidents = incidents.filter(i =>
-    ['resolved', 'closed'].includes(i.status)
-  );
-  score += (resolvedIncidents.length / incidents.length) * 25;
+  // 5. Process Maturity (10% weight) - completeness of records
+  let completenessScore = 0;
+  for (const incident of incidents) {
+    let fieldsComplete = 0;
+    if (incident.classification) fieldsComplete++;
+    if (incident.incident_type) fieldsComplete++;
+    if (incident.occurred_at) fieldsComplete++;
+    if (incident.detected_at) fieldsComplete++;
+    completenessScore += (fieldsComplete / 4) * 100;
+  }
+  completenessScore = completenessScore / incidents.length;
+  score += (completenessScore / 100) * 10;
 
-  // Incident type categorization (25% weight)
-  const typedIncidents = incidents.filter(i => i.incident_type);
-  score += (typedIncidents.length / incidents.length) * 25;
-
-  const percent = Math.round(score);
+  const percent = Math.round(Math.min(100, score));
   const level = percentToMaturityLevel(percent);
 
   return { level, percent };
@@ -379,39 +670,109 @@ function calculateIncidentReportingScore(
 
 /**
  * Calculate Resilience Testing score
- * Based on: test coverage, completion rate, findings remediation
+ * Improved algorithm based on DORA requirements:
+ * - Test coverage (25%): Types covered / 10 required types
+ * - TLPT compliance (25%): Threat-Led Penetration Testing within 3 years
+ * - Tester qualification (20%): Certified + independent testers
+ * - Finding remediation (20%): CVSS-weighted remediation rate
+ * - Execution cadence (10%): Tests completed on schedule
  */
 function calculateResilienceTestingScore(
-  tests: { status: string; test_type: string }[],
-  findings: { severity: string; status: string }[]
+  tests: { status: string; test_type: string; tester_certifications?: string[] | null; tester_independence_verified?: boolean; scheduled_date?: string | null; completed_date?: string | null }[],
+  findings: { severity: string; status: string; cvss_score?: number | null; remediation_status?: string }[],
+  tlptEngagements: { next_tlpt_due: string | null; status: string }[]
 ): { level: MaturityLevel; percent: number } {
   // Base score for having testing programme
-  let score = 20;
+  let score = 10;
 
   if (tests.length === 0) {
-    return { level: 0 as MaturityLevel, percent: 20 };
+    return { level: 0 as MaturityLevel, percent: 15 };
   }
 
-  // Test completion rate (40% weight)
-  const completedTests = tests.filter(t => t.status === 'completed');
-  score += (completedTests.length / tests.length) * 40;
+  // Required test types per DORA
+  const requiredTestTypes = [
+    'vulnerability_assessment',
+    'penetration_testing',
+    'scenario_based',
+    'red_team',
+    'disaster_recovery',
+    'business_continuity',
+    'tabletop_exercise',
+    'backup_restoration',
+    'failover_testing',
+    'communication_testing',
+  ];
 
-  // Test type diversity (20% weight)
-  const testTypes = new Set(tests.map(t => t.test_type));
-  const diversityScore = Math.min(20, testTypes.size * 5);
-  score += diversityScore;
+  // 1. Test Coverage (25% weight) - types covered / 10 required
+  const testTypes = new Set(tests.map(t => t.test_type?.toLowerCase() || ''));
+  const coveredTypes = requiredTestTypes.filter(rt =>
+    testTypes.has(rt) || [...testTypes].some(tt => tt.includes(rt.replace('_', ' ')) || tt.includes(rt))
+  );
+  const coverageScore = (coveredTypes.length / requiredTestTypes.length) * 100;
+  score += (coverageScore / 100) * 25;
 
-  // Findings remediation (20% weight)
-  if (findings.length > 0) {
-    const remediatedFindings = findings.filter(f =>
-      ['remediated', 'risk_accepted'].includes(f.status)
-    );
-    score += (remediatedFindings.length / findings.length) * 20;
+  // 2. TLPT Compliance (25% weight) - required every 3 years
+  const tlptScore = checkTLPTCompliance(tlptEngagements);
+  score += (tlptScore / 100) * 25;
+
+  // 3. Tester Qualification (20% weight) - certifications + independence
+  let qualificationScore = 0;
+  let testsWithQualifiedTesters = 0;
+
+  for (const test of tests) {
+    let testScore = 0;
+    // Check for certifications
+    if (test.tester_certifications && test.tester_certifications.length > 0) {
+      testScore += 60;
+    }
+    // Check for independence verification
+    if (test.tester_independence_verified) {
+      testScore += 40;
+    }
+    if (testScore > 0) {
+      qualificationScore += testScore;
+      testsWithQualifiedTesters++;
+    }
+  }
+
+  if (testsWithQualifiedTesters > 0) {
+    qualificationScore = qualificationScore / testsWithQualifiedTesters;
   } else {
-    score += 20; // No findings is good
+    qualificationScore = 30; // Base score if no qualification data
+  }
+  score += (qualificationScore / 100) * 20;
+
+  // 4. Finding Remediation (20% weight) - CVSS-weighted
+  const remediationScore = scoreRemediationByCVSS(
+    findings.map(f => ({
+      cvss_score: f.cvss_score || null,
+      remediation_status: f.remediation_status || f.status,
+    }))
+  );
+  score += (remediationScore / 100) * 20;
+
+  // 5. Execution Cadence (10% weight) - tests completed on/before schedule
+  const completedTests = tests.filter(t => t.status === 'completed');
+  if (completedTests.length > 0) {
+    let onTimeCount = 0;
+    for (const test of completedTests) {
+      if (test.scheduled_date && test.completed_date) {
+        const scheduled = new Date(test.scheduled_date).getTime();
+        const completed = new Date(test.completed_date).getTime();
+        if (completed <= scheduled + (7 * 24 * 60 * 60 * 1000)) { // Allow 1 week grace
+          onTimeCount++;
+        }
+      } else {
+        onTimeCount++; // No schedule = assume on time
+      }
+    }
+    const cadenceScore = (onTimeCount / completedTests.length) * 100;
+    score += (cadenceScore / 100) * 10;
+  } else {
+    score += 5; // Base if no completed tests
   }
 
-  const percent = Math.round(score);
+  const percent = Math.round(Math.min(100, score));
   const level = percentToMaturityLevel(percent);
 
   return { level, percent };
@@ -419,44 +780,122 @@ function calculateResilienceTestingScore(
 
 /**
  * Calculate Third Party Risk Management score
- * Based on: vendor inventory, risk assessments, due diligence
+ * Improved algorithm based on DORA requirements:
+ * - Concentration risk (25%): HHI-based vendor diversification
+ * - Due diligence (25%): Certifications + risk assessments
+ * - Continuous monitoring (20%): External risk scores + recency
+ * - Contractual coverage (15%): Exit strategy + audit rights
+ * - Critical provider mgmt (15%): Critical vendors fully documented
  */
 function calculateTPRMScore(
-  vendors: { tier: string; status: string; risk_score: number | null; lei: string | null; supports_critical_function: boolean }[],
-  certifications: { standard: string; status: string }[]
+  vendors: { id: string; tier: string; status: string; risk_score: number | null; lei: string | null; supports_critical_function: boolean; total_annual_expense?: number | null; external_risk_score?: number | null; updated_at?: string }[],
+  certifications: { standard: string; status: string }[],
+  contracts: { vendor_id: string; exit_strategy?: boolean | null; audit_rights?: boolean | null }[]
 ): { level: MaturityLevel; percent: number } {
   // Base score for having vendor management
-  let score = 15;
+  let score = 10;
 
   if (vendors.length === 0) {
     return { level: 0 as MaturityLevel, percent: 15 };
   }
 
-  // Active vendor management (25% weight)
-  const activeVendors = vendors.filter(v => v.status === 'active');
-  score += (activeVendors.length / vendors.length) * 25;
+  // 1. Concentration Risk (25% weight) - HHI calculation
+  const hhiScore = calculateHHI(vendors);
+  score += (hhiScore / 100) * 25;
 
-  // Risk assessment coverage (25% weight)
+  // 2. Due Diligence (25% weight) - certifications + assessments
   const assessedVendors = vendors.filter(v => v.risk_score !== null);
-  score += (assessedVendors.length / vendors.length) * 25;
+  const assessmentRate = (assessedVendors.length / vendors.length) * 100;
 
-  // LEI validation (15% weight)
-  const leiValidated = vendors.filter(v => v.lei);
-  score += (leiValidated.length / vendors.length) * 15;
+  // Count vendors with valid certifications
+  const vendorsWithCerts = new Set(
+    certifications.filter(c => c.status === 'valid' || c.status === 'active').map(c => c.standard)
+  );
+  const certRate = Math.min(100, (vendorsWithCerts.size / vendors.length) * 100);
 
-  // Critical function identification (10% weight)
-  const criticalVendors = vendors.filter(v => v.supports_critical_function);
+  const dueDiligenceScore = (assessmentRate * 0.6 + certRate * 0.4);
+  score += (dueDiligenceScore / 100) * 25;
+
+  // 3. Continuous Monitoring (20% weight) - external risk scores + recency
+  const now = new Date();
+  let monitoringScore = 0;
+  let vendorsWithMonitoring = 0;
+
+  for (const vendor of vendors) {
+    if (vendor.external_risk_score !== null) {
+      vendorsWithMonitoring++;
+      // Check recency
+      if (vendor.updated_at) {
+        const daysSinceUpdate = (now.getTime() - new Date(vendor.updated_at).getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceUpdate < 30) {
+          monitoringScore += 100; // Recent monitoring
+        } else if (daysSinceUpdate < 90) {
+          monitoringScore += 70;
+        } else {
+          monitoringScore += 40; // Stale but exists
+        }
+      } else {
+        monitoringScore += 60;
+      }
+    }
+  }
+
+  if (vendorsWithMonitoring > 0) {
+    monitoringScore = monitoringScore / vendorsWithMonitoring;
+    // Also factor in coverage
+    const coverageMultiplier = vendorsWithMonitoring / vendors.length;
+    monitoringScore = monitoringScore * coverageMultiplier;
+  } else {
+    monitoringScore = 30; // Base if no external monitoring
+  }
+  score += (monitoringScore / 100) * 20;
+
+  // 4. Contractual Coverage (15% weight) - exit strategy + audit rights
+  let contractScore = 0;
+  const vendorContractMap = new Map<string, { exit_strategy: boolean; audit_rights: boolean }>();
+
+  for (const contract of contracts) {
+    const existing = vendorContractMap.get(contract.vendor_id) || { exit_strategy: false, audit_rights: false };
+    if (contract.exit_strategy) existing.exit_strategy = true;
+    if (contract.audit_rights) existing.audit_rights = true;
+    vendorContractMap.set(contract.vendor_id, existing);
+  }
+
+  for (const vendor of vendors) {
+    const contract = vendorContractMap.get(vendor.id);
+    if (contract) {
+      if (contract.exit_strategy) contractScore += 50;
+      if (contract.audit_rights) contractScore += 50;
+    }
+  }
+
+  if (vendors.length > 0) {
+    contractScore = contractScore / vendors.length;
+  }
+  score += (contractScore / 100) * 15;
+
+  // 5. Critical Provider Management (15% weight) - critical vendors fully documented
+  const criticalVendors = vendors.filter(v => v.supports_critical_function || v.tier === 'critical');
+
   if (criticalVendors.length > 0) {
-    score += 10;
+    let criticalScore = 0;
+    for (const vendor of criticalVendors) {
+      let vendorScore = 0;
+      if (vendor.risk_score !== null) vendorScore += 25;
+      if (vendor.lei) vendorScore += 25;
+      if (vendor.external_risk_score !== null) vendorScore += 25;
+      const hasContract = vendorContractMap.has(vendor.id);
+      if (hasContract) vendorScore += 25;
+      criticalScore += vendorScore;
+    }
+    criticalScore = criticalScore / criticalVendors.length;
+    score += (criticalScore / 100) * 15;
+  } else {
+    // No critical vendors identified - partial score
+    score += 7.5;
   }
 
-  // Vendor certifications (10% weight)
-  const vendorWithCerts = new Set(certifications.map(c => c.standard));
-  if (vendorWithCerts.size > 0) {
-    score += Math.min(10, vendorWithCerts.size * 2);
-  }
-
-  const percent = Math.round(score);
+  const percent = Math.round(Math.min(100, score));
   const level = percentToMaturityLevel(percent);
 
   return { level, percent };
@@ -464,23 +903,70 @@ function calculateTPRMScore(
 
 /**
  * Calculate Information Sharing score
- * Based on: documented processes, external sharing participation
+ * Improved algorithm based on DORA requirements:
+ * - Threat intel capability (40%): Documented processes for threat intelligence
+ * - Incident sharing (30%): External incident reporting compliance
+ * - Regulatory reporting (30%): On-time submission to authorities
+ * Note: Removed artificial 60% cap - full 0-100% range now available
  */
 function calculateInfoSharingScore(
-  documents: { type: string; parsing_status: string }[]
+  documents: { type: string; parsing_status: string }[],
+  incidentReports: { submitted_at: string | null; deadline: string | null; report_type?: string }[]
 ): { level: MaturityLevel; percent: number } {
-  // Base score - info sharing is often least mature
-  let score = 20;
+  let score = 15; // Base score for having infrastructure
 
-  // Having documented evidence of information sharing practices
-  const completedDocs = documents.filter(d => d.parsing_status === 'completed');
-  if (completedDocs.length > 0) {
-    score += Math.min(30, completedDocs.length * 3);
+  // 1. Threat Intel Capability (40% weight) - based on documentation
+  const threatIntelDocs = documents.filter(d =>
+    d.type === 'threat_intelligence' ||
+    d.type === 'security_policy' ||
+    d.type === 'incident_response' ||
+    d.type === 'information_sharing'
+  );
+  const completedThreatDocs = threatIntelDocs.filter(d => d.parsing_status === 'completed');
+
+  if (threatIntelDocs.length > 0) {
+    const threatCapabilityScore = (completedThreatDocs.length / threatIntelDocs.length) * 100;
+    score += (threatCapabilityScore / 100) * 40;
+  } else {
+    // Check for any completed docs as evidence of documentation capability
+    const completedDocs = documents.filter(d => d.parsing_status === 'completed');
+    if (completedDocs.length > 0) {
+      score += Math.min(20, completedDocs.length * 4); // Up to 20% for general docs
+    }
   }
 
-  // Information sharing is typically the least developed pillar
-  // Cap at 60% unless explicitly configured
-  const percent = Math.min(60, Math.round(score));
+  // 2. Incident Sharing (30% weight) - external reporting
+  // Check for reports submitted to authorities
+  const externalReports = incidentReports.filter(r =>
+    r.report_type === 'competent_authority' ||
+    r.report_type === 'final' ||
+    r.report_type === 'intermediate'
+  );
+
+  if (externalReports.length > 0) {
+    // Score based on having external reporting
+    const reportsWithSubmission = externalReports.filter(r => r.submitted_at);
+    const sharingScore = (reportsWithSubmission.length / externalReports.length) * 100;
+    score += (sharingScore / 100) * 30;
+  } else if (incidentReports.length > 0) {
+    // Has internal reporting but no external - partial score
+    score += 10;
+  } else {
+    // No incident reports - minimal base score
+    score += 5;
+  }
+
+  // 3. Regulatory Reporting (30% weight) - on-time submission
+  if (incidentReports.length > 0) {
+    const timelineScore = checkTimelineCompliance(incidentReports);
+    score += (timelineScore / 100) * 30;
+  } else {
+    // No reports to evaluate - base score
+    score += 10;
+  }
+
+  // No artificial cap - full 0-100% range
+  const percent = Math.round(Math.min(100, score));
   const level = percentToMaturityLevel(percent);
 
   return { level, percent };
@@ -488,13 +974,19 @@ function calculateInfoSharingScore(
 
 /**
  * Convert percentage to maturity level
+ * Aligned with DORA requirements where L3 (Well-Defined) is the minimum for compliance
+ * L4: Optimized (90%+) - Continuous improvement, proactive
+ * L3: Well-Defined (75%+) - DORA minimum compliance
+ * L2: Managed (50%+) - Documented but inconsistent
+ * L1: Initial (25%+) - Ad-hoc processes
+ * L0: Non-existent (<25%) - No formal processes
  */
 function percentToMaturityLevel(percent: number): MaturityLevel {
-  if (percent >= 85) return 4;
-  if (percent >= 70) return 3;
-  if (percent >= 50) return 2;
-  if (percent >= 25) return 1;
-  return 0;
+  if (percent >= 90) return 4;  // Optimized - exceeds DORA
+  if (percent >= 75) return 3;  // Well-Defined - DORA compliant
+  if (percent >= 50) return 2;  // Managed - needs improvement
+  if (percent >= 25) return 1;  // Initial - significant gaps
+  return 0;                      // Non-existent - critical gaps
 }
 
 /**
@@ -533,6 +1025,8 @@ function calculateGapAnalysis(
   // ICT Risk Management gaps
   const hasRiskFramework = documents.length > 0;
   const hasVendorAssessments = vendors.some(v => v.risk_score !== null);
+  const hasValidCertifications = certifications.some(c => c.status === 'valid' || c.status === 'active');
+
   if (!hasRiskFramework) {
     criticalGaps.push({
       requirement_id: 'art-5',
@@ -542,6 +1036,9 @@ function calculateGapAnalysis(
       description: 'No documented ICT risk management framework detected',
     });
     critical++;
+  } else if (hasVendorAssessments && hasValidCertifications) {
+    met += 10;
+    partial += 2;
   } else if (hasVendorAssessments) {
     met += 8;
     partial += 4;
