@@ -43,15 +43,15 @@ export {
   getRequiredTierForModule,
 } from "./types";
 
-// Server-side access checks
+// Server-side access checks (use these in server components/actions)
 export {
   getOrganizationLicensing,
   hasFrameworkAccess,
   hasModuleAccess,
   getEnabledFrameworks,
-} from "./check-access";
+} from "./check-access-server";
 
-// Pure functions (can be used client-side)
+// Pure functions (safe for client components)
 export {
   checkFrameworkAccess,
   checkModuleAccess,

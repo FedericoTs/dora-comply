@@ -16,7 +16,6 @@ import {
   useState,
   useCallback,
   useMemo,
-  useEffect,
   type ReactNode,
 } from "react";
 import type {
@@ -140,20 +139,6 @@ export function FrameworkProvider({
     },
     [licensing]
   );
-
-  // Sync with localStorage on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (
-        stored &&
-        licensing &&
-        checkFrameworkAccess(licensing, stored as FrameworkCode)
-      ) {
-        setActiveFrameworkState(stored as FrameworkCode);
-      }
-    }
-  }, [licensing]);
 
   // Computed values
   const licenseTier = licensing?.license_tier || "starter";

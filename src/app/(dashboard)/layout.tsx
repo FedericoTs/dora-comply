@@ -2,13 +2,15 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Shield, LogOut } from 'lucide-react';
 import { ThemeToggleSimple } from '@/components/ui/theme-toggle';
-import { NavigationProviders, MobileSidebar, SidebarNav } from '@/components/navigation';
+import { NavigationProviders, MobileSidebar, SidebarNav, FrameworkSelector, FrameworkSelectorDropdown } from '@/components/navigation';
 import { CopilotChat } from '@/components/copilot';
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 import { checkAuthStatus, logout } from '@/lib/auth';
 import { ProductTour } from '@/components/onboarding/product-tour';
 import { GlobalSearch } from '@/components/search/global-search';
 import { getOnboardingProgress } from '@/lib/onboarding/progress';
+import { FrameworkProvider } from '@/lib/context';
+import { getCurrentOrganizationLicensing } from '@/lib/licensing/queries';
 
 export default async function DashboardLayout({
   children,
@@ -28,7 +30,11 @@ export default async function DashboardLayout({
   // Fetch onboarding progress for sidebar
   const onboardingProgress = await getOnboardingProgress();
 
+  // Fetch licensing data for framework context
+  const licensing = await getCurrentOrganizationLicensing();
+
   return (
+    <FrameworkProvider initialLicensing={licensing}>
     <div className="min-h-screen bg-background">
       <div className="flex min-h-screen">
         {/* Sidebar - sticky, hidden on mobile */}
@@ -44,7 +50,7 @@ export default async function DashboardLayout({
           </div>
 
           {/* Navigation - Grouped with collapsible sections */}
-          <SidebarNav onboardingSteps={onboardingProgress.steps} />
+          <SidebarNav onboardingSteps={onboardingProgress.steps} useFrameworkNav={true} />
 
           {/* User */}
           <div className="p-4 border-t border-sidebar-border">
@@ -85,6 +91,15 @@ export default async function DashboardLayout({
                 <GlobalSearch />
               </div>
             </div>
+
+            {/* Framework Selector - centered in header */}
+            <div className="hidden md:flex flex-1 justify-center max-w-md mx-4">
+              <FrameworkSelector />
+            </div>
+            <div className="md:hidden">
+              <FrameworkSelectorDropdown />
+            </div>
+
             <div className="flex items-center gap-2">
               <NotificationDropdown />
               <ThemeToggleSimple />
@@ -108,5 +123,6 @@ export default async function DashboardLayout({
         <ProductTour />
       </div>
     </div>
+    </FrameworkProvider>
   );
 }
