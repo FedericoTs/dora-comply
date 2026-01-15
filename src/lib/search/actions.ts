@@ -7,6 +7,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { getCurrentUserOrganization } from '@/lib/auth/organization';
 
 // ============================================================================
 // Types
@@ -56,21 +57,6 @@ const PAGES: SearchResult[] = [
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-async function getCurrentUserOrganization(): Promise<string | null> {
-  const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('organization_id')
-    .eq('id', user.id)
-    .single();
-
-  return userData?.organization_id || null;
-}
 
 function searchPages(query: string): SearchResult[] {
   const lowerQuery = query.toLowerCase();

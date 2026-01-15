@@ -18,6 +18,12 @@ import type {
   RiskLevel,
 } from '@/lib/exports/board-report-types';
 
+// Import centralized DORA constants
+import {
+  MATURITY_THRESHOLDS,
+  HHI_THRESHOLDS,
+} from '@/lib/compliance/dora-constants';
+
 interface DateRange {
   from: Date;
   to: Date;
@@ -247,11 +253,11 @@ function calculateConcentrationMetrics(
     .sort((a, b) => b.percentage - a.percentage)
     .slice(0, 5);
 
-  // Calculate HHI (Herfindahl-Hirschman Index)
+  // Calculate HHI (Herfindahl-Hirschman Index) using centralized thresholds
   const shares = Object.values(countryCount).map((c) => (c / totalVendors) * 100);
   const hhi = shares.reduce((sum, share) => sum + share * share, 0);
   const hhiCategory: 'low' | 'moderate' | 'high' =
-    hhi < 1500 ? 'low' : hhi < 2500 ? 'moderate' : 'high';
+    hhi < HHI_THRESHOLDS.UNCONCENTRATED ? 'low' : hhi < HHI_THRESHOLDS.MODERATE ? 'moderate' : 'high';
 
   // Count critical vendors as potential SPOFs
   const spofsCount = vendors.filter((v) => v.criticality_tier === 'critical').length;
@@ -470,13 +476,13 @@ function calculateOverallScore(pillars: DORACompliancePillar[]): number {
 }
 
 /**
- * Calculate DORA maturity level
+ * Calculate DORA maturity level using centralized thresholds
  */
 function calculateMaturityLevel(score: number): DORAMaturityLevel {
-  if (score >= 90) return 'L4';
-  if (score >= 75) return 'L3';
-  if (score >= 55) return 'L2';
-  if (score >= 35) return 'L1';
+  if (score >= MATURITY_THRESHOLDS.L4) return 'L4';
+  if (score >= MATURITY_THRESHOLDS.L3) return 'L3';
+  if (score >= MATURITY_THRESHOLDS.L2) return 'L2';
+  if (score >= MATURITY_THRESHOLDS.L1) return 'L1';
   return 'L0';
 }
 

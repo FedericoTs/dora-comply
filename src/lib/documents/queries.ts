@@ -4,6 +4,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { getCurrentUserOrganization } from '@/lib/auth/organization';
 import type {
   Document,
   DocumentWithVendor,
@@ -19,23 +20,6 @@ import type {
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-async function getCurrentUserOrganization(): Promise<string | null> {
-  const supabase = await createClient();
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  console.log('[getCurrentUserOrganization] auth.getUser:', user?.id, user?.email, authError?.message);
-  if (!user) return null;
-
-  const { data: userData, error: userQueryError } = await supabase
-    .from('users')
-    .select('organization_id')
-    .eq('id', user.id)
-    .single();
-
-  console.log('[getCurrentUserOrganization] users query:', userData?.organization_id, userQueryError?.message);
-  return userData?.organization_id || null;
-}
 
 function mapDocumentFromDatabase(row: Record<string, unknown>): Document {
   return {

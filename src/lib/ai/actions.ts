@@ -9,6 +9,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { getCurrentUserOrganization } from '@/lib/auth/organization';
 import { analyzeContract, EXTRACTION_MODEL, EXTRACTION_VERSION } from './contract-analyzer';
 import { parseSOC2Simple } from './parsers/soc2-parser-simple';
 import { parseISO27001 } from './parsers/iso27001-parser';
@@ -52,20 +53,6 @@ export interface AnalysisActionResult<T = void> {
 
 function createError(code: AnalysisErrorCode, message: string): AnalysisError {
   return { code, message };
-}
-
-async function getCurrentUserOrganization(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('organization_id')
-    .eq('id', user.id)
-    .single();
-
-  return userData?.organization_id || null;
 }
 
 function mapProvisionStatusToDora(status: string): DoraProvisionStatus {

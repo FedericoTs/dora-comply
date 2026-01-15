@@ -23,6 +23,20 @@ import {
   CriticalGap,
 } from './maturity-history-types';
 
+// Import centralized DORA constants and calculations
+import { percentToMaturityLevel, REQUIRED_TEST_TYPES } from './dora-constants';
+import {
+  calculateMTTR,
+  scoreMTTR,
+  calculateMTTD,
+  scoreMTTD,
+  checkTimelineCompliance,
+  calculateHHI,
+  scoreCertifications,
+  checkTLPTCompliance,
+  scoreRemediationByCVSS,
+} from './metrics-calculations';
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -31,203 +45,6 @@ interface ActionResult<T = void> {
   success: boolean;
   data?: T;
   error?: string;
-}
-
-// =============================================================================
-// HELPER FUNCTIONS FOR IMPROVED KPI CALCULATIONS
-// =============================================================================
-
-/**
- * Calculate Mean Time To Resolve (MTTR) from incidents
- * Returns average hours to resolve incidents
- */
-function calculateMTTR(incidents: { duration_hours: number | null }[]): number | null {
-  const incidentsWithDuration = incidents.filter(i => i.duration_hours !== null && i.duration_hours > 0);
-  if (incidentsWithDuration.length === 0) return null;
-
-  const totalHours = incidentsWithDuration.reduce((sum, i) => sum + (i.duration_hours || 0), 0);
-  return totalHours / incidentsWithDuration.length;
-}
-
-/**
- * Score MTTR on 0-100 scale based on DORA requirements
- * L4: < 4h, L3: < 24h, L2: < 72h, L1: < 168h, L0: >= 168h
- */
-function scoreMTTR(mttr: number | null): number {
-  if (mttr === null) return 40; // Base score if no data
-  if (mttr < 4) return 100;     // L4: Excellent
-  if (mttr < 24) return 80;     // L3: Good (DORA minimum)
-  if (mttr < 72) return 60;     // L2: Adequate
-  if (mttr < 168) return 40;    // L1: Basic
-  return 20;                     // L0: Initial
-}
-
-/**
- * Calculate Mean Time To Detect (MTTD) from incidents
- * Returns average hours between occurrence and detection
- */
-function calculateMTTD(incidents: { occurrence_datetime: string | null; detection_datetime: string | null }[]): number | null {
-  const incidentsWithDates = incidents.filter(i => i.occurrence_datetime && i.detection_datetime);
-  if (incidentsWithDates.length === 0) return null;
-
-  let totalHours = 0;
-  for (const incident of incidentsWithDates) {
-    const occurred = new Date(incident.occurrence_datetime!).getTime();
-    const detected = new Date(incident.detection_datetime!).getTime();
-    totalHours += Math.max(0, (detected - occurred) / (1000 * 60 * 60));
-  }
-
-  return totalHours / incidentsWithDates.length;
-}
-
-/**
- * Score MTTD on 0-100 scale
- */
-function scoreMTTD(mttd: number | null): number {
-  if (mttd === null) return 40; // Base score if no data
-  if (mttd < 1) return 100;     // < 1 hour - excellent
-  if (mttd < 4) return 80;      // < 4 hours - good
-  if (mttd < 24) return 60;     // < 24 hours - adequate
-  if (mttd < 72) return 40;     // < 72 hours - basic
-  return 20;                     // >= 72 hours - poor
-}
-
-/**
- * Check timeline compliance for incident reports
- * DORA requires: 4h initial, 72h intermediate, 1 month final
- */
-function checkTimelineCompliance(
-  reports: { submitted_at: string | null; deadline: string | null }[]
-): number {
-  const reportsWithDeadlines = reports.filter(r => r.submitted_at && r.deadline);
-  if (reportsWithDeadlines.length === 0) return 50; // Base score if no reports
-
-  let onTimeCount = 0;
-  for (const report of reportsWithDeadlines) {
-    const submitted = new Date(report.submitted_at!).getTime();
-    const deadline = new Date(report.deadline!).getTime();
-    if (submitted <= deadline) onTimeCount++;
-  }
-
-  return (onTimeCount / reportsWithDeadlines.length) * 100;
-}
-
-/**
- * Calculate Herfindahl-Hirschman Index for concentration risk
- * Returns 0-100 score (100 = well diversified, 0 = single vendor)
- */
-function calculateHHI(vendors: { total_annual_expense?: number | null }[]): number {
-  const vendorsWithSpend = vendors.filter(v => v.total_annual_expense && v.total_annual_expense > 0);
-  if (vendorsWithSpend.length === 0) return 50; // Base score if no spend data
-  if (vendorsWithSpend.length === 1) return 20; // Single vendor = high concentration
-
-  const totalSpend = vendorsWithSpend.reduce((sum, v) => sum + (v.total_annual_expense || 0), 0);
-  if (totalSpend === 0) return 50;
-
-  // HHI = sum of squared market shares (as percentages)
-  const hhi = vendorsWithSpend.reduce((sum, v) => {
-    const share = ((v.total_annual_expense || 0) / totalSpend) * 100;
-    return sum + share * share;
-  }, 0);
-
-  // HHI ranges: 10000 (monopoly) to ~0 (perfect competition)
-  // Convert to 0-100 score where 100 = low concentration
-  // HHI < 1500 = unconcentrated, 1500-2500 = moderate, > 2500 = concentrated
-  if (hhi < 1500) return 100;
-  if (hhi < 2500) return Math.round(80 - ((hhi - 1500) / 1000) * 30);
-  return Math.max(20, Math.round(50 - ((hhi - 2500) / 7500) * 30));
-}
-
-/**
- * Score certifications by type and validity
- * SOC2 Type II > SOC2 Type I > ISO 27001 > Others
- */
-function scoreCertifications(
-  certifications: { certification_type: string; expiry_date: string | null; status: string }[],
-  vendorCount: number
-): number {
-  if (vendorCount === 0) return 50;
-  if (certifications.length === 0) return 20;
-
-  const now = new Date();
-  let score = 0;
-
-  for (const cert of certifications) {
-    // Check validity
-    const isValid = cert.status === 'valid' || cert.status === 'active';
-    const notExpired = !cert.expiry_date || new Date(cert.expiry_date) > now;
-    if (!isValid || !notExpired) continue;
-
-    const type = cert.certification_type?.toLowerCase() || '';
-
-    // Score by certification type
-    if (type.includes('soc 2 type ii') || type.includes('soc2 type ii')) {
-      score += 25; // Best
-    } else if (type.includes('soc 2') || type.includes('soc2')) {
-      score += 18; // Good
-    } else if (type.includes('27001') || type.includes('iso')) {
-      score += 15; // Good
-    } else {
-      score += 8; // Other certs have some value
-    }
-  }
-
-  // Normalize to 0-100 based on vendor count
-  // Expect ~1 cert per vendor for full score
-  const maxExpectedScore = vendorCount * 20;
-  return Math.min(100, Math.round((score / Math.max(maxExpectedScore, 1)) * 100));
-}
-
-/**
- * Check TLPT (Threat-Led Penetration Testing) compliance
- * DORA requires TLPT at least every 3 years
- */
-function checkTLPTCompliance(
-  tlptEngagements: { next_tlpt_due: string | null; status: string }[]
-): number {
-  if (tlptEngagements.length === 0) return 0; // No TLPT = non-compliant
-
-  const now = new Date();
-  const threeYearsAgo = new Date(now.getFullYear() - 3, now.getMonth(), now.getDate());
-
-  // Check for completed TLPT in last 3 years
-  const completedRecently = tlptEngagements.some(t =>
-    t.status === 'completed' && t.next_tlpt_due && new Date(t.next_tlpt_due) > threeYearsAgo
-  );
-
-  // Check for scheduled TLPT
-  const hasScheduled = tlptEngagements.some(t =>
-    ['scheduled', 'in_progress'].includes(t.status)
-  );
-
-  if (completedRecently) return 100;
-  if (hasScheduled) return 60;
-  return 30; // Has historical TLPT but not current
-}
-
-/**
- * Score test findings by CVSS-weighted remediation rate
- */
-function scoreRemediationByCVSS(
-  findings: { cvss_score: number | null; remediation_status: string }[]
-): number {
-  if (findings.length === 0) return 80; // No findings is good
-
-  let totalWeight = 0;
-  let remediatedWeight = 0;
-
-  for (const finding of findings) {
-    // Use CVSS if available, default severity-based weights otherwise
-    const weight = finding.cvss_score || 5.0;
-    totalWeight += weight;
-
-    if (['remediated', 'risk_accepted', 'fixed'].includes(finding.remediation_status)) {
-      remediatedWeight += weight;
-    }
-  }
-
-  if (totalWeight === 0) return 80;
-  return Math.round((remediatedWeight / totalWeight) * 100);
 }
 
 // =============================================================================
@@ -689,26 +506,12 @@ function calculateResilienceTestingScore(
     return { level: 0 as MaturityLevel, percent: 15 };
   }
 
-  // Required test types per DORA
-  const requiredTestTypes = [
-    'vulnerability_assessment',
-    'penetration_testing',
-    'scenario_based',
-    'red_team',
-    'disaster_recovery',
-    'business_continuity',
-    'tabletop_exercise',
-    'backup_restoration',
-    'failover_testing',
-    'communication_testing',
-  ];
-
   // 1. Test Coverage (25% weight) - types covered / 10 required
   const testTypes = new Set(tests.map(t => t.test_type?.toLowerCase() || ''));
-  const coveredTypes = requiredTestTypes.filter(rt =>
+  const coveredTypes = REQUIRED_TEST_TYPES.filter(rt =>
     testTypes.has(rt) || [...testTypes].some(tt => tt.includes(rt.replace('_', ' ')) || tt.includes(rt))
   );
-  const coverageScore = (coveredTypes.length / requiredTestTypes.length) * 100;
+  const coverageScore = (coveredTypes.length / REQUIRED_TEST_TYPES.length) * 100;
   score += (coverageScore / 100) * 25;
 
   // 2. TLPT Compliance (25% weight) - required every 3 years
@@ -970,23 +773,6 @@ function calculateInfoSharingScore(
   const level = percentToMaturityLevel(percent);
 
   return { level, percent };
-}
-
-/**
- * Convert percentage to maturity level
- * Aligned with DORA requirements where L3 (Well-Defined) is the minimum for compliance
- * L4: Optimized (90%+) - Continuous improvement, proactive
- * L3: Well-Defined (75%+) - DORA minimum compliance
- * L2: Managed (50%+) - Documented but inconsistent
- * L1: Initial (25%+) - Ad-hoc processes
- * L0: Non-existent (<25%) - No formal processes
- */
-function percentToMaturityLevel(percent: number): MaturityLevel {
-  if (percent >= 90) return 4;  // Optimized - exceeds DORA
-  if (percent >= 75) return 3;  // Well-Defined - DORA compliant
-  if (percent >= 50) return 2;  // Managed - needs improvement
-  if (percent >= 25) return 1;  // Initial - significant gaps
-  return 0;                      // Non-existent - critical gaps
 }
 
 /**
