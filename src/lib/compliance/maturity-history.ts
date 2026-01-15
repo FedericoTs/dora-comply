@@ -171,7 +171,8 @@ export async function createMaturitySnapshot(
 }
 
 /**
- * Get current compliance data from vendor_dora_compliance or calculate fresh
+ * Get current compliance data calculated from live data sources
+ * Calculates KPIs from: vendors, incidents, tests, documents, certifications
  */
 async function getCurrentComplianceData(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -179,206 +180,472 @@ async function getCurrentComplianceData(
   vendorId?: string
 ): Promise<SnapshotData | null> {
   try {
-    if (vendorId) {
-      // Get vendor-specific compliance data
-      const { data: compliance } = await supabase
-        .from('vendor_dora_compliance')
-        .select('*')
-        .eq('vendor_id', vendorId)
-        .single();
+    // Fetch all relevant data in parallel
+    const [
+      vendorsResult,
+      incidentsResult,
+      testsResult,
+      findingsResult,
+      documentsResult,
+      certificationsResult,
+    ] = await Promise.all([
+      // Vendors for TPRM pillar
+      supabase
+        .from('vendors')
+        .select('id, tier, status, risk_score, lei, supports_critical_function, last_assessment_date')
+        .eq('organization_id', organizationId)
+        .is('deleted_at', null),
 
-      if (compliance) {
-        return mapComplianceToSnapshotData(compliance);
-      }
+      // Incidents for Incident Reporting pillar
+      supabase
+        .from('incidents')
+        .select('id, classification, status, incident_type')
+        .eq('organization_id', organizationId),
+
+      // Tests for Resilience Testing pillar
+      supabase
+        .from('resilience_tests')
+        .select('id, status, test_type')
+        .eq('organization_id', organizationId),
+
+      // Findings for gap analysis
+      supabase
+        .from('test_findings')
+        .select('id, severity, status')
+        .eq('organization_id', organizationId),
+
+      // Documents for evidence
+      supabase
+        .from('documents')
+        .select('id, type, parsing_status')
+        .eq('organization_id', organizationId),
+
+      // Certifications for ICT Risk Management
+      supabase
+        .from('vendor_certifications')
+        .select('id, standard, status, vendor_id')
+        .eq('organization_id', organizationId),
+    ]);
+
+    const vendors = vendorsResult.data || [];
+    const incidents = incidentsResult.data || [];
+    const tests = testsResult.data || [];
+    const findings = findingsResult.data || [];
+    const documents = documentsResult.data || [];
+    const certifications = certificationsResult.data || [];
+
+    // If vendor-specific, filter data
+    const relevantVendors = vendorId
+      ? vendors.filter(v => v.id === vendorId)
+      : vendors;
+    const relevantCerts = vendorId
+      ? certifications.filter(c => c.vendor_id === vendorId)
+      : certifications;
+
+    // Calculate pillar scores from real data
+    const pillarScores = {
+      ict_risk_management: calculateICTRiskScore(relevantVendors, relevantCerts, documents),
+      incident_reporting: calculateIncidentReportingScore(incidents),
+      resilience_testing: calculateResilienceTestingScore(tests, findings),
+      third_party_risk: calculateTPRMScore(relevantVendors, relevantCerts),
+      information_sharing: calculateInfoSharingScore(documents),
+    };
+
+    // Calculate overall maturity (weighted average)
+    const weights = {
+      ict_risk_management: 3,
+      incident_reporting: 3,
+      resilience_testing: 2,
+      third_party_risk: 3,
+      information_sharing: 1,
+    };
+
+    let totalWeight = 0;
+    let weightedSum = 0;
+    let weightedPercentSum = 0;
+
+    for (const [pillar, score] of Object.entries(pillarScores)) {
+      const weight = weights[pillar as keyof typeof weights];
+      totalWeight += weight;
+      weightedSum += score.level * weight;
+      weightedPercentSum += score.percent * weight;
     }
 
-    // Get aggregate organization compliance
-    const { data: vendors } = await supabase
-      .from('vendor_dora_compliance')
-      .select('*')
-      .eq('organization_id', organizationId);
+    const overallLevel = Math.round(weightedSum / totalWeight) as MaturityLevel;
+    const overallPercent = Math.round(weightedPercentSum / totalWeight);
 
-    if (!vendors || vendors.length === 0) {
-      // Return baseline data if no compliance records exist
-      return {
-        overall_level: 0,
-        overall_percent: 0,
-        pillars: {
-          ict_risk_management: { level: 0, percent: 0 },
-          incident_reporting: { level: 0, percent: 0 },
-          resilience_testing: { level: 0, percent: 0 },
-          third_party_risk: { level: 0, percent: 0 },
-          information_sharing: { level: 0, percent: 0 },
-        },
-        gaps: {
-          total: 64, // Total DORA requirements
-          met: 0,
-          partial: 0,
-          not_met: 64,
-          critical: 0,
-          high: 0,
-          medium: 0,
-          low: 0,
-        },
-        critical_gaps: [],
-        estimated_weeks: undefined,
-      };
-    }
+    // Calculate gaps from findings and missing data
+    const gapAnalysis = calculateGapAnalysis(
+      relevantVendors,
+      incidents,
+      tests,
+      findings,
+      documents,
+      relevantCerts
+    );
 
-    // Aggregate across all vendors
-    return aggregateComplianceData(vendors);
+    return {
+      overall_level: overallLevel,
+      overall_percent: overallPercent,
+      pillars: pillarScores,
+      gaps: gapAnalysis.gaps,
+      critical_gaps: gapAnalysis.criticalGaps,
+      estimated_weeks: gapAnalysis.estimatedWeeks,
+    };
   } catch (error) {
     console.error('[MaturityHistory] Get compliance data error:', error);
     return null;
   }
 }
 
-function mapComplianceToSnapshotData(compliance: Record<string, unknown>): SnapshotData {
-  const levelMap: Record<string, MaturityLevel> = {
-    'L0 - Not Performed': 0,
-    'L1 - Informal': 1,
-    'L2 - Planned & Tracked': 2,
-    'L3 - Well-Defined': 3,
-    'L4 - Quantitatively Managed': 4,
-  };
+/**
+ * Calculate ICT Risk Management score
+ * Based on: vendor risk assessments, certifications, documented policies
+ */
+function calculateICTRiskScore(
+  vendors: { risk_score: number | null; last_assessment_date: string | null }[],
+  certifications: { standard: string; status: string }[],
+  documents: { type: string; parsing_status: string }[]
+): { level: MaturityLevel; percent: number } {
+  let score = 0;
 
-  const overallLabel = compliance.overall_maturity_level as string || 'L0 - Not Performed';
-  const overallLevel = levelMap[overallLabel] ?? 0;
-
-  return {
-    overall_level: overallLevel,
-    overall_percent: (compliance.overall_readiness_percent as number) || 0,
-    pillars: {
-      ict_risk_management: {
-        level: levelMap[compliance.pillar_ict_risk_mgmt as string] ?? 0,
-        percent: (compliance.pillar_ict_risk_mgmt_percent as number) || 0,
-      },
-      incident_reporting: {
-        level: levelMap[compliance.pillar_incident_reporting as string] ?? 0,
-        percent: (compliance.pillar_incident_reporting_percent as number) || 0,
-      },
-      resilience_testing: {
-        level: levelMap[compliance.pillar_resilience_testing as string] ?? 0,
-        percent: (compliance.pillar_resilience_testing_percent as number) || 0,
-      },
-      third_party_risk: {
-        level: levelMap[compliance.pillar_third_party_risk as string] ?? 0,
-        percent: (compliance.pillar_third_party_risk_percent as number) || 0,
-      },
-      information_sharing: {
-        level: levelMap[compliance.pillar_info_sharing as string] ?? 0,
-        percent: (compliance.pillar_info_sharing_percent as number) || 0,
-      },
-    },
-    gaps: {
-      total: (compliance.total_requirements as number) || 0,
-      met: (compliance.requirements_met as number) || 0,
-      partial: (compliance.requirements_partial as number) || 0,
-      not_met: (compliance.requirements_not_met as number) || 0,
-      critical: (compliance.critical_gaps_count as number) || 0,
-      high: (compliance.high_gaps_count as number) || 0,
-      medium: (compliance.medium_gaps_count as number) || 0,
-      low: (compliance.low_gaps_count as number) || 0,
-    },
-    critical_gaps: (compliance.critical_gaps as CriticalGap[]) || [],
-    estimated_weeks: (compliance.estimated_remediation_months as number)
-      ? Math.round((compliance.estimated_remediation_months as number) * 4)
-      : undefined,
-  };
-}
-
-function aggregateComplianceData(vendors: Record<string, unknown>[]): SnapshotData {
-  if (vendors.length === 0) {
-    return {
-      overall_level: 0,
-      overall_percent: 0,
-      pillars: {
-        ict_risk_management: { level: 0, percent: 0 },
-        incident_reporting: { level: 0, percent: 0 },
-        resilience_testing: { level: 0, percent: 0 },
-        third_party_risk: { level: 0, percent: 0 },
-        information_sharing: { level: 0, percent: 0 },
-      },
-      gaps: { total: 0, met: 0, partial: 0, not_met: 0, critical: 0, high: 0, medium: 0, low: 0 },
-      critical_gaps: [],
-    };
+  // Vendor risk assessments (40% weight)
+  if (vendors.length > 0) {
+    const assessedVendors = vendors.filter(v => v.risk_score !== null);
+    const assessmentRate = (assessedVendors.length / vendors.length) * 100;
+    score += (assessmentRate / 100) * 40;
+  } else {
+    score += 20; // Base score if no vendors yet
   }
 
-  // Map all vendors to snapshot data
-  const vendorData = vendors.map(mapComplianceToSnapshotData);
+  // Valid certifications (30% weight)
+  const validCerts = certifications.filter(c => c.status === 'valid');
+  const soc2Certs = validCerts.filter(c => c.standard.toLowerCase().includes('soc'));
+  const isoCerts = validCerts.filter(c => c.standard.toLowerCase().includes('27001'));
+  if (soc2Certs.length > 0 || isoCerts.length > 0) {
+    const certScore = Math.min(100, (validCerts.length / Math.max(vendors.length, 1)) * 100);
+    score += (certScore / 100) * 30;
+  }
 
-  // Calculate averages
-  const avgOverallLevel = Math.round(
-    vendorData.reduce((sum, v) => sum + v.overall_level, 0) / vendors.length
-  ) as MaturityLevel;
+  // Documented policies (30% weight)
+  const parsedDocs = documents.filter(d => d.parsing_status === 'completed');
+  if (parsedDocs.length > 0) {
+    score += Math.min(30, parsedDocs.length * 5);
+  }
 
-  const avgOverallPercent =
-    vendorData.reduce((sum, v) => sum + v.overall_percent, 0) / vendors.length;
+  const percent = Math.round(score);
+  const level = percentToMaturityLevel(percent);
 
-  // Aggregate pillars
-  const pillars = {
-    ict_risk_management: {
-      level: Math.round(
-        vendorData.reduce((sum, v) => sum + v.pillars.ict_risk_management.level, 0) / vendors.length
-      ) as MaturityLevel,
-      percent:
-        vendorData.reduce((sum, v) => sum + v.pillars.ict_risk_management.percent, 0) /
-        vendors.length,
-    },
-    incident_reporting: {
-      level: Math.round(
-        vendorData.reduce((sum, v) => sum + v.pillars.incident_reporting.level, 0) / vendors.length
-      ) as MaturityLevel,
-      percent:
-        vendorData.reduce((sum, v) => sum + v.pillars.incident_reporting.percent, 0) /
-        vendors.length,
-    },
-    resilience_testing: {
-      level: Math.round(
-        vendorData.reduce((sum, v) => sum + v.pillars.resilience_testing.level, 0) / vendors.length
-      ) as MaturityLevel,
-      percent:
-        vendorData.reduce((sum, v) => sum + v.pillars.resilience_testing.percent, 0) /
-        vendors.length,
-    },
-    third_party_risk: {
-      level: Math.round(
-        vendorData.reduce((sum, v) => sum + v.pillars.third_party_risk.level, 0) / vendors.length
-      ) as MaturityLevel,
-      percent:
-        vendorData.reduce((sum, v) => sum + v.pillars.third_party_risk.percent, 0) / vendors.length,
-    },
-    information_sharing: {
-      level: Math.round(
-        vendorData.reduce((sum, v) => sum + v.pillars.information_sharing.level, 0) / vendors.length
-      ) as MaturityLevel,
-      percent:
-        vendorData.reduce((sum, v) => sum + v.pillars.information_sharing.percent, 0) /
-        vendors.length,
-    },
+  return { level, percent };
+}
+
+/**
+ * Calculate Incident Reporting score
+ * Based on: incident tracking, classification, resolution
+ */
+function calculateIncidentReportingScore(
+  incidents: { classification: string; status: string; incident_type: string }[]
+): { level: MaturityLevel; percent: number } {
+  // Base score for having incident tracking capability
+  let score = 25;
+
+  if (incidents.length === 0) {
+    // No incidents - could be good (no problems) or bad (not tracking)
+    // Give moderate score for having capability even without incidents
+    return { level: 1 as MaturityLevel, percent: 40 };
+  }
+
+  // Proper classification (25% weight)
+  const classifiedIncidents = incidents.filter(i =>
+    i.classification && ['major', 'significant', 'minor'].includes(i.classification)
+  );
+  score += (classifiedIncidents.length / incidents.length) * 25;
+
+  // Resolution rate (25% weight)
+  const resolvedIncidents = incidents.filter(i =>
+    ['resolved', 'closed'].includes(i.status)
+  );
+  score += (resolvedIncidents.length / incidents.length) * 25;
+
+  // Incident type categorization (25% weight)
+  const typedIncidents = incidents.filter(i => i.incident_type);
+  score += (typedIncidents.length / incidents.length) * 25;
+
+  const percent = Math.round(score);
+  const level = percentToMaturityLevel(percent);
+
+  return { level, percent };
+}
+
+/**
+ * Calculate Resilience Testing score
+ * Based on: test coverage, completion rate, findings remediation
+ */
+function calculateResilienceTestingScore(
+  tests: { status: string; test_type: string }[],
+  findings: { severity: string; status: string }[]
+): { level: MaturityLevel; percent: number } {
+  // Base score for having testing programme
+  let score = 20;
+
+  if (tests.length === 0) {
+    return { level: 0 as MaturityLevel, percent: 20 };
+  }
+
+  // Test completion rate (40% weight)
+  const completedTests = tests.filter(t => t.status === 'completed');
+  score += (completedTests.length / tests.length) * 40;
+
+  // Test type diversity (20% weight)
+  const testTypes = new Set(tests.map(t => t.test_type));
+  const diversityScore = Math.min(20, testTypes.size * 5);
+  score += diversityScore;
+
+  // Findings remediation (20% weight)
+  if (findings.length > 0) {
+    const remediatedFindings = findings.filter(f =>
+      ['remediated', 'risk_accepted'].includes(f.status)
+    );
+    score += (remediatedFindings.length / findings.length) * 20;
+  } else {
+    score += 20; // No findings is good
+  }
+
+  const percent = Math.round(score);
+  const level = percentToMaturityLevel(percent);
+
+  return { level, percent };
+}
+
+/**
+ * Calculate Third Party Risk Management score
+ * Based on: vendor inventory, risk assessments, due diligence
+ */
+function calculateTPRMScore(
+  vendors: { tier: string; status: string; risk_score: number | null; lei: string | null; supports_critical_function: boolean }[],
+  certifications: { standard: string; status: string }[]
+): { level: MaturityLevel; percent: number } {
+  // Base score for having vendor management
+  let score = 15;
+
+  if (vendors.length === 0) {
+    return { level: 0 as MaturityLevel, percent: 15 };
+  }
+
+  // Active vendor management (25% weight)
+  const activeVendors = vendors.filter(v => v.status === 'active');
+  score += (activeVendors.length / vendors.length) * 25;
+
+  // Risk assessment coverage (25% weight)
+  const assessedVendors = vendors.filter(v => v.risk_score !== null);
+  score += (assessedVendors.length / vendors.length) * 25;
+
+  // LEI validation (15% weight)
+  const leiValidated = vendors.filter(v => v.lei);
+  score += (leiValidated.length / vendors.length) * 15;
+
+  // Critical function identification (10% weight)
+  const criticalVendors = vendors.filter(v => v.supports_critical_function);
+  if (criticalVendors.length > 0) {
+    score += 10;
+  }
+
+  // Vendor certifications (10% weight)
+  const vendorWithCerts = new Set(certifications.map(c => c.standard));
+  if (vendorWithCerts.size > 0) {
+    score += Math.min(10, vendorWithCerts.size * 2);
+  }
+
+  const percent = Math.round(score);
+  const level = percentToMaturityLevel(percent);
+
+  return { level, percent };
+}
+
+/**
+ * Calculate Information Sharing score
+ * Based on: documented processes, external sharing participation
+ */
+function calculateInfoSharingScore(
+  documents: { type: string; parsing_status: string }[]
+): { level: MaturityLevel; percent: number } {
+  // Base score - info sharing is often least mature
+  let score = 20;
+
+  // Having documented evidence of information sharing practices
+  const completedDocs = documents.filter(d => d.parsing_status === 'completed');
+  if (completedDocs.length > 0) {
+    score += Math.min(30, completedDocs.length * 3);
+  }
+
+  // Information sharing is typically the least developed pillar
+  // Cap at 60% unless explicitly configured
+  const percent = Math.min(60, Math.round(score));
+  const level = percentToMaturityLevel(percent);
+
+  return { level, percent };
+}
+
+/**
+ * Convert percentage to maturity level
+ */
+function percentToMaturityLevel(percent: number): MaturityLevel {
+  if (percent >= 85) return 4;
+  if (percent >= 70) return 3;
+  if (percent >= 50) return 2;
+  if (percent >= 25) return 1;
+  return 0;
+}
+
+/**
+ * Calculate gap analysis from compliance data
+ */
+function calculateGapAnalysis(
+  vendors: { tier: string; risk_score: number | null }[],
+  incidents: { classification: string; status: string }[],
+  tests: { status: string }[],
+  findings: { severity: string; status: string }[],
+  documents: { type: string }[],
+  certifications: { standard: string; status: string }[]
+): {
+  gaps: {
+    total: number;
+    met: number;
+    partial: number;
+    not_met: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
   };
+  criticalGaps: CriticalGap[];
+  estimatedWeeks: number | undefined;
+} {
+  const totalRequirements = 64; // Total DORA requirements
+  const criticalGaps: CriticalGap[] = [];
+  let met = 0;
+  let partial = 0;
+  let critical = 0;
+  let high = 0;
+  let medium = 0;
+  let low = 0;
 
-  // Aggregate gaps
-  const gaps = {
-    total: vendorData.reduce((sum, v) => sum + v.gaps.total, 0),
-    met: vendorData.reduce((sum, v) => sum + v.gaps.met, 0),
-    partial: vendorData.reduce((sum, v) => sum + v.gaps.partial, 0),
-    not_met: vendorData.reduce((sum, v) => sum + v.gaps.not_met, 0),
-    critical: vendorData.reduce((sum, v) => sum + v.gaps.critical, 0),
-    high: vendorData.reduce((sum, v) => sum + v.gaps.high, 0),
-    medium: vendorData.reduce((sum, v) => sum + v.gaps.medium, 0),
-    low: vendorData.reduce((sum, v) => sum + v.gaps.low, 0),
-  };
+  // ICT Risk Management gaps
+  const hasRiskFramework = documents.length > 0;
+  const hasVendorAssessments = vendors.some(v => v.risk_score !== null);
+  if (!hasRiskFramework) {
+    criticalGaps.push({
+      requirement_id: 'art-5',
+      article: 'Article 5',
+      pillar: 'ict_risk_management',
+      priority: 'critical',
+      description: 'No documented ICT risk management framework detected',
+    });
+    critical++;
+  } else if (hasVendorAssessments) {
+    met += 8;
+    partial += 4;
+  } else {
+    partial += 10;
+    high += 2;
+  }
 
-  // Collect all critical gaps
-  const criticalGaps = vendorData.flatMap((v) => v.critical_gaps);
+  // Incident Reporting gaps
+  const hasIncidentProcess = incidents.length > 0;
+  if (!hasIncidentProcess) {
+    criticalGaps.push({
+      requirement_id: 'art-17',
+      article: 'Article 17',
+      pillar: 'incident_reporting',
+      priority: 'high',
+      description: 'No incident management records found',
+    });
+    high++;
+    partial += 6;
+  } else {
+    met += 8;
+    partial += 2;
+  }
+
+  // Resilience Testing gaps
+  const hasTestingProgramme = tests.length > 0;
+  const completedTests = tests.filter(t => t.status === 'completed').length;
+  if (!hasTestingProgramme) {
+    criticalGaps.push({
+      requirement_id: 'art-24',
+      article: 'Article 24',
+      pillar: 'resilience_testing',
+      priority: 'critical',
+      description: 'No resilience testing programme established',
+    });
+    critical++;
+  } else if (completedTests === 0) {
+    high++;
+    partial += 4;
+  } else {
+    met += 6;
+    partial += 2;
+  }
+
+  // TPRM gaps
+  const criticalVendorsWithoutAssessment = vendors.filter(
+    v => v.tier === 'critical' && v.risk_score === null
+  );
+  if (vendors.length === 0) {
+    criticalGaps.push({
+      requirement_id: 'art-28',
+      article: 'Article 28',
+      pillar: 'third_party_risk',
+      priority: 'critical',
+      description: 'No third-party vendor inventory established',
+    });
+    critical++;
+  } else if (criticalVendorsWithoutAssessment.length > 0) {
+    criticalGaps.push({
+      requirement_id: 'art-28',
+      article: 'Article 28',
+      pillar: 'third_party_risk',
+      priority: 'high',
+      description: `${criticalVendorsWithoutAssessment.length} critical vendors without risk assessment`,
+    });
+    high++;
+    partial += 4;
+  } else {
+    met += 10;
+    partial += 2;
+  }
+
+  // Open findings contribute to gaps
+  const openFindings = findings.filter(f => !['remediated', 'risk_accepted'].includes(f.status));
+  const criticalFindings = openFindings.filter(f => f.severity === 'critical').length;
+  const highFindings = openFindings.filter(f => f.severity === 'high').length;
+  const mediumFindings = openFindings.filter(f => f.severity === 'medium').length;
+  const lowFindings = openFindings.filter(f => f.severity === 'low').length;
+
+  critical += criticalFindings;
+  high += highFindings;
+  medium += mediumFindings;
+  low += lowFindings;
+
+  // Calculate remaining
+  const not_met = totalRequirements - met - partial;
+
+  // Estimate remediation time
+  const estimatedWeeks = criticalGaps.length * 4 + high * 2 + medium * 1;
 
   return {
-    overall_level: avgOverallLevel,
-    overall_percent: avgOverallPercent,
-    pillars,
-    gaps,
-    critical_gaps: criticalGaps.slice(0, 10), // Top 10 critical gaps
+    gaps: {
+      total: totalRequirements,
+      met: Math.min(met, totalRequirements),
+      partial: Math.min(partial, totalRequirements - met),
+      not_met: Math.max(0, not_met),
+      critical,
+      high,
+      medium,
+      low,
+    },
+    criticalGaps: criticalGaps.slice(0, 10),
+    estimatedWeeks: estimatedWeeks > 0 ? estimatedWeeks : undefined,
   };
 }
 
