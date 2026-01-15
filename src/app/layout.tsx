@@ -14,8 +14,31 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "DORA Comply | AI-Powered DORA Compliance Platform",
+  title: {
+    default: "DORA Comply | AI-Powered DORA Compliance Platform",
+    template: "%s | DORA Comply",
+  },
   description: "Automate vendor assessments, generate the Register of Information, and manage ICT incident reporting for EU financial institutions.",
+  keywords: ["DORA", "compliance", "EU regulation", "financial services", "vendor risk", "ICT risk", "Register of Information", "incident reporting"],
+  authors: [{ name: "DORA Comply" }],
+  creator: "DORA Comply",
+  metadataBase: new URL("https://doracomply.eu"),
+  openGraph: {
+    type: "website",
+    locale: "en_EU",
+    siteName: "DORA Comply",
+    title: "DORA Comply | AI-Powered DORA Compliance Platform",
+    description: "Automate vendor assessments, generate the Register of Information, and manage ICT incident reporting for EU financial institutions.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DORA Comply | AI-Powered DORA Compliance Platform",
+    description: "AI-powered DORA compliance for EU financial institutions. Deadline: January 17, 2026.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
