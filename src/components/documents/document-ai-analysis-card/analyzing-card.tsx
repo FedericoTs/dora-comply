@@ -29,13 +29,11 @@ export function AnalyzingCard({ progress }: AnalyzingCardProps) {
           <ProgressStep
             isComplete={progress >= 80}
             isActive={progress >= 20 && progress < 80}
-            isPending={progress < 20}
             label="Analyzing DORA Article 30 provisions"
           />
           <ProgressStep
             isComplete={false}
             isActive={progress >= 80}
-            isPending={progress < 80}
             label="Identifying risks and gaps"
           />
         </div>
@@ -51,11 +49,10 @@ export function AnalyzingCard({ progress }: AnalyzingCardProps) {
 interface ProgressStepProps {
   isComplete: boolean;
   isActive: boolean;
-  isPending?: boolean;
   label: string;
 }
 
-function ProgressStep({ isComplete, isActive, label }: Omit<ProgressStepProps, 'isPending'>) {
+function ProgressStep({ isComplete, isActive, label }: ProgressStepProps) {
   return (
     <div className="flex items-center gap-2 text-muted-foreground">
       {isComplete ? (

@@ -150,7 +150,6 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
               deadline: new Date(r.deadline),
               submitted_at: r.submitted_at,
             }))}
-            incidentStatus={incident.status}
           />
         </CardContent>
       </Card>

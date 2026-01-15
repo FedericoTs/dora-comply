@@ -110,7 +110,7 @@ async function analyzeWithClaude(
           },
           {
             type: 'text',
-            text: buildAnalysisPrompt(''), // Empty string - PDF is sent directly
+            text: buildAnalysisPrompt(),
           },
         ],
       },

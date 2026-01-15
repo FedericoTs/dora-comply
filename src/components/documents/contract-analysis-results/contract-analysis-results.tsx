@@ -99,7 +99,7 @@ export function ContractAnalysisResults({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ProvisionsList provisions={article30_2} article="30.2" />
+              <ProvisionsList provisions={article30_2} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -112,7 +112,7 @@ export function ContractAnalysisResults({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ProvisionsList provisions={article30_3} article="30.3" />
+              <ProvisionsList provisions={article30_3} />
             </CardContent>
           </Card>
         </TabsContent>

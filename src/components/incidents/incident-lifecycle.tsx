@@ -32,8 +32,6 @@ interface IncidentLifecycleProps {
   detectionDatetime: Date;
   /** List of reports submitted for this incident */
   reports: ReportInfo[];
-  /** Current incident status */
-  incidentStatus: string;
   /** Whether to show a compact version */
   compact?: boolean;
 }
@@ -133,7 +131,7 @@ export function IncidentLifecycle({
   detectionDatetime,
   reports,
   compact = false,
-}: Omit<IncidentLifecycleProps, 'incidentStatus'>) {
+}: IncidentLifecycleProps) {
   // Non-major incidents don't require regulatory reporting
   if (classification !== 'major') {
     return (

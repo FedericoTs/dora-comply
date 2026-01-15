@@ -7,10 +7,9 @@ import type { ExtractedProvision, ExtractedArticle30_2, ExtractedArticle30_3 } f
 
 interface ProvisionsListProps {
   provisions: ExtractedArticle30_2 | ExtractedArticle30_3;
-  article: '30.2' | '30.3';
 }
 
-export function ProvisionsList({ provisions }: Omit<ProvisionsListProps, 'article'>) {
+export function ProvisionsList({ provisions }: ProvisionsListProps) {
   const entries = Object.entries(provisions) as [string, ExtractedProvision][];
 
   // Count statuses

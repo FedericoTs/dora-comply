@@ -11,7 +11,7 @@
  * - Audit metadata to update the existing vendor
  */
 
-import type { ParsedSOC2Report } from '@/lib/ai/parsers/types';
+import type { ParsedSOC2Report, ExtractedSubserviceOrg } from '@/lib/ai/parsers/types';
 import type {
   SOC2ToRoiMappingResult,
   VendorUpdateData,
