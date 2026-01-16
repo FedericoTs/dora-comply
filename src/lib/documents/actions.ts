@@ -32,6 +32,7 @@ import {
   type DocumentErrorCode,
 } from '@/lib/errors';
 import { getCurrentUserOrganization, getCurrentUserId } from '@/lib/auth/organization';
+import { getDocumentTypesForFramework } from '@/lib/framework-mappings';
 
 // ============================================================================
 // Types
@@ -525,7 +526,22 @@ export async function fetchDocumentsAction(
     query = query.ilike('filename', `%${filters.search}%`);
   }
 
-  if (filters.type && filters.type.length > 0) {
+  // Framework filter - filter by document types relevant to the framework
+  if (filters.framework) {
+    const relevantTypes = getDocumentTypesForFramework(filters.framework);
+    // If user also specified type filters, intersect them with framework types
+    if (filters.type && filters.type.length > 0) {
+      const intersectedTypes = filters.type.filter(t => relevantTypes.includes(t));
+      if (intersectedTypes.length > 0) {
+        query = query.in('type', intersectedTypes);
+      } else {
+        // No overlap - show framework types
+        query = query.in('type', relevantTypes);
+      }
+    } else {
+      query = query.in('type', relevantTypes);
+    }
+  } else if (filters.type && filters.type.length > 0) {
     query = query.in('type', filters.type);
   }
 

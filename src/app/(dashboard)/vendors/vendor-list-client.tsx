@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useTransition, useCallback } from 'react';
+import { useState, useTransition, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Loader2, Trash2, Upload } from 'lucide-react';
 import { useUrlFilters } from '@/hooks/use-url-filters';
+import { useFramework } from '@/lib/context/framework-context';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { FrameworkContextBanner } from '@/components/ui/framework-context-banner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +59,9 @@ export function VendorListClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const { getParam, getArrayParam, getBoolParam, getNumberParam, setParams, clearParams } = useUrlFilters();
+
+  // Get active framework for filtering
+  const { activeFramework } = useFramework();
 
   // Initialize state from URL params
   const initialPage = getNumberParam('page', 1) ?? 1;
@@ -173,6 +178,8 @@ export function VendorListClient({
           ...qfFilters,
           ...(newFilters ?? filters),
           search: newSearch ?? (searchQuery || undefined),
+          // Add framework filter
+          framework: activeFramework || undefined,
         };
 
         const result = await fetchVendorsAction({
@@ -190,8 +197,17 @@ export function VendorListClient({
         setSelectedIds([]);
       });
     },
-    [page, limit, filters, sortOptions, searchQuery, quickFilter, getFiltersFromQuickFilter]
+    [page, limit, filters, sortOptions, searchQuery, quickFilter, getFiltersFromQuickFilter, activeFramework]
   );
+
+  // Refetch when framework changes
+  useEffect(() => {
+    if (activeFramework) {
+      fetchVendors(1);
+    }
+    // Only depend on framework, not fetchVendors to avoid infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFramework]);
 
   // Handlers - sync to URL for shareable/bookmarkable state
   const handleQuickFilterChange = (filterId: QuickFilterId) => {
@@ -309,6 +325,9 @@ export function VendorListClient({
 
   return (
     <div className="space-y-4">
+      {/* Framework Context Banner */}
+      <FrameworkContextBanner pageType="vendors" />
+
       {/* Quick Filter Tabs */}
       <QuickFilters
         filters={quickFilterOptions}

@@ -16,12 +16,15 @@ import {
   getDocumentStatus,
 } from '@/lib/documents/types';
 import { fetchDocumentsAction } from '@/lib/documents/actions';
+import type { FrameworkCode } from '@/lib/licensing/types';
 
 interface UseDocumentsStateProps {
   initialData: PaginatedResult<DocumentWithVendor>;
+  /** Active framework to filter documents by relevant types */
+  framework?: FrameworkCode;
 }
 
-export function useDocumentsState({ initialData }: UseDocumentsStateProps) {
+export function useDocumentsState({ initialData, framework }: UseDocumentsStateProps) {
   const router = useRouter();
 
   // Core state
@@ -81,6 +84,7 @@ export function useDocumentsState({ initialData }: UseDocumentsStateProps) {
           search: debouncedSearch || undefined,
           type: typeFilters.length > 0 ? typeFilters : undefined,
           vendor_id: vendorFilter !== 'all' ? vendorFilter : undefined,
+          framework: framework || undefined,
         },
         pagination: { page: newPage, limit: initialData.limit },
         sort: { field: sortField === 'vendor' ? 'created_at' : sortField, direction: sortDirection },
@@ -96,7 +100,7 @@ export function useDocumentsState({ initialData }: UseDocumentsStateProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [page, debouncedSearch, typeFilters, vendorFilter, sortField, sortDirection, initialData.limit]);
+  }, [page, debouncedSearch, typeFilters, vendorFilter, sortField, sortDirection, initialData.limit, framework]);
 
   // Fetch when debounced search changes
   useEffect(() => {
@@ -104,6 +108,15 @@ export function useDocumentsState({ initialData }: UseDocumentsStateProps) {
       fetchDocuments(1);
     }
   }, [debouncedSearch, fetchDocuments]);
+
+  // Fetch when framework changes
+  useEffect(() => {
+    if (framework) {
+      fetchDocuments(1);
+    }
+    // Only depend on framework, not fetchDocuments to avoid double fetches
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [framework]);
 
   // Poll for status updates when documents are processing
   useEffect(() => {
@@ -124,6 +137,7 @@ export function useDocumentsState({ initialData }: UseDocumentsStateProps) {
           search: debouncedSearch || undefined,
           type: typeFilters.length > 0 ? typeFilters : undefined,
           vendor_id: vendorFilter !== 'all' ? vendorFilter : undefined,
+          framework: framework || undefined,
         },
         pagination: { page, limit: initialData.limit },
         sort: { field: sortField === 'vendor' ? 'created_at' : sortField, direction: sortDirection },
@@ -168,7 +182,7 @@ export function useDocumentsState({ initialData }: UseDocumentsStateProps) {
     processingIdsRef.current = currentProcessingIds;
 
     return () => clearInterval(pollInterval);
-  }, [documents, debouncedSearch, typeFilters, vendorFilter, page, sortField, sortDirection, initialData.limit, router]);
+  }, [documents, debouncedSearch, typeFilters, vendorFilter, page, sortField, sortDirection, initialData.limit, router, framework]);
 
   // Filter documents by status (client-side for status)
   const filteredDocuments = useMemo(() => {

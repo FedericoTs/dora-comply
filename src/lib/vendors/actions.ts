@@ -634,12 +634,43 @@ export async function fetchVendorsAction(
     pagination = { page: 1, limit: 20 },
   } = options;
 
+  // Framework filter - get vendor IDs that have gap analysis for the selected framework
+  let frameworkVendorIds: string[] | null = null;
+  if (filters.framework) {
+    // First, get the framework ID
+    const { data: framework } = await supabase
+      .from('frameworks')
+      .select('id')
+      .eq('code', filters.framework)
+      .single();
+
+    if (framework) {
+      // Get vendor IDs with gap analysis for this framework
+      const { data: gapAnalysis } = await supabase
+        .from('vendor_gap_analysis')
+        .select('vendor_id')
+        .eq('organization_id', organizationId)
+        .eq('target_framework_id', framework.id);
+
+      frameworkVendorIds = gapAnalysis?.map(g => g.vendor_id) || [];
+    }
+  }
+
   // Build query
   let query = supabase
     .from('vendors')
     .select('*', { count: 'exact' })
     .eq('organization_id', organizationId)
     .is('deleted_at', null);
+
+  // Apply framework filter if vendor IDs were found
+  if (frameworkVendorIds !== null) {
+    if (frameworkVendorIds.length === 0) {
+      // No vendors match the framework filter
+      return { data: [], total: 0, page: pagination.page, limit: pagination.limit, total_pages: 0 };
+    }
+    query = query.in('id', frameworkVendorIds);
+  }
 
   // Apply filters
   if (filters.search) {

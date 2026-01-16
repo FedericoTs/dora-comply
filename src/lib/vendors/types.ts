@@ -272,6 +272,8 @@ export interface VendorFilters {
   risk_max?: number;
   has_lei?: boolean;
   supports_critical_function?: boolean;
+  /** Filter by framework - shows only vendors with gap analysis for this framework */
+  framework?: 'dora' | 'nis2' | 'gdpr' | 'iso27001';
 }
 
 export interface VendorSortOptions {

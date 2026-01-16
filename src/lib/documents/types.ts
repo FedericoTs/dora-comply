@@ -113,6 +113,8 @@ export interface DocumentFilters {
   expiring_before?: string;
   uploaded_after?: string;
   uploaded_before?: string;
+  /** Filter by framework - shows only document types relevant to this framework */
+  framework?: 'dora' | 'nis2' | 'gdpr' | 'iso27001';
 }
 
 export interface DocumentSortOptions {

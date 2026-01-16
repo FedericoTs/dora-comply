@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, ArrowUpDown, Loader2 } from 'lucide-react';
 import { SearchEmptyState, FilterEmptyState, NoDocumentsState } from '@/components/ui/empty-state';
+import { FrameworkContextBanner } from '@/components/ui/framework-context-banner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -31,6 +32,7 @@ import {
 } from '@/lib/documents/actions';
 import { fetchVendorsAction } from '@/lib/vendors/actions';
 import { useDocumentsState } from '@/hooks/use-documents-state';
+import { useFramework } from '@/lib/context/framework-context';
 import {
   DocumentRow,
   DocumentCard,
@@ -92,8 +94,11 @@ function SortableHeader({ field, sortField, sortDirection, onSort, children }: S
 // ============================================================================
 
 export function DocumentsClient({ initialData, initialVendors = [] }: DocumentsClientProps) {
-  // Use the custom hook for state management
-  const state = useDocumentsState({ initialData });
+  // Get active framework from context
+  const { activeFramework } = useFramework();
+
+  // Use the custom hook for state management with framework filter
+  const state = useDocumentsState({ initialData, framework: activeFramework });
 
   // Dialog state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -240,6 +245,9 @@ export function DocumentsClient({ initialData, initialVendors = [] }: DocumentsC
 
   return (
     <>
+      {/* Framework Context Banner */}
+      <FrameworkContextBanner pageType="documents" className="mb-4" />
+
       <Card className="card-elevated">
         {/* Toolbar */}
         <CardHeader className="pb-4">

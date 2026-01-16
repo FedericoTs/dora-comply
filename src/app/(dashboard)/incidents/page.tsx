@@ -20,6 +20,7 @@ import { getReportTypeLabel } from '@/lib/incidents/types';
 import { getOrganization } from '@/lib/org/context';
 import { hasModuleAccess } from '@/lib/licensing/check-access-server';
 import { LockedModule } from '@/components/licensing/locked-module';
+import { FrameworkContextBanner } from '@/components/ui/framework-context-banner';
 
 export const metadata = {
   title: 'Incidents | DORA Comply',
@@ -239,6 +240,9 @@ export default async function IncidentsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Framework Context Banner */}
+      <FrameworkContextBanner pageType="incidents" />
+
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
