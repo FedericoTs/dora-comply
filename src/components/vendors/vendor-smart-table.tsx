@@ -447,10 +447,10 @@ export function VendorSmartTable({
               )}
             </TableHead>
             <TableHead className="hidden lg:table-cell w-[140px]">
-              DORA Status
+              NIS2 Status
             </TableHead>
             <TableHead className="hidden lg:table-cell w-[140px]">
-              NIS2 Status
+              DORA Status
             </TableHead>
             <TableHead className="w-[120px] text-right">Actions</TableHead>
           </TableRow>
@@ -498,10 +498,10 @@ export function VendorSmartTable({
                   <RiskCell vendor={vendor} />
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
-                  <DoraComplianceCell vendor={vendor} />
+                  <Nis2ComplianceCell vendor={vendor} />
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
-                  <Nis2ComplianceCell vendor={vendor} />
+                  <DoraComplianceCell vendor={vendor} />
                 </TableCell>
                 <TableCell>
                   <ActionsCell
