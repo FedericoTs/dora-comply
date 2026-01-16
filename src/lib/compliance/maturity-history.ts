@@ -1339,6 +1339,241 @@ export async function getChangeLog(
 }
 
 // =============================================================================
+// DORA DASHBOARD DATA
+// =============================================================================
+
+export interface DORADashboardData {
+  overall_percent: number;
+  overall_level: MaturityLevel;
+  pillars: {
+    id: string;
+    name: string;
+    articles: string;
+    percent: number;
+    level: MaturityLevel;
+    status: 'compliant' | 'partial' | 'non_compliant' | 'not_assessed';
+  }[];
+  gaps: {
+    total: number;
+    met: number;
+    critical: number;
+    high: number;
+  };
+  critical_gaps: CriticalGap[];
+  estimated_weeks?: number;
+  last_updated?: string;
+}
+
+/**
+ * Get DORA dashboard data for the overview page
+ * Returns real calculated data from current compliance state or latest snapshot
+ */
+export async function getDORADashboardData(): Promise<ActionResult<DORADashboardData>> {
+  try {
+    const supabase = await createClient();
+
+    // Get current user and org
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!userData?.organization_id) {
+      return { success: false, error: 'No organization found' };
+    }
+
+    // Try to get latest snapshot first (cached/historical view)
+    const { data: latestSnapshot } = await supabase
+      .from('maturity_snapshots')
+      .select('*')
+      .eq('organization_id', userData.organization_id)
+      .is('vendor_id', null)
+      .order('snapshot_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    // If we have a recent snapshot (< 24h old), use it
+    if (latestSnapshot) {
+      const snapshotDate = new Date(latestSnapshot.created_at);
+      const hoursOld = (Date.now() - snapshotDate.getTime()) / (1000 * 60 * 60);
+
+      if (hoursOld < 24) {
+        return {
+          success: true,
+          data: formatSnapshotToDashboardData(latestSnapshot),
+        };
+      }
+    }
+
+    // Otherwise calculate fresh data
+    const complianceData = await getCurrentComplianceData(
+      supabase,
+      userData.organization_id
+    );
+
+    if (!complianceData) {
+      // Return empty/default state if no data
+      return {
+        success: true,
+        data: {
+          overall_percent: 0,
+          overall_level: 0 as MaturityLevel,
+          pillars: getDefaultPillars(),
+          gaps: { total: 64, met: 0, critical: 0, high: 0 },
+          critical_gaps: [],
+        },
+      };
+    }
+
+    // Convert to dashboard format
+    const dashboardData: DORADashboardData = {
+      overall_percent: complianceData.overall_percent,
+      overall_level: complianceData.overall_level,
+      pillars: [
+        {
+          id: 'ict_risk',
+          name: 'ICT Risk Management',
+          articles: 'Articles 5-16',
+          percent: complianceData.pillars.ict_risk_management.percent,
+          level: complianceData.pillars.ict_risk_management.level,
+          status: getStatusFromPercent(complianceData.pillars.ict_risk_management.percent),
+        },
+        {
+          id: 'incident',
+          name: 'Incident Reporting',
+          articles: 'Articles 17-23',
+          percent: complianceData.pillars.incident_reporting.percent,
+          level: complianceData.pillars.incident_reporting.level,
+          status: getStatusFromPercent(complianceData.pillars.incident_reporting.percent),
+        },
+        {
+          id: 'testing',
+          name: 'Resilience Testing',
+          articles: 'Articles 24-27',
+          percent: complianceData.pillars.resilience_testing.percent,
+          level: complianceData.pillars.resilience_testing.level,
+          status: getStatusFromPercent(complianceData.pillars.resilience_testing.percent),
+        },
+        {
+          id: 'tprm',
+          name: 'Third Party Risk',
+          articles: 'Articles 28-44',
+          percent: complianceData.pillars.third_party_risk.percent,
+          level: complianceData.pillars.third_party_risk.level,
+          status: getStatusFromPercent(complianceData.pillars.third_party_risk.percent),
+        },
+        {
+          id: 'sharing',
+          name: 'Information Sharing',
+          articles: 'Article 45',
+          percent: complianceData.pillars.information_sharing.percent,
+          level: complianceData.pillars.information_sharing.level,
+          status: getStatusFromPercent(complianceData.pillars.information_sharing.percent),
+        },
+      ],
+      gaps: {
+        total: complianceData.gaps.total,
+        met: complianceData.gaps.met,
+        critical: complianceData.gaps.critical,
+        high: complianceData.gaps.high,
+      },
+      critical_gaps: complianceData.critical_gaps,
+      estimated_weeks: complianceData.estimated_weeks,
+      last_updated: new Date().toISOString(),
+    };
+
+    return { success: true, data: dashboardData };
+  } catch (error) {
+    console.error('[getDORADashboardData] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get dashboard data',
+    };
+  }
+}
+
+function formatSnapshotToDashboardData(snapshot: MaturitySnapshot): DORADashboardData {
+  return {
+    overall_percent: snapshot.overall_readiness_percent,
+    overall_level: snapshot.overall_maturity_level as MaturityLevel,
+    pillars: [
+      {
+        id: 'ict_risk',
+        name: 'ICT Risk Management',
+        articles: 'Articles 5-16',
+        percent: snapshot.pillar_ict_risk_mgmt_percent || 0,
+        level: snapshot.pillar_ict_risk_mgmt as MaturityLevel,
+        status: getStatusFromPercent(snapshot.pillar_ict_risk_mgmt_percent || 0),
+      },
+      {
+        id: 'incident',
+        name: 'Incident Reporting',
+        articles: 'Articles 17-23',
+        percent: snapshot.pillar_incident_reporting_percent || 0,
+        level: snapshot.pillar_incident_reporting as MaturityLevel,
+        status: getStatusFromPercent(snapshot.pillar_incident_reporting_percent || 0),
+      },
+      {
+        id: 'testing',
+        name: 'Resilience Testing',
+        articles: 'Articles 24-27',
+        percent: snapshot.pillar_resilience_testing_percent || 0,
+        level: snapshot.pillar_resilience_testing as MaturityLevel,
+        status: getStatusFromPercent(snapshot.pillar_resilience_testing_percent || 0),
+      },
+      {
+        id: 'tprm',
+        name: 'Third Party Risk',
+        articles: 'Articles 28-44',
+        percent: snapshot.pillar_third_party_risk_percent || 0,
+        level: snapshot.pillar_third_party_risk as MaturityLevel,
+        status: getStatusFromPercent(snapshot.pillar_third_party_risk_percent || 0),
+      },
+      {
+        id: 'sharing',
+        name: 'Information Sharing',
+        articles: 'Article 45',
+        percent: snapshot.pillar_info_sharing_percent || 0,
+        level: snapshot.pillar_info_sharing as MaturityLevel,
+        status: getStatusFromPercent(snapshot.pillar_info_sharing_percent || 0),
+      },
+    ],
+    gaps: {
+      total: snapshot.total_requirements,
+      met: snapshot.requirements_met,
+      critical: snapshot.critical_gaps_count,
+      high: snapshot.high_gaps_count || 0,
+    },
+    critical_gaps: (snapshot.critical_gaps as CriticalGap[]) || [],
+    estimated_weeks: snapshot.estimated_remediation_weeks || undefined,
+    last_updated: snapshot.created_at,
+  };
+}
+
+function getStatusFromPercent(percent: number): 'compliant' | 'partial' | 'non_compliant' | 'not_assessed' {
+  if (percent >= 75) return 'compliant';
+  if (percent >= 40) return 'partial';
+  if (percent > 0) return 'non_compliant';
+  return 'not_assessed';
+}
+
+function getDefaultPillars() {
+  return [
+    { id: 'ict_risk', name: 'ICT Risk Management', articles: 'Articles 5-16', percent: 0, level: 0 as MaturityLevel, status: 'not_assessed' as const },
+    { id: 'incident', name: 'Incident Reporting', articles: 'Articles 17-23', percent: 0, level: 0 as MaturityLevel, status: 'not_assessed' as const },
+    { id: 'testing', name: 'Resilience Testing', articles: 'Articles 24-27', percent: 0, level: 0 as MaturityLevel, status: 'not_assessed' as const },
+    { id: 'tprm', name: 'Third Party Risk', articles: 'Articles 28-44', percent: 0, level: 0 as MaturityLevel, status: 'not_assessed' as const },
+    { id: 'sharing', name: 'Information Sharing', articles: 'Article 45', percent: 0, level: 0 as MaturityLevel, status: 'not_assessed' as const },
+  ];
+}
+
+// =============================================================================
 // SETTINGS
 // =============================================================================
 

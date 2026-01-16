@@ -29,6 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getOrganization } from '@/lib/org/context';
 import { hasFrameworkAccess, hasModuleAccess } from '@/lib/licensing/check-access-server';
 import { LockedFramework } from '@/components/licensing/locked-module';
+import { getDORADashboardData } from '@/lib/compliance/maturity-history';
 
 export const metadata: Metadata = {
   title: 'DORA Compliance | DORA Comply',
@@ -44,7 +45,7 @@ interface PillarStatus {
   name: string;
   articles: string;
   icon: typeof Shield;
-  percentage: number;
+  percent: number;
   status: 'compliant' | 'partial' | 'non_compliant' | 'not_assessed';
 }
 
@@ -142,9 +143,9 @@ function PillarStatusCard({ pillar }: { pillar: PillarStatus }) {
         <div className="space-y-1">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">{pillar.percentage}%</span>
+            <span className="font-medium">{pillar.percent}%</span>
           </div>
-          <Progress value={pillar.percentage} className={`h-2 ${progressColors[pillar.status]}`} />
+          <Progress value={pillar.percent} className={`h-2 ${progressColors[pillar.status]}`} />
         </div>
       </CardContent>
     </Card>
@@ -216,57 +217,46 @@ async function DORADashboardContent() {
     return <DORALockedState />;
   }
 
-  // Check module access for each DORA feature
-  const [roiAccess, incidentsAccess, testingAccess, tprmAccess] = await Promise.all([
+  // Fetch module access and dashboard data in parallel
+  const [roiAccess, incidentsAccess, testingAccess, tprmAccess, dashboardResult] = await Promise.all([
     hasModuleAccess(org.id, 'dora', 'roi'),
     hasModuleAccess(org.id, 'dora', 'incidents'),
     hasModuleAccess(org.id, 'dora', 'testing'),
     hasModuleAccess(org.id, 'dora', 'tprm'),
+    getDORADashboardData(),
   ]);
 
-  // DORA 5 Pillars (placeholder data - would be fetched from compliance data)
-  const pillars: PillarStatus[] = [
-    {
-      id: 'ict_risk',
-      name: 'ICT Risk Management',
-      articles: 'Articles 5-16',
-      icon: Shield,
-      percentage: 65,
-      status: 'partial',
-    },
-    {
-      id: 'incident',
-      name: 'Incident Reporting',
-      articles: 'Articles 17-23',
-      icon: AlertTriangle,
-      percentage: 45,
-      status: 'partial',
-    },
-    {
-      id: 'testing',
-      name: 'Resilience Testing',
-      articles: 'Articles 24-27',
-      icon: FlaskConical,
-      percentage: 30,
-      status: 'non_compliant',
-    },
-    {
-      id: 'tprm',
-      name: 'Third Party Risk',
-      articles: 'Articles 28-44',
-      icon: Network,
-      percentage: 55,
-      status: 'partial',
-    },
-    {
-      id: 'sharing',
-      name: 'Information Sharing',
-      articles: 'Article 45',
-      icon: FileText,
-      percentage: 40,
-      status: 'partial',
-    },
-  ];
+  // Map pillar IDs to icons
+  const pillarIcons: Record<string, typeof Shield> = {
+    ict_risk: Shield,
+    incident: AlertTriangle,
+    testing: FlaskConical,
+    tprm: Network,
+    sharing: FileText,
+  };
+
+  // Use real data or fallback to defaults
+  const dashboardData = dashboardResult.success && dashboardResult.data
+    ? dashboardResult.data
+    : null;
+
+  // Build pillars from real data
+  const pillars: PillarStatus[] = dashboardData
+    ? dashboardData.pillars.map((p) => ({
+        id: p.id,
+        name: p.name,
+        articles: p.articles,
+        icon: pillarIcons[p.id] || Shield,
+        percent: p.percent,
+        status: p.status,
+      }))
+    : [
+        { id: 'ict_risk', name: 'ICT Risk Management', articles: 'Articles 5-16', icon: Shield, percent: 0, status: 'not_assessed' as const },
+        { id: 'incident', name: 'Incident Reporting', articles: 'Articles 17-23', icon: AlertTriangle, percent: 0, status: 'not_assessed' as const },
+        { id: 'testing', name: 'Resilience Testing', articles: 'Articles 24-27', icon: FlaskConical, percent: 0, status: 'not_assessed' as const },
+        { id: 'tprm', name: 'Third Party Risk', articles: 'Articles 28-44', icon: Network, percent: 0, status: 'not_assessed' as const },
+        { id: 'sharing', name: 'Information Sharing', articles: 'Article 45', icon: FileText, percent: 0, status: 'not_assessed' as const },
+      ];
 
   // Module links
   const modules: ModuleLink[] = [
@@ -307,9 +297,20 @@ async function DORADashboardContent() {
     tprm: tprmAccess,
   };
 
-  // Calculate overall stats
-  const overallPercent = Math.round(pillars.reduce((sum, p) => sum + p.percentage, 0) / pillars.length);
+  // Calculate overall stats from real data
+  const overallPercent = dashboardData?.overall_percent ?? 0;
   const daysUntilDeadline = Math.ceil((new Date('2026-01-17').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+
+  // Gap stats
+  const criticalGaps = dashboardData?.gaps.critical ?? 0;
+  const highGaps = dashboardData?.gaps.high ?? 0;
+  const totalGaps = dashboardData?.gaps.total ?? 64;
+  const metRequirements = dashboardData?.gaps.met ?? 0;
+  const estimatedWeeks = dashboardData?.estimated_weeks ?? 0;
+
+  // Count pillars by status
+  const compliantPillars = pillars.filter((p) => p.status === 'compliant').length;
+  const needsAttentionPillars = pillars.filter((p) => p.status === 'partial' || p.status === 'non_compliant').length;
 
   return (
     <div className="space-y-6">
@@ -351,11 +352,11 @@ async function DORADashboardContent() {
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  2 pillars on track
+                  {compliantPillars} pillar{compliantPillars !== 1 ? 's' : ''} on track
                 </span>
                 <span className="flex items-center gap-1">
                   <AlertCircle className="h-4 w-4 text-amber-500" />
-                  3 pillars need attention
+                  {needsAttentionPillars} pillar{needsAttentionPillars !== 1 ? 's' : ''} need{needsAttentionPillars === 1 ? 's' : ''} attention
                 </span>
               </div>
             </div>
@@ -396,8 +397,12 @@ async function DORADashboardContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">5</div>
-            <p className="text-xs text-muted-foreground">Requiring immediate attention</p>
+            <div className={`text-2xl font-bold ${criticalGaps > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+              {criticalGaps + highGaps}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {criticalGaps} critical, {highGaps} high priority
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -407,7 +412,7 @@ async function DORADashboardContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">32 / 64</div>
+            <div className="text-2xl font-bold">{metRequirements} / {totalGaps}</div>
             <p className="text-xs text-muted-foreground">DORA articles addressed</p>
           </CardContent>
         </Card>
@@ -418,7 +423,9 @@ async function DORADashboardContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12 weeks</div>
+            <div className="text-2xl font-bold">
+              {estimatedWeeks > 0 ? `${estimatedWeeks} weeks` : 'N/A'}
+            </div>
             <p className="text-xs text-muted-foreground">To full compliance</p>
           </CardContent>
         </Card>
