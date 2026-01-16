@@ -4,6 +4,7 @@ import { FileText, AlertTriangle, Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { getDocuments, getDocumentStats } from '@/lib/documents/queries';
 import { DocumentsClient } from './documents-client';
+import { getActiveFrameworkFromCookie } from '@/lib/context/framework-cookie';
 
 export const metadata: Metadata = {
   title: 'Documents | DORA Comply',
@@ -85,10 +86,14 @@ function StatsSkeleton() {
 }
 
 export default async function DocumentsPage() {
+  // Get framework from cookie for server-side filtering
+  const framework = await getActiveFrameworkFromCookie();
+
   // Initial data fetch for SSR
   const initialData = await getDocuments({
     pagination: { page: 1, limit: 20 },
     sort: { field: 'created_at', direction: 'desc' },
+    filters: framework ? { framework } : undefined,
   });
 
   return (

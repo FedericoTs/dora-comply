@@ -55,6 +55,10 @@ export function useDocumentsState({ initialData, framework }: UseDocumentsStateP
   // Track processing document IDs for notifications
   const processingIdsRef = useRef<Set<string>>(new Set());
 
+  // Track initial mount and previous framework to prevent double-fetch
+  const isInitialMount = useRef(true);
+  const previousFramework = useRef(framework);
+
   const totalPages = Math.ceil(total / initialData.limit);
 
   // Debounce search
@@ -109,9 +113,17 @@ export function useDocumentsState({ initialData, framework }: UseDocumentsStateP
     }
   }, [debouncedSearch, fetchDocuments]);
 
-  // Fetch when framework changes
+  // Fetch when framework changes (skip initial mount to prevent double-fetch)
   useEffect(() => {
-    if (framework) {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      previousFramework.current = framework;
+      return;
+    }
+
+    // Only fetch if framework actually changed
+    if (framework && framework !== previousFramework.current) {
+      previousFramework.current = framework;
       fetchDocuments(1);
     }
     // Only depend on framework, not fetchDocuments to avoid double fetches
