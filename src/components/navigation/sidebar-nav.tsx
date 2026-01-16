@@ -99,6 +99,8 @@ const LEGACY_ADVANCED_NAV: NavItem[] = [
 const FRAMEWORK_NAV: Record<FrameworkCode, NavItem[]> = {
   nis2: [
     { name: 'NIS2 Overview', href: '/nis2', icon: Shield },
+    { name: 'Risk Register', href: '/nis2/risk-register', icon: ClipboardList },
+    { name: 'Risk Heat Map', href: '/nis2/heat-map', icon: PieChart },
     { name: 'Gap Analysis', href: '/nis2/gaps', icon: AlertTriangle },
     { name: 'Compliance Trends', href: '/compliance/trends', icon: BarChart3 },
   ],
