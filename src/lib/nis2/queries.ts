@@ -13,9 +13,8 @@ import type {
   NIS2RiskControl,
   NIS2RiskAssessment,
   RiskSummary,
-  RiskFilters,
-  ControlFilters,
 } from './types';
+import type { RiskFilters, ControlFilters } from './schema';
 import {
   calculateFullRiskAssessment,
   type ControlForCalculation,

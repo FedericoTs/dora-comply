@@ -16,7 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { NIS2_CATEGORIES } from '@/lib/compliance/nis2-types';
+import { NIS2_CATEGORIES, NIS2CategoryLabels } from '@/lib/compliance/nis2-types';
 import type { NIS2Category } from '@/lib/compliance/nis2-types';
 import type { RiskLevel, RiskStatus, TreatmentStrategy } from '@/lib/nis2/types';
 
@@ -46,7 +46,7 @@ const RISK_STATUSES: { value: RiskStatus; label: string }[] = [
   { value: 'identified', label: 'Identified' },
   { value: 'assessed', label: 'Assessed' },
   { value: 'treating', label: 'Treating' },
-  { value: 'accepted', label: 'Accepted' },
+  { value: 'monitoring', label: 'Monitoring' },
   { value: 'closed', label: 'Closed' },
 ];
 
@@ -159,8 +159,8 @@ export function RiskRegisterFilters({
                       <SelectContent>
                         <SelectItem value="all">All categories</SelectItem>
                         {NIS2_CATEGORIES.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
+                          <SelectItem key={cat} value={cat}>
+                            {NIS2CategoryLabels[cat]}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -228,8 +228,8 @@ export function RiskRegisterFilters({
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
                 {NIS2_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
+                  <SelectItem key={cat} value={cat}>
+                    {NIS2CategoryLabels[cat]}
                   </SelectItem>
                 ))}
               </SelectContent>

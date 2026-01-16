@@ -400,58 +400,10 @@ export interface NIS2ControlEvidence {
 }
 
 // =============================================================================
-// Input Types (for forms)
+// Input Types - Defined in schema.ts via Zod
 // =============================================================================
-
-export interface CreateRiskInput {
-  title: string;
-  description?: string;
-  category: NIS2Category;
-  likelihood_score: LikelihoodScore;
-  impact_score: ImpactScore;
-  owner_id?: string;
-  treatment_strategy?: TreatmentStrategy;
-  treatment_plan?: string;
-  treatment_due_date?: string;
-  treatment_owner_id?: string;
-  tolerance_threshold?: number;
-}
-
-export interface UpdateRiskInput extends Partial<CreateRiskInput> {
-  status?: RiskStatus;
-  review_date?: string;
-  residual_likelihood?: LikelihoodScore;
-  residual_impact?: ImpactScore;
-  residual_risk_score?: number;
-  residual_risk_level?: RiskLevel;
-  combined_control_effectiveness?: number;
-  is_within_tolerance?: boolean;
-}
-
-export interface CreateControlInput {
-  title: string;
-  description?: string;
-  category: NIS2Category;
-  control_type: ControlType;
-  implementation_status?: ControlStatus;
-  design_effectiveness?: number;
-  operational_effectiveness?: number;
-  evidence_requirements?: string[];
-  owner_id?: string;
-  next_review_date?: string;
-}
-
-export interface UpdateControlInput extends Partial<CreateControlInput> {
-  last_evidence_date?: string;
-}
-
-export interface LinkControlInput {
-  risk_id: string;
-  control_id: string;
-  effectiveness_score: number;
-  effectiveness_rationale?: string;
-  next_test_due?: string;
-}
+// Note: CreateRiskInput, UpdateRiskInput, CreateControlInput, UpdateControlInput,
+// and LinkControlInput are exported from schema.ts using z.infer.
 
 // =============================================================================
 // Summary and Stats Types
@@ -568,24 +520,7 @@ export interface RiskGuidance {
 }
 
 // =============================================================================
-// Filter Types
+// Filter Types (defined in schema.ts via Zod)
 // =============================================================================
-
-export interface RiskFilters {
-  category?: NIS2Category;
-  status?: RiskStatus;
-  inherent_level?: RiskLevel;
-  residual_level?: RiskLevel;
-  treatment_strategy?: TreatmentStrategy;
-  owner_id?: string;
-  search?: string;
-}
-
-export interface ControlFilters {
-  category?: NIS2Category;
-  control_type?: ControlType;
-  implementation_status?: ControlStatus;
-  min_effectiveness?: number;
-  owner_id?: string;
-  search?: string;
-}
+// Note: RiskFilters and ControlFilters are exported from schema.ts
+// using z.infer to derive types from Zod schemas.

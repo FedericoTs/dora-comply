@@ -3,7 +3,7 @@
 /**
  * Risk Status Badge Component
  *
- * Displays a badge for risk status (identified, assessed, treating, accepted, closed).
+ * Displays a badge for risk status (identified, assessed, treating, monitoring, closed).
  */
 
 import { cn } from '@/lib/utils';
@@ -25,8 +25,8 @@ const STATUS_CONFIG: Record<RiskStatus, { label: string; color: string; dotColor
     color: 'bg-amber-100 text-amber-700',
     dotColor: 'bg-amber-500',
   },
-  accepted: {
-    label: 'Accepted',
+  monitoring: {
+    label: 'Monitoring',
     color: 'bg-purple-100 text-purple-700',
     dotColor: 'bg-purple-500',
   },

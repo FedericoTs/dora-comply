@@ -274,7 +274,7 @@ export function RiskRegisterTable({
                               {risk.control_count}
                             </span>
                             <EffectivenessBar
-                              value={risk.combined_effectiveness ?? 0}
+                              value={risk.combined_control_effectiveness ?? 0}
                               showPercentage={false}
                               size="sm"
                               className="flex-1"
@@ -282,7 +282,7 @@ export function RiskRegisterTable({
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{risk.control_count} controls, {risk.combined_effectiveness ?? 0}% combined effectiveness</p>
+                          <p>{risk.control_count} controls, {risk.combined_control_effectiveness ?? 0}% combined effectiveness</p>
                         </TooltipContent>
                       </Tooltip>
                     ) : (

@@ -29,7 +29,7 @@ import {
   LIKELIHOOD_LABELS,
   IMPACT_LABELS,
 } from '@/lib/nis2/heat-map-utils';
-import { NIS2_CATEGORIES, type NIS2Category } from '@/lib/compliance/nis2-types';
+import { NIS2_CATEGORIES, NIS2CategoryLabels, type NIS2Category } from '@/lib/compliance/nis2-types';
 import { RiskLevelBadge } from '../shared/risk-level-badge';
 
 interface RiskHeatMapProps {
@@ -125,8 +125,8 @@ export function RiskHeatMap({
                 <SelectContent>
                   <SelectItem value="all">All categories</SelectItem>
                   {NIS2_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
+                    <SelectItem key={cat} value={cat}>
+                      {NIS2CategoryLabels[cat]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -169,7 +169,7 @@ export function RiskHeatMap({
                               isSelected={selectedCell?.likelihood === cell.likelihood && selectedCell?.impact === cell.impact}
                               isCurrent={
                                 showPositionMarkers &&
-                                current &&
+                                current !== null &&
                                 Math.round(current.likelihood) === cell.likelihood &&
                                 Math.round(current.impact) === cell.impact
                               }

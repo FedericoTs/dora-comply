@@ -73,6 +73,18 @@ export const NIS2CategoryColors: Record<NIS2Category, string> = {
   reporting: 'bg-red-500',
 };
 
+/**
+ * Array of all NIS2 categories for iteration
+ */
+export const NIS2_CATEGORIES: NIS2Category[] = [
+  'governance',
+  'risk_management',
+  'incident_handling',
+  'business_continuity',
+  'supply_chain',
+  'reporting',
+];
+
 // =============================================================================
 // Entity Types
 // =============================================================================

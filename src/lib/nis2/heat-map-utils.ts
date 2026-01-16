@@ -344,7 +344,6 @@ export function generateHeatMapComparison(
   toleranceThreshold: number = 9
 ): HeatMapComparison {
   const baseConfig: Omit<HeatMapConfig, 'view'> = {
-    view: 'inherent',
     show_aggregate_position: true,
     show_target_position: true,
     tolerance_threshold: toleranceThreshold,
