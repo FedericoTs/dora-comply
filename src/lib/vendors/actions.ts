@@ -663,12 +663,9 @@ export async function fetchVendorsAction(
     .eq('organization_id', organizationId)
     .is('deleted_at', null);
 
-  // Apply framework filter if vendor IDs were found
-  if (frameworkVendorIds !== null) {
-    if (frameworkVendorIds.length === 0) {
-      // No vendors match the framework filter
-      return { data: [], total: 0, page: pagination.page, limit: pagination.limit, total_pages: 0 };
-    }
+  // Apply framework filter only if there are vendors with gap analysis for this framework
+  // If no gap analysis exists yet, show all vendors (don't filter to empty)
+  if (frameworkVendorIds !== null && frameworkVendorIds.length > 0) {
     query = query.in('id', frameworkVendorIds);
   }
 
