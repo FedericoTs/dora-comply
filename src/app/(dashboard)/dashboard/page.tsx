@@ -1,4 +1,10 @@
 import { Metadata } from 'next';
+import {
+  Building2,
+  Shield,
+  AlertTriangle,
+  Calendar,
+} from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { getVendorStats } from '@/lib/vendors/queries';
 import { fetchAllTemplateStats } from '@/lib/roi/queries';
@@ -7,36 +13,43 @@ import { getIncidentStatsEnhanced, getPendingDeadlines } from '@/lib/incidents/q
 import { getTestingStats } from '@/lib/testing/queries';
 import { getOrganizationContext } from '@/lib/org/context';
 import { getDocumentStats } from '@/lib/documents/queries';
-import { getEnabledFrameworks } from '@/lib/licensing/check-access-server';
-import { IncidentMetricsCard } from '@/components/incidents/dashboard';
-import { StatCard, StatCardGrid } from '@/components/ui/stat-card';
-import { KPI_HELP } from '@/components/ui/help-tooltip';
+import { getLatestSnapshot } from '@/lib/compliance/maturity-history';
 import {
-  GettingStartedCard,
-  IncidentStatCard,
-  TestingStatCard,
   AlertBanners,
-  DeadlineCard,
-  AhaMomentCard,
   DashboardHeader,
-  VendorsByRiskCard,
-  PendingDeadlinesCard,
   RecentActivityCard,
   OnboardingDashboard,
-  FrameworkOverviewCard,
+  ActionRequired,
+  KPICard,
+  KPICardGrid,
+  ComplianceGauge,
+  getDefaultDORAPillars,
+  RiskHeatMapMini,
+  type ActionItem,
+  type RiskCount,
 } from '@/components/dashboard';
 
 export const metadata: Metadata = {
   title: 'Dashboard | DORA Comply',
-  description: 'Your DORA compliance dashboard',
+  description: 'Your DORA compliance command center',
 };
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   const firstName = user?.fullName?.split(' ')[0] || '';
 
-  // Fetch real data including organization context for entity classification
-  const [vendorStats, roiStats, recentActivity, incidentStatsResult, pendingDeadlinesResult, testingStatsResult, orgContext, documentStats] = await Promise.all([
+  // Fetch all data in parallel
+  const [
+    vendorStats,
+    roiStats,
+    recentActivity,
+    incidentStatsResult,
+    pendingDeadlinesResult,
+    testingStatsResult,
+    orgContext,
+    documentStats,
+    maturitySnapshot,
+  ] = await Promise.all([
     getVendorStats(),
     fetchAllTemplateStats(),
     getRecentActivity(5),
@@ -45,43 +58,58 @@ export default async function DashboardPage() {
     getTestingStats(),
     getOrganizationContext(),
     getDocumentStats(),
+    getLatestSnapshot(),
   ]);
 
   const incidentStats = incidentStatsResult.data;
   const pendingDeadlines = pendingDeadlinesResult.data;
   const testingStats = testingStatsResult.data;
 
-  // Entity classification determines TLPT requirements
+  // Entity classification
   const classification = orgContext?.classification;
   const tlptRequired = classification?.tlptRequired ?? false;
   const simplifiedFramework = classification?.simplifiedFramework ?? false;
 
-  // Get enabled frameworks for the organization
-  const enabledFrameworks = orgContext?.organization?.id
-    ? await getEnabledFrameworks(orgContext.organization.id)
-    : [];
-
-  // Calculate RoI readiness (average completeness across templates with data)
+  // Calculate RoI readiness
   const templatesWithData = roiStats.filter(s => s.rowCount > 0);
   const avgRoiCompleteness = templatesWithData.length > 0
     ? Math.round(templatesWithData.reduce((sum, s) => sum + s.completeness, 0) / templatesWithData.length)
     : 0;
 
-  // Calculate days to deadline (April 30, 2026 for first RoI submission)
+  // Calculate days to deadline (April 30, 2026)
   const deadline = new Date('2026-04-30');
   const today = new Date();
   const daysToDeadline = Math.max(0, Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
 
-  // Calculate total vendors
+  // Vendor stats
   const totalVendors = vendorStats.total;
-  const criticalRisks = vendorStats.by_risk.critical;
+  const criticalRisks = vendorStats.by_risk.critical + vendorStats.by_risk.high;
+  const vendorTrend = totalVendors > 0 ? Math.round((vendorStats.by_risk.low / totalVendors) * 100 - 50) : 0;
 
-  // Check for overdue items
+  // Incident stats
   const overdueReports = incidentStats?.overdue_reports ?? 0;
+  // Active incidents = total - closed - draft
+  const activeIncidents = incidentStats
+    ? (incidentStats.total - (incidentStats.by_status?.closed ?? 0) - (incidentStats.by_status?.draft ?? 0))
+    : 0;
+
+  // Testing stats
   const tlptOverdue = testingStats?.tlpt_overdue ?? 0;
   const tlptDueSoon = testingStats?.tlpt_due_soon ?? 0;
+  const openFindings = testingStats?.critical_open_findings ?? 0;
 
-  // Determine onboarding progress
+  // Calculate overall compliance score from maturity snapshot
+  const snapshot = maturitySnapshot?.data;
+  const complianceScore = snapshot?.overall_readiness_percent ?? 0;
+  const pillarScores = {
+    ictRisk: snapshot?.pillar_ict_risk_mgmt_percent ?? 0,
+    incidents: snapshot?.pillar_incident_reporting_percent ?? 0,
+    testing: snapshot?.pillar_resilience_testing_percent ?? 0,
+    tprm: snapshot?.pillar_third_party_risk_percent ?? 0,
+    infoSharing: snapshot?.pillar_info_sharing_percent ?? 0,
+  };
+
+  // Onboarding progress
   const onboardingSteps = [
     { done: totalVendors > 0, label: 'Add first vendor' },
     { done: documentStats.total > 0, label: 'Upload documents' },
@@ -91,7 +119,7 @@ export default async function DashboardPage() {
   const completedSteps = onboardingSteps.filter(s => s.done).length;
   const isNewUser = completedSteps < 2;
 
-  // Focused Onboarding Dashboard for new users
+  // New user dashboard
   if (isNewUser) {
     return (
       <OnboardingDashboard
@@ -105,7 +133,22 @@ export default async function DashboardPage() {
     );
   }
 
-  // Full Dashboard for returning users
+  // Build action items
+  const actionItems = buildActionItems({
+    overdueReports,
+    activeIncidents,
+    criticalRisks,
+    openFindings,
+    tlptOverdue,
+    tlptDueSoon,
+    tlptRequired,
+    pendingDeadlines,
+  });
+
+  // Build risk heat map data from vendor stats
+  const riskHeatMapData = buildRiskHeatMapData(vendorStats);
+
+  // Full Dashboard - Command Center layout
   return (
     <>
       {/* Alert Banners */}
@@ -120,100 +163,250 @@ export default async function DashboardPage() {
       {/* Page Header */}
       <DashboardHeader firstName={firstName} />
 
-      {/* Stats Grid */}
-      <StatCardGrid columns={6} className="mb-8 stagger" data-tour="stats-grid">
-        <StatCard
-          label="Total Vendors"
+      {/* KPI Cards Row */}
+      <KPICardGrid columns={4} className="mb-6">
+        <KPICard
+          label="DORA Score"
+          value={`${Math.round(complianceScore)}%`}
+          progress={complianceScore}
+          progressBlocks
+          href="/compliance/trends"
+          icon={Shield}
+          variant={complianceScore >= 60 ? 'success' : complianceScore >= 40 ? 'warning' : 'error'}
+        />
+        <KPICard
+          label="Third Parties"
           value={totalVendors}
-          trend={totalVendors > 0 ? 'up' : 'neutral'}
-          trendLabel={`${totalVendors} total`}
+          subtitle={totalVendors > 0 ? `${criticalRisks} need attention` : 'Add vendors to start'}
+          trend={vendorTrend}
           href="/vendors"
-          size="compact"
-          tooltip={KPI_HELP.totalVendors}
+          icon={Building2}
+          variant={criticalRisks > 3 ? 'warning' : 'default'}
         />
-        <StatCard
-          label="RoI Readiness"
-          value={`${avgRoiCompleteness}%`}
-          progress={avgRoiCompleteness}
-          description={avgRoiCompleteness > 0 ? `${templatesWithData.length} templates` : 'No data yet'}
-          href="/roi"
-          size="compact"
-          tooltip={KPI_HELP.roiReadiness}
-        />
-        <StatCard
-          label="Critical Risks"
+        <KPICard
+          label="Risk Exposure"
           value={criticalRisks}
+          subtitle={criticalRisks > 0 ? `${criticalRisks} critical/high risks` : 'No critical risks'}
+          trend={-criticalRisks}
+          invertTrend
+          href="/vendors?risk=critical,high"
+          icon={AlertTriangle}
           variant={criticalRisks > 0 ? 'error' : 'success'}
-          trend={criticalRisks === 0 ? 'neutral' : 'down'}
-          trendLabel={criticalRisks === 0 ? 'None' : `${criticalRisks} vendors`}
-          href="/vendors?risk=critical"
-          size="compact"
-          tooltip={KPI_HELP.criticalRisks}
         />
-        {incidentStats ? (
-          <IncidentMetricsCard stats={incidentStats} />
-        ) : (
-          <IncidentStatCard major={0} significant={0} pending={0} />
-        )}
-        <TestingStatCard
-          testTypeCoverage={testingStats?.test_type_coverage ?? 0}
-          openFindings={testingStats?.critical_open_findings ?? 0}
-          tlptStatus={tlptOverdue > 0 ? 'overdue' : tlptDueSoon > 0 ? 'due_soon' : 'compliant'}
-          tlptRequired={tlptRequired}
-        />
-        <StatCard
+        <KPICard
           label="Days to Deadline"
           value={daysToDeadline}
-          description="April 30, 2026"
-          variant={daysToDeadline <= 30 ? 'warning' : 'default'}
-          href="/roi/submissions"
-          size="compact"
-          tooltip={KPI_HELP.daysToDeadline}
+          subtitle="April 30, 2026"
+          href="/roi"
+          icon={Calendar}
+          variant={daysToDeadline <= 90 ? 'warning' : 'info'}
         />
-      </StatCardGrid>
+      </KPICardGrid>
 
-      {/* Aha Moment Card */}
-      {totalVendors === 1 && documentStats.total === 0 && (
-        <AhaMomentCard />
-      )}
+      {/* Main Grid - 2 columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column */}
+        <div className="space-y-6">
+          {/* Action Required Widget */}
+          <ActionRequired items={actionItems} maxItems={5} />
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
-        <RecentActivityCard
-          recentActivity={recentActivity}
-          totalVendors={totalVendors}
-        />
+          {/* Risk Heat Map */}
+          <RiskHeatMapMini
+            risks={riskHeatMapData}
+            href="/risks"
+            title="Risk Distribution"
+          />
+        </div>
 
-        {/* Deadline Card */}
-        <DeadlineCard
-          daysToDeadline={daysToDeadline}
-          avgRoiCompleteness={avgRoiCompleteness}
-          totalVendors={totalVendors}
-        />
+        {/* Right Column */}
+        <div className="space-y-6">
+          {/* Compliance Gauge */}
+          <ComplianceGauge
+            score={complianceScore}
+            label="DORA Compliance"
+            pillars={getDefaultDORAPillars(pillarScores)}
+            href="/compliance/trends"
+          />
 
-        {/* Framework Overview */}
-        <FrameworkOverviewCard enabledFrameworks={enabledFrameworks} />
-
-        {/* Vendors by Risk */}
-        <VendorsByRiskCard
-          vendorStats={vendorStats}
-          totalVendors={totalVendors}
-        />
-
-        {/* Pending Report Deadlines */}
-        <PendingDeadlinesCard pendingDeadlines={pendingDeadlines} />
-
-        {/* Getting Started */}
-        <GettingStartedCard
-          stepsCompleted={[
-            totalVendors > 0,
-            documentStats.total > 0,
-            (incidentStats?.total ?? 0) > 0,
-            avgRoiCompleteness > 0,
-          ]}
-        />
+          {/* Recent Activity */}
+          <RecentActivityCard
+            recentActivity={recentActivity}
+            totalVendors={totalVendors}
+          />
+        </div>
       </div>
     </>
   );
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+interface ActionBuilderParams {
+  overdueReports: number;
+  activeIncidents: number;
+  criticalRisks: number;
+  openFindings: number;
+  tlptOverdue: number;
+  tlptDueSoon: number;
+  tlptRequired: boolean;
+  pendingDeadlines: Array<{
+    incident_id: string;
+    incident_title: string;
+    deadline: string;
+  }> | null;
+}
+
+function buildActionItems(params: ActionBuilderParams): ActionItem[] {
+  const items: ActionItem[] = [];
+
+  // Overdue incident reports (Critical)
+  if (params.overdueReports > 0) {
+    items.push({
+      id: 'overdue-reports',
+      priority: 'critical',
+      type: 'overdue',
+      icon: 'document',
+      title: 'Overdue incident reports',
+      subtitle: `${params.overdueReports} report${params.overdueReports > 1 ? 's' : ''} past deadline`,
+      href: '/incidents?filter=overdue',
+      count: params.overdueReports,
+      dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    });
+  }
+
+  // Active incidents (High)
+  if (params.activeIncidents > 0) {
+    items.push({
+      id: 'active-incidents',
+      priority: 'high',
+      type: 'pending',
+      icon: 'alert',
+      title: 'Active incidents',
+      subtitle: `${params.activeIncidents} incident${params.activeIncidents > 1 ? 's' : ''} require attention`,
+      href: '/incidents?status=active',
+      count: params.activeIncidents,
+    });
+  }
+
+  // Critical vendor risks (High)
+  if (params.criticalRisks > 0) {
+    items.push({
+      id: 'critical-vendors',
+      priority: 'high',
+      type: 'pending',
+      icon: 'vendor',
+      title: 'High-risk vendors',
+      subtitle: `${params.criticalRisks} vendor${params.criticalRisks > 1 ? 's' : ''} need risk mitigation`,
+      href: '/vendors?risk=critical,high',
+      count: params.criticalRisks,
+    });
+  }
+
+  // Open critical findings (Medium)
+  if (params.openFindings > 0) {
+    items.push({
+      id: 'open-findings',
+      priority: 'medium',
+      type: 'pending',
+      icon: 'testing',
+      title: 'Open test findings',
+      subtitle: `${params.openFindings} critical finding${params.openFindings > 1 ? 's' : ''} unresolved`,
+      href: '/testing/findings?severity=critical',
+      count: params.openFindings,
+    });
+  }
+
+  // TLPT overdue (Critical if required)
+  if (params.tlptRequired && params.tlptOverdue > 0) {
+    items.push({
+      id: 'tlpt-overdue',
+      priority: 'critical',
+      type: 'overdue',
+      icon: 'testing',
+      title: 'TLPT overdue',
+      subtitle: 'Threat-led penetration test past due date',
+      href: '/testing/tlpt',
+    });
+  }
+
+  // TLPT due soon (Medium)
+  if (params.tlptRequired && params.tlptDueSoon > 0 && params.tlptOverdue === 0) {
+    items.push({
+      id: 'tlpt-due-soon',
+      priority: 'low',
+      type: 'due_soon',
+      icon: 'testing',
+      title: 'TLPT due soon',
+      subtitle: 'Schedule next threat-led penetration test',
+      href: '/testing/tlpt',
+      dueDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+    });
+  }
+
+  // Pending deadlines from incidents
+  if (params.pendingDeadlines && params.pendingDeadlines.length > 0) {
+    const upcomingDeadlines = params.pendingDeadlines.slice(0, 2);
+    for (const deadline of upcomingDeadlines) {
+      const dueDate = new Date(deadline.deadline);
+      const daysUntil = Math.ceil((dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+
+      if (daysUntil <= 7) {
+        items.push({
+          id: `deadline-${deadline.incident_id}`,
+          priority: daysUntil <= 2 ? 'high' : 'medium',
+          type: daysUntil <= 0 ? 'overdue' : 'due_soon',
+          icon: 'clock',
+          title: deadline.incident_title,
+          subtitle: `Report deadline approaching`,
+          href: `/incidents/${deadline.incident_id}`,
+          dueDate,
+        });
+      }
+    }
+  }
+
+  return items;
+}
+
+interface VendorStats {
+  by_risk: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+}
+
+function buildRiskHeatMapData(vendorStats: VendorStats): RiskCount[] {
+  // Map vendor risk levels to heat map positions
+  // This is a simplified mapping - in production, you'd use actual L*I scores
+  const risks: RiskCount[] = [];
+
+  // Critical risks -> high likelihood, high impact
+  if (vendorStats.by_risk.critical > 0) {
+    risks.push({ likelihood: 5, impact: 5, count: Math.ceil(vendorStats.by_risk.critical / 2) });
+    risks.push({ likelihood: 4, impact: 5, count: Math.floor(vendorStats.by_risk.critical / 2) });
+  }
+
+  // High risks -> medium-high likelihood, high impact
+  if (vendorStats.by_risk.high > 0) {
+    risks.push({ likelihood: 4, impact: 4, count: Math.ceil(vendorStats.by_risk.high / 2) });
+    risks.push({ likelihood: 3, impact: 4, count: Math.floor(vendorStats.by_risk.high / 2) });
+  }
+
+  // Medium risks -> medium likelihood, medium impact
+  if (vendorStats.by_risk.medium > 0) {
+    risks.push({ likelihood: 3, impact: 3, count: Math.ceil(vendorStats.by_risk.medium / 2) });
+    risks.push({ likelihood: 2, impact: 3, count: Math.floor(vendorStats.by_risk.medium / 2) });
+  }
+
+  // Low risks -> low likelihood, low impact
+  if (vendorStats.by_risk.low > 0) {
+    risks.push({ likelihood: 2, impact: 2, count: Math.ceil(vendorStats.by_risk.low / 2) });
+    risks.push({ likelihood: 1, impact: 2, count: Math.floor(vendorStats.by_risk.low / 2) });
+  }
+
+  return risks;
 }

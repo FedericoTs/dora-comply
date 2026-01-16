@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   VendorCard,
-  VendorTable,
+  VendorSmartTable,
   VendorSearch,
   VendorFiltersDropdown,
   VendorFilterTags,
@@ -27,6 +27,9 @@ import {
   VendorEmptyState,
   VendorPagination,
   VendorImportWizard,
+  QuickFilters,
+  createVendorQuickFilters,
+  type QuickFilterId,
 } from '@/components/vendors';
 import type { Vendor, VendorFilters, VendorSortOptions, ViewMode } from '@/lib/vendors/types';
 import { deleteVendor, updateVendorStatus, bulkDeleteVendors, fetchVendorsAction } from '@/lib/vendors/actions';
@@ -36,6 +39,10 @@ interface VendorListClientProps {
   initialTotal: number;
   initialTotalPages: number;
   hasVendors: boolean;
+  // Stats for quick filters
+  criticalCount?: number;
+  needsReviewCount?: number;
+  expiringSoonCount?: number;
 }
 
 export function VendorListClient({
@@ -43,6 +50,9 @@ export function VendorListClient({
   initialTotal,
   initialTotalPages,
   hasVendors,
+  criticalCount = 0,
+  needsReviewCount = 0,
+  expiringSoonCount = 0,
 }: VendorListClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -52,7 +62,7 @@ export function VendorListClient({
   const initialPage = getNumberParam('page', 1) ?? 1;
   const initialLimit = getNumberParam('limit', 20) ?? 20;
   const initialSearch = getParam('q') ?? '';
-  const initialView = (getParam('view') as ViewMode) || 'cards';
+  const initialView = (getParam('view') as ViewMode) || 'table'; // Default to table view now
   const initialTier = getArrayParam('tier');
   const initialStatus = getArrayParam('status');
   const initialProviderType = getArrayParam('provider_type');
@@ -60,6 +70,7 @@ export function VendorListClient({
   const initialCritical = getBoolParam('critical');
   const initialSortField = getParam('sort') ?? 'created_at';
   const initialSortDir = (getParam('dir') as 'asc' | 'desc') || 'desc';
+  const initialQuickFilter = (getParam('quick') as QuickFilterId) || 'all';
 
   // State
   const [vendors, setVendors] = useState<Vendor[]>(initialVendors);
@@ -69,6 +80,7 @@ export function VendorListClient({
   const [limit, setLimit] = useState(initialLimit);
   const [viewMode, setViewMode] = useState<ViewMode>(initialView);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [quickFilter, setQuickFilter] = useState<QuickFilterId>(initialQuickFilter);
   const [filters, setFilters] = useState<VendorFilters>({
     tier: initialTier.length > 0 ? initialTier as VendorFilters['tier'] : undefined,
     status: initialStatus.length > 0 ? initialStatus as VendorFilters['status'] : undefined,
@@ -82,6 +94,14 @@ export function VendorListClient({
   });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // Quick filter options
+  const quickFilterOptions = createVendorQuickFilters({
+    total: initialTotal,
+    critical: criticalCount,
+    needsReview: needsReviewCount,
+    expiringSoon: expiringSoonCount,
+  });
+
   // Sync URL when filters change
   const syncUrl = useCallback((updates: {
     page?: number;
@@ -90,13 +110,15 @@ export function VendorListClient({
     view?: ViewMode;
     filters?: VendorFilters;
     sort?: VendorSortOptions;
+    quick?: QuickFilterId;
   }) => {
     const urlUpdates: Record<string, string | number | boolean | string[] | null | undefined> = {};
 
     if (updates.page !== undefined) urlUpdates.page = updates.page > 1 ? updates.page : null;
     if (updates.limit !== undefined) urlUpdates.limit = updates.limit !== 20 ? updates.limit : null;
     if (updates.search !== undefined) urlUpdates.q = updates.search || null;
-    if (updates.view !== undefined) urlUpdates.view = updates.view !== 'cards' ? updates.view : null;
+    if (updates.view !== undefined) urlUpdates.view = updates.view !== 'table' ? updates.view : null;
+    if (updates.quick !== undefined) urlUpdates.quick = updates.quick !== 'all' ? updates.quick : null;
     if (updates.sort !== undefined) {
       urlUpdates.sort = updates.sort.field !== 'created_at' ? updates.sort.field : null;
       urlUpdates.dir = updates.sort.direction !== 'desc' ? updates.sort.direction : null;
@@ -119,6 +141,21 @@ export function VendorListClient({
   // Import wizard state
   const [showImportWizard, setShowImportWizard] = useState(false);
 
+  // Convert quick filter to VendorFilters
+  const getFiltersFromQuickFilter = useCallback((qf: QuickFilterId): VendorFilters => {
+    switch (qf) {
+      case 'critical':
+        return { tier: ['critical'] };
+      case 'needs_review':
+        return { status: ['pending'] };
+      case 'expiring_soon':
+        // TODO: Add contract expiration filter when available
+        return {};
+      default:
+        return {};
+    }
+  }, []);
+
   // Fetch vendors with current filters
   const fetchVendors = useCallback(
     async (
@@ -126,18 +163,24 @@ export function VendorListClient({
       newLimit?: number,
       newFilters?: VendorFilters,
       newSort?: VendorSortOptions,
-      newSearch?: string
+      newSearch?: string,
+      newQuickFilter?: QuickFilterId
     ) => {
       startTransition(async () => {
+        // Merge quick filter with explicit filters
+        const qfFilters = getFiltersFromQuickFilter(newQuickFilter ?? quickFilter);
+        const mergedFilters = {
+          ...qfFilters,
+          ...(newFilters ?? filters),
+          search: newSearch ?? (searchQuery || undefined),
+        };
+
         const result = await fetchVendorsAction({
           pagination: {
             page: newPage ?? page,
             limit: newLimit ?? limit,
           },
-          filters: {
-            ...(newFilters ?? filters),
-            search: newSearch ?? (searchQuery || undefined),
-          },
+          filters: mergedFilters,
           sort: newSort ?? sortOptions,
         });
 
@@ -147,10 +190,19 @@ export function VendorListClient({
         setSelectedIds([]);
       });
     },
-    [page, limit, filters, sortOptions, searchQuery]
+    [page, limit, filters, sortOptions, searchQuery, quickFilter, getFiltersFromQuickFilter]
   );
 
   // Handlers - sync to URL for shareable/bookmarkable state
+  const handleQuickFilterChange = (filterId: QuickFilterId) => {
+    setQuickFilter(filterId);
+    setPage(1);
+    // Clear explicit filters when using quick filter
+    setFilters({});
+    syncUrl({ quick: filterId, page: 1, filters: {} });
+    fetchVendors(1, undefined, {}, undefined, undefined, filterId);
+  };
+
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     setPage(1);
@@ -257,6 +309,13 @@ export function VendorListClient({
 
   return (
     <div className="space-y-4">
+      {/* Quick Filter Tabs */}
+      <QuickFilters
+        filters={quickFilterOptions}
+        activeFilter={quickFilter}
+        onFilterChange={handleQuickFilterChange}
+      />
+
       {/* Toolbar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-3">
@@ -330,7 +389,7 @@ export function VendorListClient({
               ))}
             </div>
           ) : (
-            <VendorTable
+            <VendorSmartTable
               vendors={vendors}
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}

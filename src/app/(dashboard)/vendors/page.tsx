@@ -2,29 +2,23 @@ import { Suspense } from 'react';
 import { Metadata } from 'next';
 import { getVendors, getVendorStats } from '@/lib/vendors/queries';
 import { VendorListClient } from './vendor-list-client';
-import { VendorStatsCards } from '@/components/vendors';
+import { VendorStatsCompact } from '@/components/vendors';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const metadata: Metadata = {
-  title: 'Vendors | DORA Comply',
+  title: 'Third Parties | DORA Comply',
   description: 'Manage your ICT third-party service providers',
 };
 
 // Stats loading skeleton
 function StatsSkeletonLoader() {
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-24 rounded-lg" />
-      ))}
-    </div>
-  );
+  return <Skeleton className="h-10 w-64" />;
 }
 
 // Stats server component
 async function VendorStatsSection() {
   const stats = await getVendorStats();
-  return <VendorStatsCards stats={stats} />;
+  return <VendorStatsCompact stats={stats} />;
 }
 
 // Initial data loader
@@ -43,6 +37,9 @@ async function VendorListSection() {
       initialTotal={vendorsResult.total}
       initialTotalPages={vendorsResult.total_pages}
       hasVendors={stats.total > 0}
+      criticalCount={stats.by_tier.critical}
+      needsReviewCount={stats.pending_reviews}
+      expiringSoonCount={0} // TODO: Get from contracts when available
     />
   );
 }
@@ -51,31 +48,35 @@ export default function VendorsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Vendors</h1>
-        <p className="text-muted-foreground">
-          Manage your ICT third-party service providers and their DORA compliance status.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Third Parties</h1>
+          <Suspense fallback={<StatsSkeletonLoader />}>
+            <VendorStatsSection />
+          </Suspense>
+        </div>
       </div>
 
-      {/* Stats Section */}
-      <Suspense fallback={<StatsSkeletonLoader />}>
-        <VendorStatsSection />
-      </Suspense>
-
-      {/* Vendor List */}
+      {/* Vendor List with Quick Filters */}
       <Suspense
         fallback={
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-10 w-64" />
-              <Skeleton className="h-10 w-32" />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-48 rounded-lg" />
+            {/* Quick filter skeleton */}
+            <div className="flex gap-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-9 w-24 rounded-md" />
               ))}
             </div>
+            {/* Toolbar skeleton */}
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-10 w-64" />
+              <div className="flex gap-2">
+                <Skeleton className="h-10 w-24" />
+                <Skeleton className="h-10 w-32" />
+              </div>
+            </div>
+            {/* Table skeleton */}
+            <Skeleton className="h-96 w-full rounded-lg" />
           </div>
         }
       >

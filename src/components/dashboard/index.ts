@@ -20,3 +20,9 @@ export { PendingDeadlinesCard } from './pending-deadlines-card';
 export { RecentActivityCard } from './recent-activity-card';
 export { OnboardingDashboard } from './onboarding-dashboard';
 export { FrameworkOverviewCard } from './framework-overview-card';
+
+// UI/UX Redesign Phase 2 components
+export { ActionRequired, generateSampleActions, type ActionItem, type ActionPriority, type ActionType, type ActionIcon } from './action-required';
+export { KPICard, KPICardGrid, type KPICardProps } from './kpi-card';
+export { ComplianceGauge, ComplianceGaugeMini, getDefaultDORAPillars, type CompliancePillar } from './compliance-gauge';
+export { RiskHeatMapMini, generateSampleRiskData, type RiskCount } from './risk-heat-map-mini';

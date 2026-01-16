@@ -6,10 +6,9 @@ import { usePathname } from 'next/navigation';
 import {
   ChevronDown,
   ChevronRight,
-  LayoutDashboard,
+  Home,
   Building2,
   FileText,
-  BookOpen,
   AlertTriangle,
   Network,
   FlaskConical,
@@ -66,43 +65,53 @@ interface SidebarNavProps {
   showAdvanced?: boolean;
   /** Use framework-based navigation (Phase 2) */
   useFrameworkNav?: boolean;
+  /** Badge counts for navigation items */
+  badges?: {
+    thirdParties?: number;
+    documents?: number;
+    incidents?: number;
+  };
 }
 
 // ============================================================================
-// Navigation Configuration
+// New Navigation Configuration (UI/UX Redesign)
 // ============================================================================
 
-// Core items - always visible
-const CORE_NAV: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Vendors', href: '/vendors', icon: Building2 },
-  { name: 'Documents', href: '/documents', icon: FileText },
-];
+// Home - Single unified dashboard
+const HOME_NAV: NavItem = {
+  name: 'Home',
+  href: '/dashboard',
+  icon: Home,
+};
 
-// Legacy navigation (when useFrameworkNav is false)
-const LEGACY_CORE_NAV: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Vendors', href: '/vendors', icon: Building2 },
+// Manage section - Day-to-day operations
+const MANAGE_NAV: NavItem[] = [
+  { name: 'Third Parties', href: '/vendors', icon: Building2 },
   { name: 'Documents', href: '/documents', icon: FileText },
-  { name: 'Register of Information', href: '/roi', icon: BookOpen },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
 ];
 
-const LEGACY_ADVANCED_NAV: NavItem[] = [
-  { name: 'Concentration Risk', href: '/concentration', icon: Network },
+// Compliance section - Regulatory requirements
+const COMPLIANCE_NAV: NavItem[] = [
+  { name: 'Register of Information', href: '/roi', icon: Database },
+  { name: 'Risk Register', href: '/risks', icon: ClipboardList },
   { name: 'Resilience Testing', href: '/testing', icon: FlaskConical },
-  { name: 'Compliance Trends', href: '/compliance/trends', icon: BarChart3 },
-  { name: 'Frameworks', href: '/frameworks', icon: Layers },
 ];
 
-// Framework-specific navigation
+// Insights section - Analytics (collapsed by default)
+const INSIGHTS_NAV: NavItem[] = [
+  { name: 'Compliance Trends', href: '/compliance/trends', icon: BarChart3 },
+  { name: 'Concentration Risk', href: '/concentration', icon: Network },
+  { name: 'Framework Coverage', href: '/frameworks', icon: Layers },
+];
+
+// Framework-specific navigation (Phase 2)
 const FRAMEWORK_NAV: Record<FrameworkCode, NavItem[]> = {
   nis2: [
     { name: 'NIS2 Overview', href: '/nis2', icon: Shield },
     { name: 'Risk Register', href: '/nis2/risk-register', icon: ClipboardList },
     { name: 'Risk Heat Map', href: '/nis2/heat-map', icon: PieChart },
     { name: 'Gap Analysis', href: '/nis2/gaps', icon: AlertTriangle },
-    { name: 'Compliance Trends', href: '/compliance/trends', icon: BarChart3 },
   ],
   dora: [
     { name: 'DORA Overview', href: '/dora', icon: Shield },
@@ -110,7 +119,6 @@ const FRAMEWORK_NAV: Record<FrameworkCode, NavItem[]> = {
     { name: 'ICT Incidents', href: '/incidents', icon: AlertCircle, module: 'incidents' },
     { name: 'Resilience Testing', href: '/testing', icon: FlaskConical, module: 'testing' },
     { name: 'Concentration Risk', href: '/concentration', icon: PieChart, module: 'tprm' },
-    { name: 'Compliance Trends', href: '/compliance/trends', icon: BarChart3 },
   ],
   gdpr: [
     { name: 'GDPR Overview', href: '/gdpr', icon: Shield },
@@ -124,9 +132,11 @@ const FRAMEWORK_NAV: Record<FrameworkCode, NavItem[]> = {
   ],
 };
 
-const SETTINGS_NAV: NavItem[] = [
-  { name: 'Settings', href: '/settings', icon: Settings },
-];
+const SETTINGS_NAV: NavItem = {
+  name: 'Settings',
+  href: '/settings',
+  icon: Settings,
+};
 
 // ============================================================================
 // Components
@@ -169,8 +179,8 @@ function NavLink({
     >
       <Icon className="h-5 w-5" />
       <span className="flex-1 text-sm">{item.name}</span>
-      {item.badge && (
-        <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
+      {item.badge !== undefined && Number(item.badge) > 0 && (
+        <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary min-w-[20px] text-center">
           {item.badge}
         </span>
       )}
@@ -395,6 +405,7 @@ export function SidebarNav({
   onboardingProgress = 0,
   showAdvanced = true,
   useFrameworkNav = false,
+  badges,
 }: SidebarNavProps) {
   const pathname = usePathname();
   const completed = onboardingSteps?.filter(s => s.done).length ?? onboardingProgress;
@@ -408,38 +419,56 @@ export function SidebarNav({
         isNewUser={isNewUser}
         completed={completed}
         pathname={pathname}
+        badges={badges}
       />
     );
   }
 
-  // Legacy navigation (backwards compatible)
+  // New unified navigation (default)
   return (
-    <LegacySidebarNav
+    <UnifiedSidebarNav
       onboardingSteps={onboardingSteps}
       isNewUser={isNewUser}
       completed={completed}
       pathname={pathname}
       showAdvanced={showAdvanced}
+      badges={badges}
     />
   );
 }
 
 // ============================================================================
-// Framework-Aware Sidebar (uses FrameworkProvider)
+// Unified Sidebar (New UI/UX Design)
 // ============================================================================
 
-function FrameworkSidebarNav({
+function UnifiedSidebarNav({
   onboardingSteps,
   isNewUser,
   completed,
   pathname,
+  showAdvanced = true,
+  badges,
 }: {
   onboardingSteps?: OnboardingStep[];
   isNewUser: boolean;
   completed: number;
   pathname: string;
+  showAdvanced?: boolean;
+  badges?: SidebarNavProps['badges'];
 }) {
-  const { enabledFrameworks, hasModuleAccess } = useFramework();
+  // Apply badges to nav items
+  const manageNavWithBadges = MANAGE_NAV.map(item => {
+    if (item.href === '/vendors' && badges?.thirdParties) {
+      return { ...item, badge: badges.thirdParties };
+    }
+    if (item.href === '/documents' && badges?.documents) {
+      return { ...item, badge: badges.documents };
+    }
+    if (item.href === '/incidents' && badges?.incidents) {
+      return { ...item, badge: badges.incidents };
+    }
+    return item;
+  });
 
   return (
     <nav className="flex-1 p-4 space-y-4">
@@ -452,10 +481,110 @@ function FrameworkSidebarNav({
         />
       )}
 
-      {/* Core Navigation - Always visible */}
+      {/* Home - Single item, no group */}
+      <div className="space-y-1">
+        <NavLink
+          item={HOME_NAV}
+          isActive={pathname === '/dashboard' || pathname === '/'}
+        />
+      </div>
+
+      {/* Manage Section */}
       <CollapsibleGroup
-        title="Core"
-        items={CORE_NAV}
+        title="Manage"
+        items={manageNavWithBadges}
+        defaultOpen={true}
+        collapsible={false}
+        currentPath={pathname}
+      />
+
+      {/* Compliance Section */}
+      <CollapsibleGroup
+        title="Compliance"
+        items={COMPLIANCE_NAV}
+        defaultOpen={true}
+        collapsible={false}
+        currentPath={pathname}
+      />
+
+      {/* Insights Section - Collapsed by default for users < 10 vendors */}
+      {showAdvanced && (
+        <CollapsibleGroup
+          title="Insights"
+          items={INSIGHTS_NAV}
+          defaultOpen={!isNewUser}
+          collapsible={true}
+          currentPath={pathname}
+        />
+      )}
+
+      {/* Settings */}
+      <div className="pt-2 border-t border-sidebar-border">
+        <NavLink
+          item={SETTINGS_NAV}
+          isActive={pathname.startsWith('/settings')}
+        />
+      </div>
+    </nav>
+  );
+}
+
+// ============================================================================
+// Framework-Aware Sidebar (uses FrameworkProvider)
+// ============================================================================
+
+function FrameworkSidebarNav({
+  onboardingSteps,
+  isNewUser,
+  completed,
+  pathname,
+  badges,
+}: {
+  onboardingSteps?: OnboardingStep[];
+  isNewUser: boolean;
+  completed: number;
+  pathname: string;
+  badges?: SidebarNavProps['badges'];
+}) {
+  const { enabledFrameworks, hasModuleAccess } = useFramework();
+
+  // Apply badges to manage nav
+  const manageNavWithBadges = MANAGE_NAV.map(item => {
+    if (item.href === '/vendors' && badges?.thirdParties) {
+      return { ...item, badge: badges.thirdParties };
+    }
+    if (item.href === '/documents' && badges?.documents) {
+      return { ...item, badge: badges.documents };
+    }
+    if (item.href === '/incidents' && badges?.incidents) {
+      return { ...item, badge: badges.incidents };
+    }
+    return item;
+  });
+
+  return (
+    <nav className="flex-1 p-4 space-y-4">
+      {/* Onboarding Progress (only for new users) */}
+      {isNewUser && (
+        <OnboardingProgress
+          steps={onboardingSteps}
+          completed={completed}
+          total={onboardingSteps?.length ?? 4}
+        />
+      )}
+
+      {/* Home */}
+      <div className="space-y-1">
+        <NavLink
+          item={HOME_NAV}
+          isActive={pathname === '/dashboard' || pathname === '/'}
+        />
+      </div>
+
+      {/* Manage Section */}
+      <CollapsibleGroup
+        title="Manage"
+        items={manageNavWithBadges}
         defaultOpen={true}
         collapsible={false}
         currentPath={pathname}
@@ -475,77 +604,21 @@ function FrameworkSidebarNav({
         />
       ))}
 
-      {/* Settings */}
-      <div className="pt-2 border-t border-sidebar-border">
-        {SETTINGS_NAV.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            isActive={pathname.startsWith(item.href)}
-          />
-        ))}
-      </div>
-    </nav>
-  );
-}
-
-// ============================================================================
-// Legacy Sidebar (backwards compatible)
-// ============================================================================
-
-function LegacySidebarNav({
-  onboardingSteps,
-  isNewUser,
-  completed,
-  pathname,
-  showAdvanced = true,
-}: {
-  onboardingSteps?: OnboardingStep[];
-  isNewUser: boolean;
-  completed: number;
-  pathname: string;
-  showAdvanced?: boolean;
-}) {
-  return (
-    <nav className="flex-1 p-4 space-y-4">
-      {/* Onboarding Progress (only for new users) */}
-      {isNewUser && (
-        <OnboardingProgress
-          steps={onboardingSteps}
-          completed={completed}
-          total={onboardingSteps?.length ?? 4}
-        />
-      )}
-
-      {/* Core Navigation - Always visible */}
+      {/* Insights Section */}
       <CollapsibleGroup
-        title="Core"
-        items={LEGACY_CORE_NAV}
-        defaultOpen={true}
-        collapsible={false}
+        title="Insights"
+        items={INSIGHTS_NAV}
+        defaultOpen={!isNewUser}
+        collapsible={true}
         currentPath={pathname}
       />
 
-      {/* Advanced Navigation - Collapsible, closed by default for new users */}
-      {showAdvanced && (
-        <CollapsibleGroup
-          title="Advanced"
-          items={LEGACY_ADVANCED_NAV}
-          defaultOpen={!isNewUser}
-          collapsible={true}
-          currentPath={pathname}
-        />
-      )}
-
       {/* Settings */}
       <div className="pt-2 border-t border-sidebar-border">
-        {SETTINGS_NAV.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            isActive={pathname.startsWith(item.href)}
-          />
-        ))}
+        <NavLink
+          item={SETTINGS_NAV}
+          isActive={pathname.startsWith('/settings')}
+        />
       </div>
     </nav>
   );

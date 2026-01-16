@@ -33,9 +33,11 @@ import {
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { VendorLEIStatus } from './vendor-lei-status';
-import { VendorRiskGauge } from './vendor-risk-gauge';
+import { TierBadge } from '@/components/ui/tier-badge';
+import { GradeBadge, scoreToGrade } from '@/components/ui/grade-badge';
+import { ProgressMini } from '@/components/ui/progress-mini';
 import type { Vendor } from '@/lib/vendors/types';
-import { getRiskLevel } from '@/lib/vendors/types';
+import { PROVIDER_TYPE_LABELS } from '@/lib/vendors/types';
 import { deleteVendor } from '@/lib/vendors/actions';
 
 interface VendorHeroProps {
@@ -50,7 +52,28 @@ export function VendorHero({ vendor, onRefreshGleif, isRefreshing }: VendorHeroP
   const [isDeleting, setIsDeleting] = useState(false);
 
   const isCritical = vendor.supports_critical_function;
-  const riskLevel = getRiskLevel(vendor.risk_score ?? null);
+
+  // Map tier to numeric value for TierBadge
+  const tierValue = vendor.tier === 'critical' ? 1 : vendor.tier === 'important' ? 2 : 3;
+
+  // Calculate DORA compliance score (simplified - in production would come from DB)
+  const hasLei = !!vendor.lei;
+  const hasAssessment = !!vendor.last_assessment_date;
+  const hasCriticalFunctions = vendor.critical_functions?.length > 0;
+  let doraComplianceScore = 0;
+  if (hasLei) doraComplianceScore += 35;
+  if (hasAssessment) doraComplianceScore += 35;
+  if (hasCriticalFunctions || !vendor.supports_critical_function) doraComplianceScore += 30;
+
+  // Use external grade if available, otherwise calculate from risk_score
+  const riskGrade = vendor.external_risk_grade ||
+    (vendor.risk_score !== null && vendor.risk_score !== undefined
+      ? scoreToGrade(vendor.risk_score)
+      : null);
+
+  const providerLabel = vendor.provider_type
+    ? PROVIDER_TYPE_LABELS[vendor.provider_type]
+    : null;
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -159,64 +182,81 @@ export function VendorHero({ vendor, onRefreshGleif, isRefreshing }: VendorHeroP
 
       {/* Main Hero Section */}
       <div className="card-premium p-6">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-          {/* Left: Vendor Info */}
-          <div className="space-y-4 flex-1">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-semibold tracking-tight">
-                  {vendor.name}
-                </h1>
-                {isCritical && (
-                  <Badge className="bg-primary/10 text-primary border-primary/20 gap-1">
-                    <Shield className="h-3 w-3" />
-                    Critical Function
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* LEI Status */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {vendor.lei && (
-                <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
-                  LEI: {vendor.lei}
-                </code>
+        <div className="space-y-4">
+          {/* Top Row: Name and subtitle */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {vendor.name}
+              </h1>
+              {isCritical && (
+                <Badge className="bg-primary/10 text-primary border-primary/20 gap-1">
+                  <Shield className="h-3 w-3" />
+                  Critical Function
+                </Badge>
               )}
-              <VendorLEIStatus
-                lei={vendor.lei}
-                leiStatus={vendor.lei_status}
-                leiVerifiedAt={vendor.lei_verified_at}
-                leiNextRenewal={vendor.lei_next_renewal}
-                entityStatus={vendor.entity_status}
-              />
             </div>
+            {providerLabel && (
+              <p className="text-muted-foreground">{providerLabel}</p>
+            )}
+          </div>
 
-            {/* Quick Stats */}
-            <div className="flex flex-wrap gap-4 pt-2">
-              <div className="text-sm">
-                <span className="text-muted-foreground">Provider Type:</span>{' '}
-                <span className="font-medium">{vendor.provider_type || 'Not specified'}</span>
+          {/* Inline Status Indicators - The key improvement */}
+          <div className="flex items-center gap-4 flex-wrap py-2 border-y border-border/50">
+            <TierBadge tier={tierValue} ctpp={vendor.is_ctpp} showLabel />
+
+            <div className="w-px h-6 bg-border" />
+
+            {riskGrade ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Risk:</span>
+                <GradeBadge grade={riskGrade} size="sm" />
               </div>
-              <div className="text-sm">
-                <span className="text-muted-foreground">Jurisdiction:</span>{' '}
-                <span className="font-medium">{vendor.jurisdiction || 'Not specified'}</span>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Risk:</span>
+                <span className="text-sm text-muted-foreground">Not assessed</span>
               </div>
-              {vendor.esa_register_id && (
-                <div className="text-sm">
-                  <span className="text-muted-foreground">ESA ID:</span>{' '}
-                  <span className="font-medium">{vendor.esa_register_id}</span>
-                </div>
-              )}
+            )}
+
+            <div className="w-px h-6 bg-border" />
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">DORA:</span>
+              <ProgressMini value={doraComplianceScore} size="sm" showValue width="w-20" />
             </div>
           </div>
 
-          {/* Right: Risk Gauge */}
-          <div className="flex-shrink-0">
-            <VendorRiskGauge
-              score={vendor.risk_score ?? null}
-              level={riskLevel}
-            />
+          {/* LEI and Jurisdiction */}
+          <div className="flex flex-wrap items-center gap-4">
+            {vendor.lei && (
+              <div className="flex items-center gap-2">
+                <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                  LEI: {vendor.lei}
+                </code>
+                <VendorLEIStatus
+                  lei={vendor.lei}
+                  leiStatus={vendor.lei_status}
+                  leiVerifiedAt={vendor.lei_verified_at}
+                  leiNextRenewal={vendor.lei_next_renewal}
+                  entityStatus={vendor.entity_status}
+                />
+              </div>
+            )}
+
+            {vendor.jurisdiction && (
+              <div className="text-sm">
+                <span className="text-muted-foreground">Jurisdiction:</span>{' '}
+                <span className="font-medium">{vendor.jurisdiction}</span>
+              </div>
+            )}
+
+            {vendor.esa_register_id && (
+              <div className="text-sm">
+                <span className="text-muted-foreground">ESA ID:</span>{' '}
+                <span className="font-medium">{vendor.esa_register_id}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

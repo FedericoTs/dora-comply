@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { Plus, Download, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StatusDot } from '@/components/ui/status-dot';
+import { cn } from '@/lib/utils';
 import type { RiskSummary } from '@/lib/nis2/types';
 
 interface RiskRegisterHeaderProps {
@@ -10,19 +12,20 @@ interface RiskRegisterHeaderProps {
 }
 
 export function RiskRegisterHeader({ summary }: RiskRegisterHeaderProps) {
-  const criticalCount = (summary?.critical_residual ?? 0) + (summary?.high_residual ?? 0);
-  const withinTolerance = summary
-    ? summary.total_risks - criticalCount - (summary.not_assessed ?? 0)
-    : 0;
+  // Extract risk counts by level (use residual if available, otherwise inherent)
+  const criticalCount = summary?.critical_residual ?? 0;
+  const highCount = summary?.high_residual ?? 0;
+  const mediumCount = summary?.medium_residual ?? 0;
+  const lowCount = summary?.low_residual ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header with actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Risk Register</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Risk Register</h1>
           <p className="text-muted-foreground mt-1">
-            NIS2 ICT risk assessment and treatment tracking
+            ICT risk assessment and treatment tracking
           </p>
         </div>
         <div className="flex gap-2">
@@ -45,52 +48,77 @@ export function RiskRegisterHeader({ summary }: RiskRegisterHeaderProps) {
         </div>
       </div>
 
-      {/* Summary stats */}
+      {/* Risk Level Summary Cards */}
       {summary && summary.total_risks > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <SummaryCard
-            label="Total Risks"
-            value={summary.total_risks}
-            subtext={`${summary.not_assessed ?? 0} unassessed`}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <RiskLevelCard
+            level="critical"
+            count={criticalCount}
+            total={summary.total_risks}
           />
-          <SummaryCard
-            label="Critical/High"
-            value={criticalCount}
-            valueClassName="text-error"
-            subtext="Require attention"
+          <RiskLevelCard
+            level="high"
+            count={highCount}
+            total={summary.total_risks}
           />
-          <SummaryCard
-            label="Within Tolerance"
-            value={withinTolerance}
-            valueClassName="text-success"
-            subtext={`${Math.round((withinTolerance / summary.total_risks) * 100)}% of total`}
+          <RiskLevelCard
+            level="medium"
+            count={mediumCount}
+            total={summary.total_risks}
           />
-          <SummaryCard
-            label="Avg. Control Effectiveness"
-            value={summary.avg_control_effectiveness !== null ? `${Math.round(summary.avg_control_effectiveness)}%` : '-'}
-            subtext="Across all risks"
+          <RiskLevelCard
+            level="low"
+            count={lowCount}
+            total={summary.total_risks}
           />
+          <div className="rounded-lg border bg-card p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-medium text-muted-foreground">Total</span>
+            </div>
+            <p className="text-2xl font-bold">{summary.total_risks}</p>
+            <p className="text-xs text-muted-foreground">
+              {summary.avg_control_effectiveness !== null
+                ? `${Math.round(summary.avg_control_effectiveness)}% control effectiveness`
+                : 'No controls applied'}
+            </p>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-interface SummaryCardProps {
-  label: string;
-  value: number | string;
-  valueClassName?: string;
-  subtext?: string;
+interface RiskLevelCardProps {
+  level: 'critical' | 'high' | 'medium' | 'low';
+  count: number;
+  total: number;
 }
 
-function SummaryCard({ label, value, valueClassName, subtext }: SummaryCardProps) {
+function RiskLevelCard({ level, count, total }: RiskLevelCardProps) {
+  const labels: Record<string, string> = {
+    critical: 'Critical',
+    high: 'High',
+    medium: 'Medium',
+    low: 'Low',
+  };
+
+  const bgColors: Record<string, string> = {
+    critical: 'bg-error/10 border-error/20',
+    high: 'bg-orange-500/10 border-orange-500/20',
+    medium: 'bg-warning/10 border-warning/20',
+    low: 'bg-success/10 border-success/20',
+  };
+
+  const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+
   return (
-    <div className="rounded-lg border bg-card p-4">
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <p className={`text-2xl font-bold mt-1 ${valueClassName ?? ''}`}>{value}</p>
-      {subtext && (
-        <p className="text-xs text-muted-foreground mt-0.5">{subtext}</p>
-      )}
+    <div className={cn('rounded-lg border p-4', bgColors[level])}>
+      <div className="flex items-center gap-2 mb-1">
+        <StatusDot status={level} />
+        <span className="text-sm font-medium">{labels[level]}</span>
+      </div>
+      <p className="text-2xl font-bold">{count}</p>
+      <p className="text-xs text-muted-foreground">{percentage}% of total</p>
     </div>
   );
 }
