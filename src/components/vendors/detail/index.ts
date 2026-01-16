@@ -9,3 +9,10 @@ export { VendorAlertBanner } from './vendor-alert-banner';
 export { VendorEnrichmentTab } from './vendor-enrichment-tab';
 export { VendorCertifications } from './vendor-certifications';
 export { CTTPOversightPanel } from './ctpp-oversight-panel';
+export {
+  VendorSummaryDashboard,
+  VendorQuickMetrics,
+  type VendorHealthDimension,
+  type VendorAction,
+  type VendorSummaryDashboardProps,
+} from './vendor-summary-dashboard';

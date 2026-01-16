@@ -27,6 +27,7 @@ import {
   VendorESAFields,
   VendorEnrichmentTab,
   CTTPOversightPanel,
+  VendorSummaryDashboard,
 } from '@/components/vendors/detail';
 import { AssessmentProgress } from '@/components/vendors/assessment-progress';
 import { VendorMonitoringTab } from '@/components/vendors/monitoring';
@@ -91,56 +92,8 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
       {/* Alert Banner */}
       <VendorAlertBanner vendor={vendor} />
 
-      {/* Quick Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="card-elevated">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="rounded-lg bg-primary/10 p-2">
-              <FileText className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{vendor.documents_count || 0}</p>
-              <p className="text-xs text-muted-foreground">Documents</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-elevated">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="rounded-lg bg-info/10 p-2">
-              <ScrollText className="h-5 w-5 text-info" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{vendor.contracts_count || 0}</p>
-              <p className="text-xs text-muted-foreground">Contracts</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-elevated">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="rounded-lg bg-warning/10 p-2">
-              <Building2 className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{vendor.services_count || 0}</p>
-              <p className="text-xs text-muted-foreground">ICT Services</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-elevated">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="rounded-lg bg-purple-500/10 p-2">
-              <Users className="h-5 w-5 text-purple-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{vendor.contacts?.length || 0}</p>
-              <p className="text-xs text-muted-foreground">Contacts</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Summary Dashboard with Health Score and Next Actions */}
+      <VendorSummaryDashboard vendor={vendor} />
 
       {/* Assessment Progress */}
       <AssessmentProgress

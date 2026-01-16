@@ -7,6 +7,13 @@ export { VendorCard } from './vendor-card';
 export { VendorTable } from './vendor-table';
 export { VendorSmartTable } from './vendor-smart-table';
 export { VendorStatsCards, VendorStatsCompact } from './vendor-stats';
+export {
+  VendorStatsDashboard,
+  VendorStatsMini,
+  type VendorStatsDashboardProps,
+  type VendorTrendData,
+  type TimePeriod,
+} from './vendor-stats-dashboard';
 export { VendorFiltersDropdown, VendorFilterTags } from './vendor-filters';
 export { VendorSearch } from './vendor-search';
 export { VendorViewToggle } from './vendor-view-toggle';
@@ -19,6 +26,17 @@ export {
   type QuickFilterId,
   type QuickFilterOption,
 } from './quick-filters';
+
+// AI Insights
+export {
+  VendorAIInsights,
+  VendorAIInsightsBanner,
+  generateMockInsights,
+  type AIInsight,
+  type InsightType,
+  type InsightPriority,
+  type VendorAIInsightsProps,
+} from './ai/vendor-ai-insights';
 
 // Form components
 export { FormSection } from './form-section';
