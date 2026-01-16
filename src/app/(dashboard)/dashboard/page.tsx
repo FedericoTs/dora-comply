@@ -7,6 +7,7 @@ import { getIncidentStatsEnhanced, getPendingDeadlines } from '@/lib/incidents/q
 import { getTestingStats } from '@/lib/testing/queries';
 import { getOrganizationContext } from '@/lib/org/context';
 import { getDocumentStats } from '@/lib/documents/queries';
+import { getEnabledFrameworks } from '@/lib/licensing/check-access-server';
 import { IncidentMetricsCard } from '@/components/incidents/dashboard';
 import { StatCard, StatCardGrid } from '@/components/ui/stat-card';
 import { KPI_HELP } from '@/components/ui/help-tooltip';
@@ -22,6 +23,7 @@ import {
   PendingDeadlinesCard,
   RecentActivityCard,
   OnboardingDashboard,
+  FrameworkOverviewCard,
 } from '@/components/dashboard';
 
 export const metadata: Metadata = {
@@ -53,6 +55,11 @@ export default async function DashboardPage() {
   const classification = orgContext?.classification;
   const tlptRequired = classification?.tlptRequired ?? false;
   const simplifiedFramework = classification?.simplifiedFramework ?? false;
+
+  // Get enabled frameworks for the organization
+  const enabledFrameworks = orgContext?.organization?.id
+    ? await getEnabledFrameworks(orgContext.organization.id)
+    : [];
 
   // Calculate RoI readiness (average completeness across templates with data)
   const templatesWithData = roiStats.filter(s => s.rowCount > 0);
@@ -184,6 +191,9 @@ export default async function DashboardPage() {
           avgRoiCompleteness={avgRoiCompleteness}
           totalVendors={totalVendors}
         />
+
+        {/* Framework Overview */}
+        <FrameworkOverviewCard enabledFrameworks={enabledFrameworks} />
 
         {/* Vendors by Risk */}
         <VendorsByRiskCard

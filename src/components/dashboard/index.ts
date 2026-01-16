@@ -19,3 +19,4 @@ export { VendorsByRiskCard } from './vendors-by-risk-card';
 export { PendingDeadlinesCard } from './pending-deadlines-card';
 export { RecentActivityCard } from './recent-activity-card';
 export { OnboardingDashboard } from './onboarding-dashboard';
+export { FrameworkOverviewCard } from './framework-overview-card';
