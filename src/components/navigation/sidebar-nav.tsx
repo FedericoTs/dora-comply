@@ -531,6 +531,7 @@ function UnifiedSidebarNav({
 
 // ============================================================================
 // Framework-Aware Sidebar (uses FrameworkProvider)
+// Shows only the ACTIVE framework's navigation (not all enabled frameworks)
 // ============================================================================
 
 function FrameworkSidebarNav({
@@ -546,7 +547,7 @@ function FrameworkSidebarNav({
   pathname: string;
   badges?: SidebarNavProps['badges'];
 }) {
-  const { enabledFrameworks, hasModuleAccess } = useFramework();
+  const { activeFramework, hasModuleAccess } = useFramework();
 
   // Apply badges to manage nav
   const manageNavWithBadges = MANAGE_NAV.map(item => {
@@ -561,6 +562,9 @@ function FrameworkSidebarNav({
     }
     return item;
   });
+
+  // Get navigation items for the active framework only
+  const activeFrameworkNav = FRAMEWORK_NAV[activeFramework] || [];
 
   return (
     <nav className="flex-1 p-4 space-y-4">
@@ -590,19 +594,18 @@ function FrameworkSidebarNav({
         currentPath={pathname}
       />
 
-      {/* Framework-specific sections */}
-      {enabledFrameworks.map((fw) => (
+      {/* Active Framework Section - Only show the currently selected framework */}
+      {activeFrameworkNav.length > 0 && (
         <CollapsibleGroup
-          key={fw}
-          title={FRAMEWORK_DISPLAY_NAMES[fw]}
-          items={FRAMEWORK_NAV[fw] || []}
+          title={FRAMEWORK_DISPLAY_NAMES[activeFramework]}
+          items={activeFrameworkNav}
           defaultOpen={true}
-          collapsible={true}
+          collapsible={false}
           currentPath={pathname}
-          frameworkCode={fw}
+          frameworkCode={activeFramework}
           checkModuleAccess={hasModuleAccess}
         />
-      ))}
+      )}
 
       {/* Insights Section */}
       <CollapsibleGroup
