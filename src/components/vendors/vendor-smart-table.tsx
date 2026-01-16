@@ -117,7 +117,13 @@ function RiskCell({ vendor }: { vendor: Vendor }) {
   const hasGrade = vendor.external_risk_grade;
 
   if (!hasRisk && !hasGrade) {
-    return <span className="text-muted-foreground text-sm">-</span>;
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+          Not Assessed
+        </span>
+      </div>
+    );
   }
 
   // Use external grade if available, otherwise calculate from risk_score
@@ -127,9 +133,22 @@ function RiskCell({ vendor }: { vendor: Vendor }) {
   // For now, we'll use a derived trend based on score positioning
   const trend = vendor.risk_score ? (50 - vendor.risk_score) / 10 : 0;
 
+  // Determine risk level for background color
+  const riskScore = vendor.risk_score ?? 50;
+  const riskBgClass = riskScore >= 70
+    ? 'bg-red-50 dark:bg-red-950/30'
+    : riskScore >= 50
+      ? 'bg-amber-50 dark:bg-amber-950/30'
+      : 'bg-emerald-50 dark:bg-emerald-950/30';
+
   return (
-    <div className="flex items-center gap-2">
+    <div className={cn('flex items-center gap-2 px-2 py-1 rounded-md -mx-2', riskBgClass)}>
       {grade && <GradeBadge grade={grade} size="sm" />}
+      {hasRisk && (
+        <span className="text-xs font-medium text-muted-foreground">
+          {vendor.risk_score}
+        </span>
+      )}
       {hasRisk && <TrendArrow value={Math.round(trend)} size="sm" invertColors />}
     </div>
   );
@@ -153,6 +172,69 @@ function DoraComplianceCell({ vendor }: { vendor: Vendor }) {
   let StatusIcon = AlertCircle;
   let statusColor = 'text-warning';
   if (complianceScore >= 85) {
+    StatusIcon = CheckCircle2;
+    statusColor = 'text-success';
+  } else if (complianceScore < 40) {
+    StatusIcon = XCircle;
+    statusColor = 'text-error';
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <ProgressMini
+        value={complianceScore}
+        size="sm"
+        showValue
+        width="w-16"
+      />
+      <StatusIcon className={cn('h-4 w-4', statusColor)} />
+    </div>
+  );
+}
+
+function Nis2ComplianceCell({ vendor }: { vendor: Vendor }) {
+  // Calculate NIS2 compliance score based on available data
+  // NIS2 focuses on: risk management, incident handling, supply chain security, encryption
+  const hasRiskAssessment = vendor.risk_score !== null && vendor.risk_score !== undefined;
+  const hasAssessment = !!vendor.last_assessment_date;
+  const isCriticalTier = vendor.tier === 'critical' || vendor.tier === 'important';
+
+  // Check assessment recency (NIS2 requires ongoing monitoring)
+  const assessmentRecent = vendor.last_assessment_date
+    ? new Date(vendor.last_assessment_date) > new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+    : false;
+
+  // NIS2 compliance scoring
+  // - Risk assessment: 30%
+  // - Assessment currency: 25%
+  // - Security posture (based on risk_score): 25%
+  // - Supply chain controls (critical function mapping): 20%
+  let complianceScore = 0;
+
+  if (hasRiskAssessment) complianceScore += 30;
+  if (hasAssessment && assessmentRecent) complianceScore += 25;
+  else if (hasAssessment) complianceScore += 10; // Partial credit for old assessment
+
+  // Security posture from risk score (lower is better)
+  if (hasRiskAssessment) {
+    const riskScore = vendor.risk_score!;
+    if (riskScore <= 30) complianceScore += 25;
+    else if (riskScore <= 50) complianceScore += 18;
+    else if (riskScore <= 70) complianceScore += 10;
+    else complianceScore += 5;
+  }
+
+  // Supply chain controls
+  if (vendor.critical_functions?.length > 0 || !vendor.supports_critical_function) {
+    complianceScore += 20;
+  } else if (isCriticalTier) {
+    complianceScore += 5; // Partial: critical tier but no function mapping
+  }
+
+  // Determine status icon
+  let StatusIcon = AlertCircle;
+  let statusColor = 'text-warning';
+  if (complianceScore >= 80) {
     StatusIcon = CheckCircle2;
     statusColor = 'text-success';
   } else if (complianceScore < 40) {
@@ -364,8 +446,11 @@ export function VendorSmartTable({
                 'Risk'
               )}
             </TableHead>
-            <TableHead className="hidden md:table-cell w-[160px]">
+            <TableHead className="hidden lg:table-cell w-[140px]">
               DORA Status
+            </TableHead>
+            <TableHead className="hidden lg:table-cell w-[140px]">
+              NIS2 Status
             </TableHead>
             <TableHead className="w-[120px] text-right">Actions</TableHead>
           </TableRow>
@@ -412,8 +497,11 @@ export function VendorSmartTable({
                 <TableCell>
                   <RiskCell vendor={vendor} />
                 </TableCell>
-                <TableCell className="hidden md:table-cell">
+                <TableCell className="hidden lg:table-cell">
                   <DoraComplianceCell vendor={vendor} />
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <Nis2ComplianceCell vendor={vendor} />
                 </TableCell>
                 <TableCell>
                   <ActionsCell
