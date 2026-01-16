@@ -16,6 +16,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useEffect,
   type ReactNode,
 } from "react";
 import type {
@@ -81,6 +82,17 @@ interface FrameworkProviderProps {
 }
 
 const STORAGE_KEY = "active-framework";
+const COOKIE_NAME = "active-framework";
+
+/**
+ * Set cookie on client side to sync with server
+ */
+function setFrameworkCookie(framework: FrameworkCode): void {
+  if (typeof document !== "undefined") {
+    const maxAge = 60 * 60 * 24 * 365; // 1 year
+    document.cookie = `${COOKIE_NAME}=${framework}; path=/; max-age=${maxAge}; samesite=lax`;
+  }
+}
 
 export function FrameworkProvider({
   children,
@@ -122,6 +134,11 @@ export function FrameworkProvider({
   const [activeFramework, setActiveFrameworkState] =
     useState<FrameworkCode>(defaultFramework);
 
+  // Sync cookie on mount to ensure server has access
+  useEffect(() => {
+    setFrameworkCookie(defaultFramework);
+  }, [defaultFramework]);
+
   // Persist framework selection
   const setActiveFramework = useCallback(
     (framework: FrameworkCode) => {
@@ -132,9 +149,10 @@ export function FrameworkProvider({
 
       setActiveFrameworkState(framework);
 
-      // Persist to localStorage
+      // Persist to localStorage and cookie (for server-side access)
       if (typeof window !== "undefined") {
         localStorage.setItem(STORAGE_KEY, framework);
+        setFrameworkCookie(framework);
       }
     },
     [licensing]

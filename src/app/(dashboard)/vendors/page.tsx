@@ -4,6 +4,7 @@ import { getVendors, getVendorStats } from '@/lib/vendors/queries';
 import { VendorListClient } from './vendor-list-client';
 import { VendorStatsCompact } from '@/components/vendors';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getActiveFrameworkFromCookie } from '@/lib/context/framework-cookie';
 
 export const metadata: Metadata = {
   title: 'Third Parties | DORA Comply',
@@ -23,10 +24,14 @@ async function VendorStatsSection() {
 
 // Initial data loader
 async function VendorListSection() {
+  // Get framework from cookie for server-side filtering
+  const framework = await getActiveFrameworkFromCookie();
+
   const [vendorsResult, stats] = await Promise.all([
     getVendors({
       pagination: { page: 1, limit: 20 },
       sort: { field: 'created_at', direction: 'desc' },
+      filters: framework ? { framework } : undefined,
     }),
     getVendorStats(),
   ]);

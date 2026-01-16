@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useCallback, useEffect } from 'react';
+import { useState, useTransition, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Loader2, Trash2, Upload } from 'lucide-react';
@@ -62,6 +62,11 @@ export function VendorListClient({
 
   // Get active framework for filtering
   const { activeFramework } = useFramework();
+
+  // Track if this is the initial mount to prevent double-fetch
+  // (Server already fetched with framework filter from cookie)
+  const isInitialMount = useRef(true);
+  const previousFramework = useRef(activeFramework);
 
   // Initialize state from URL params
   const initialPage = getNumberParam('page', 1) ?? 1;
@@ -172,40 +177,53 @@ export function VendorListClient({
       newQuickFilter?: QuickFilterId
     ) => {
       startTransition(async () => {
-        // Merge quick filter with explicit filters
-        const qfFilters = getFiltersFromQuickFilter(newQuickFilter ?? quickFilter);
-        const mergedFilters = {
-          ...qfFilters,
-          ...(newFilters ?? filters),
-          search: newSearch ?? (searchQuery || undefined),
-          // Add framework filter
-          framework: activeFramework || undefined,
-        };
+        try {
+          // Merge quick filter with explicit filters
+          const qfFilters = getFiltersFromQuickFilter(newQuickFilter ?? quickFilter);
+          const mergedFilters = {
+            ...qfFilters,
+            ...(newFilters ?? filters),
+            search: newSearch ?? (searchQuery || undefined),
+            // Add framework filter
+            framework: activeFramework || undefined,
+          };
 
-        const result = await fetchVendorsAction({
-          pagination: {
-            page: newPage ?? page,
-            limit: newLimit ?? limit,
-          },
-          filters: mergedFilters,
-          sort: newSort ?? sortOptions,
-        });
+          const result = await fetchVendorsAction({
+            pagination: {
+              page: newPage ?? page,
+              limit: newLimit ?? limit,
+            },
+            filters: mergedFilters,
+            sort: newSort ?? sortOptions,
+          });
 
-        setVendors(result.data);
-        setTotal(result.total);
-        setTotalPages(result.total_pages);
-        setSelectedIds([]);
+          setVendors(result.data);
+          setTotal(result.total);
+          setTotalPages(result.total_pages);
+          setSelectedIds([]);
+        } catch (error) {
+          console.error('Failed to fetch vendors:', error);
+          toast.error('Failed to load vendors. Please try again.');
+        }
       });
     },
     [page, limit, filters, sortOptions, searchQuery, quickFilter, getFiltersFromQuickFilter, activeFramework]
   );
 
-  // Refetch when framework changes
+  // Refetch when framework changes (but not on initial mount - server already fetched with framework)
   useEffect(() => {
-    if (activeFramework) {
+    // Skip initial mount - server already fetched with correct framework from cookie
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      previousFramework.current = activeFramework;
+      return;
+    }
+
+    // Only refetch if framework actually changed
+    if (activeFramework && activeFramework !== previousFramework.current) {
+      previousFramework.current = activeFramework;
       fetchVendors(1);
     }
-    // Only depend on framework, not fetchVendors to avoid infinite loops
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFramework]);
 
