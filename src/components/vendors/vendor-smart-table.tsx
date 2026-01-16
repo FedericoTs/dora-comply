@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useMemo } from 'react';
 import {
   MoreHorizontal,
   FileText,
@@ -12,6 +13,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  Info,
 } from 'lucide-react';
 import {
   Table,
@@ -30,6 +32,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { TierBadge } from '@/components/ui/tier-badge';
 import { GradeBadge, scoreToGrade } from '@/components/ui/grade-badge';
 import { TrendArrow } from '@/components/ui/trend-arrow';
@@ -37,6 +45,12 @@ import { ProgressMini } from '@/components/ui/progress-mini';
 import { cn } from '@/lib/utils';
 import type { Vendor, VendorSortOptions } from '@/lib/vendors/types';
 import { PROVIDER_TYPE_LABELS } from '@/lib/vendors/types';
+import {
+  calculateDoraVendorScore,
+  calculateNis2VendorScore,
+  type ComplianceScore,
+  type VendorComplianceInput,
+} from '@/lib/compliance/vendor-compliance-scoring';
 
 // ============================================================================
 // Types
@@ -154,104 +168,145 @@ function RiskCell({ vendor }: { vendor: Vendor }) {
   );
 }
 
-function DoraComplianceCell({ vendor }: { vendor: Vendor }) {
-  // Calculate DORA compliance score based on available data
-  // In production, this would come from a computed field
-  const hasLei = !!vendor.lei;
-  const hasAssessment = !!vendor.last_assessment_date;
-  const hasCriticalFunctions = vendor.critical_functions?.length > 0;
+/**
+ * Convert Vendor to VendorComplianceInput for scoring
+ */
+function vendorToComplianceInput(vendor: Vendor): VendorComplianceInput {
+  return {
+    tier: vendor.tier,
+    status: vendor.status,
+    risk_score: vendor.risk_score,
+    external_risk_score: vendor.external_risk_score,
+    external_risk_grade: vendor.external_risk_grade,
+    lei: vendor.lei,
+    supports_critical_function: vendor.supports_critical_function,
+    critical_functions: vendor.critical_functions,
+    last_assessment_date: vendor.last_assessment_date,
+    updated_at: vendor.updated_at,
+  };
+}
 
-  // Simple compliance score calculation
-  let complianceScore = 0;
-  if (hasLei) complianceScore += 35;
-  if (hasAssessment) complianceScore += 35;
-  if (hasCriticalFunctions || !vendor.supports_critical_function)
-    complianceScore += 30;
-
-  // Determine status icon
-  let StatusIcon = AlertCircle;
-  let statusColor = 'text-warning';
-  if (complianceScore >= 85) {
-    StatusIcon = CheckCircle2;
-    statusColor = 'text-success';
-  } else if (complianceScore < 40) {
-    StatusIcon = XCircle;
-    statusColor = 'text-error';
-  }
-
+/**
+ * Compliance Score Tooltip Content
+ */
+function ComplianceTooltip({ score, framework }: { score: ComplianceScore; framework: 'DORA' | 'NIS2' }) {
   return (
-    <div className="flex items-center gap-2">
-      <ProgressMini
-        value={complianceScore}
-        size="sm"
-        showValue
-        width="w-16"
-      />
-      <StatusIcon className={cn('h-4 w-4', statusColor)} />
+    <div className="space-y-2 max-w-xs">
+      <div className="font-medium text-sm border-b pb-1">
+        {framework} Compliance Breakdown
+      </div>
+      <div className="space-y-1.5">
+        {score.components.map((component) => (
+          <div key={component.name} className="flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1.5">
+              {component.status === 'complete' && (
+                <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+              )}
+              {component.status === 'partial' && (
+                <AlertCircle className="h-3 w-3 text-amber-500" />
+              )}
+              {component.status === 'missing' && (
+                <XCircle className="h-3 w-3 text-red-500" />
+              )}
+              {component.name}
+            </span>
+            <span className="font-mono">
+              {component.score}/{component.maxScore}
+            </span>
+          </div>
+        ))}
+      </div>
+      {score.nextActions.length > 0 && (
+        <div className="border-t pt-1.5 mt-1.5">
+          <div className="text-xs font-medium text-muted-foreground mb-1">Next Steps:</div>
+          <ul className="text-xs space-y-0.5">
+            {score.nextActions.slice(0, 2).map((action, i) => (
+              <li key={i} className="text-muted-foreground">• {action}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
 
-function Nis2ComplianceCell({ vendor }: { vendor: Vendor }) {
-  // Calculate NIS2 compliance score based on available data
-  // NIS2 focuses on: risk management, incident handling, supply chain security, encryption
-  const hasRiskAssessment = vendor.risk_score !== null && vendor.risk_score !== undefined;
-  const hasAssessment = !!vendor.last_assessment_date;
-  const isCriticalTier = vendor.tier === 'critical' || vendor.tier === 'important';
+function DoraComplianceCell({ vendor }: { vendor: Vendor }) {
+  // Use centralized scoring for consistency
+  const score = useMemo(
+    () => calculateDoraVendorScore(vendorToComplianceInput(vendor)),
+    [vendor]
+  );
 
-  // Check assessment recency (NIS2 requires ongoing monitoring)
-  const assessmentRecent = vendor.last_assessment_date
-    ? new Date(vendor.last_assessment_date) > new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-    : false;
-
-  // NIS2 compliance scoring
-  // - Risk assessment: 30%
-  // - Assessment currency: 25%
-  // - Security posture (based on risk_score): 25%
-  // - Supply chain controls (critical function mapping): 20%
-  let complianceScore = 0;
-
-  if (hasRiskAssessment) complianceScore += 30;
-  if (hasAssessment && assessmentRecent) complianceScore += 25;
-  else if (hasAssessment) complianceScore += 10; // Partial credit for old assessment
-
-  // Security posture from risk score (lower is better)
-  if (hasRiskAssessment) {
-    const riskScore = vendor.risk_score!;
-    if (riskScore <= 30) complianceScore += 25;
-    else if (riskScore <= 50) complianceScore += 18;
-    else if (riskScore <= 70) complianceScore += 10;
-    else complianceScore += 5;
-  }
-
-  // Supply chain controls
-  if (vendor.critical_functions?.length > 0 || !vendor.supports_critical_function) {
-    complianceScore += 20;
-  } else if (isCriticalTier) {
-    complianceScore += 5; // Partial: critical tier but no function mapping
-  }
-
-  // Determine status icon
+  // Determine status icon based on level
   let StatusIcon = AlertCircle;
   let statusColor = 'text-warning';
-  if (complianceScore >= 80) {
+  if (score.level === 'compliant') {
     StatusIcon = CheckCircle2;
     statusColor = 'text-success';
-  } else if (complianceScore < 40) {
+  } else if (score.level === 'non_compliant' || score.level === 'not_assessed') {
     StatusIcon = XCircle;
     statusColor = 'text-error';
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <ProgressMini
-        value={complianceScore}
-        size="sm"
-        showValue
-        width="w-16"
-      />
-      <StatusIcon className={cn('h-4 w-4', statusColor)} />
-    </div>
+    <TooltipProvider>
+      <Tooltip delayDuration={300}>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 cursor-help">
+            <ProgressMini
+              value={score.total}
+              size="sm"
+              showValue
+              width="w-16"
+            />
+            <StatusIcon className={cn('h-4 w-4', statusColor)} />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="left" className="p-3">
+          <ComplianceTooltip score={score} framework="DORA" />
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function Nis2ComplianceCell({ vendor }: { vendor: Vendor }) {
+  // Use centralized scoring for consistency
+  const score = useMemo(
+    () => calculateNis2VendorScore(vendorToComplianceInput(vendor)),
+    [vendor]
+  );
+
+  // Determine status icon based on level
+  let StatusIcon = AlertCircle;
+  let statusColor = 'text-warning';
+  if (score.level === 'compliant') {
+    StatusIcon = CheckCircle2;
+    statusColor = 'text-success';
+  } else if (score.level === 'non_compliant' || score.level === 'not_assessed') {
+    StatusIcon = XCircle;
+    statusColor = 'text-error';
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip delayDuration={300}>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 cursor-help">
+            <ProgressMini
+              value={score.total}
+              size="sm"
+              showValue
+              width="w-16"
+            />
+            <StatusIcon className={cn('h-4 w-4', statusColor)} />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="left" className="p-3">
+          <ComplianceTooltip score={score} framework="NIS2" />
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
