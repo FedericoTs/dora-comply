@@ -32,6 +32,11 @@ import {
   getUpgradePromptForFramework,
   getUpgradePromptForModule,
 } from "@/lib/licensing/check-access";
+import {
+  FRAMEWORK_COOKIE_NAME,
+  FRAMEWORK_STORAGE_KEY,
+  isValidFramework,
+} from "./framework-constants";
 
 // ============================================
 // CONTEXT TYPES
@@ -81,16 +86,13 @@ interface FrameworkProviderProps {
   initialFramework?: FrameworkCode;
 }
 
-const STORAGE_KEY = "active-framework";
-const COOKIE_NAME = "active-framework";
-
 /**
  * Set cookie on client side to sync with server
  */
 function setFrameworkCookie(framework: FrameworkCode): void {
   if (typeof document !== "undefined") {
     const maxAge = 60 * 60 * 24 * 365; // 1 year
-    document.cookie = `${COOKIE_NAME}=${framework}; path=/; max-age=${maxAge}; samesite=lax`;
+    document.cookie = `${FRAMEWORK_COOKIE_NAME}=${framework}; path=/; max-age=${maxAge}; samesite=lax`;
   }
 }
 
@@ -108,14 +110,11 @@ export function FrameworkProvider({
 
     // Try to get from localStorage on client
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored && ["nis2", "dora", "gdpr", "iso27001"].includes(stored)) {
+      const stored = localStorage.getItem(FRAMEWORK_STORAGE_KEY);
+      if (isValidFramework(stored)) {
         // Verify user has access to stored framework
-        if (
-          licensing &&
-          checkFrameworkAccess(licensing, stored as FrameworkCode)
-        ) {
-          return stored as FrameworkCode;
+        if (licensing && checkFrameworkAccess(licensing, stored)) {
+          return stored;
         }
       }
     }
@@ -151,7 +150,7 @@ export function FrameworkProvider({
 
       // Persist to localStorage and cookie (for server-side access)
       if (typeof window !== "undefined") {
-        localStorage.setItem(STORAGE_KEY, framework);
+        localStorage.setItem(FRAMEWORK_STORAGE_KEY, framework);
         setFrameworkCookie(framework);
       }
     },

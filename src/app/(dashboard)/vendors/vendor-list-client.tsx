@@ -68,6 +68,9 @@ export function VendorListClient({
   const isInitialMount = useRef(true);
   const previousFramework = useRef(activeFramework);
 
+  // Track request ID to prevent race conditions (stale responses overwriting newer data)
+  const requestIdRef = useRef(0);
+
   // Initialize state from URL params
   const initialPage = getNumberParam('page', 1) ?? 1;
   const initialLimit = getNumberParam('limit', 20) ?? 20;
@@ -176,6 +179,9 @@ export function VendorListClient({
       newSearch?: string,
       newQuickFilter?: QuickFilterId
     ) => {
+      // Increment request ID to track this request
+      const currentRequestId = ++requestIdRef.current;
+
       startTransition(async () => {
         try {
           // Merge quick filter with explicit filters
@@ -197,11 +203,20 @@ export function VendorListClient({
             sort: newSort ?? sortOptions,
           });
 
+          // Only update state if this is still the latest request (prevents race conditions)
+          if (currentRequestId !== requestIdRef.current) {
+            return;
+          }
+
           setVendors(result.data);
           setTotal(result.total);
           setTotalPages(result.total_pages);
           setSelectedIds([]);
         } catch (error) {
+          // Only show error if this is still the latest request
+          if (currentRequestId !== requestIdRef.current) {
+            return;
+          }
           console.error('Failed to fetch vendors:', error);
           toast.error('Failed to load vendors. Please try again.');
         }

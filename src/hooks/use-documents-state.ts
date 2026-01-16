@@ -59,6 +59,9 @@ export function useDocumentsState({ initialData, framework }: UseDocumentsStateP
   const isInitialMount = useRef(true);
   const previousFramework = useRef(framework);
 
+  // Track request ID to prevent race conditions (stale responses overwriting newer data)
+  const requestIdRef = useRef(0);
+
   const totalPages = Math.ceil(total / initialData.limit);
 
   // Debounce search
@@ -81,6 +84,9 @@ export function useDocumentsState({ initialData, framework }: UseDocumentsStateP
 
   // Fetch documents
   const fetchDocuments = useCallback(async (newPage: number = page) => {
+    // Increment request ID to track this request
+    const currentRequestId = ++requestIdRef.current;
+
     setIsLoading(true);
     try {
       const result = await fetchDocumentsAction({
@@ -93,16 +99,29 @@ export function useDocumentsState({ initialData, framework }: UseDocumentsStateP
         pagination: { page: newPage, limit: initialData.limit },
         sort: { field: sortField === 'vendor' ? 'created_at' : sortField, direction: sortDirection },
       });
+
+      // Only update state if this is still the latest request (prevents race conditions)
+      if (currentRequestId !== requestIdRef.current) {
+        return;
+      }
+
       setDocuments(result.data);
       setTotal(result.total);
       setPage(result.page);
       setSelectedIds(new Set());
       setSelectAll(false);
     } catch (error) {
+      // Only show error if this is still the latest request
+      if (currentRequestId !== requestIdRef.current) {
+        return;
+      }
       console.error('Failed to fetch documents:', error);
       toast.error('Failed to load documents');
     } finally {
-      setIsLoading(false);
+      // Only clear loading if this is still the latest request
+      if (currentRequestId === requestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [page, debouncedSearch, typeFilters, vendorFilter, sortField, sortDirection, initialData.limit, framework]);
 

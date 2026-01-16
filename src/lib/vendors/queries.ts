@@ -113,19 +113,27 @@ export async function getVendors(
   let frameworkVendorIds: string[] | null = null;
   if (filters.framework) {
     // First, get the framework ID
-    const { data: framework } = await supabase
+    const { data: framework, error: frameworkError } = await supabase
       .from('frameworks')
       .select('id')
       .eq('code', filters.framework)
       .single();
 
+    if (frameworkError) {
+      console.error(`Failed to fetch framework "${filters.framework}":`, frameworkError);
+    }
+
     if (framework) {
       // Get vendor IDs with gap analysis for this framework
-      const { data: gapAnalysis } = await supabase
+      const { data: gapAnalysis, error: gapError } = await supabase
         .from('vendor_gap_analysis')
         .select('vendor_id')
         .eq('organization_id', organizationId)
         .eq('target_framework_id', framework.id);
+
+      if (gapError) {
+        console.error(`Failed to fetch vendor gap analysis for framework "${filters.framework}":`, gapError);
+      }
 
       frameworkVendorIds = gapAnalysis?.map(g => g.vendor_id) || [];
     }

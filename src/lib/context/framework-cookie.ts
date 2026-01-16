@@ -8,9 +8,13 @@
 
 import { cookies } from 'next/headers';
 import type { FrameworkCode } from '@/lib/licensing/types';
+import {
+  FRAMEWORK_COOKIE_NAME,
+  isValidFramework,
+} from './framework-constants';
 
-export const FRAMEWORK_COOKIE_NAME = 'active-framework';
-const VALID_FRAMEWORKS: FrameworkCode[] = ['nis2', 'dora', 'gdpr', 'iso27001'];
+// Re-export for convenience
+export { FRAMEWORK_COOKIE_NAME };
 
 /**
  * Get the active framework from cookies (server-side)
@@ -20,8 +24,8 @@ export async function getActiveFrameworkFromCookie(): Promise<FrameworkCode | nu
   const cookieStore = await cookies();
   const value = cookieStore.get(FRAMEWORK_COOKIE_NAME)?.value;
 
-  if (value && VALID_FRAMEWORKS.includes(value as FrameworkCode)) {
-    return value as FrameworkCode;
+  if (isValidFramework(value)) {
+    return value;
   }
 
   return null;
