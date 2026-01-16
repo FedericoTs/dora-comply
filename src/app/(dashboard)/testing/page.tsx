@@ -3,6 +3,7 @@
  *
  * Resilience testing management for DORA Chapter IV compliance
  * Articles 24-27 - Digital Operational Resilience Testing
+ * Requires DORA Professional license for access.
  */
 
 import { Suspense } from 'react';
@@ -11,7 +12,9 @@ import { Plus, Target, Scale } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { getOrganizationContext } from '@/lib/org/context';
+import { getOrganization, getOrganizationContext } from '@/lib/org/context';
+import { hasModuleAccess } from '@/lib/licensing/check-access-server';
+import { LockedModule } from '@/components/licensing/locked-module';
 import {
   TestingStatsCards,
   StatsCardsSkeleton,
@@ -29,7 +32,37 @@ export const metadata = {
   description: 'Digital operational resilience testing management',
 };
 
+// Locked state component
+function TestingLockedState() {
+  return (
+    <LockedModule
+      framework="dora"
+      moduleName="Resilience Testing"
+      features={[
+        'DORA Chapter IV test planning & execution',
+        'TLPT (Threat-Led Penetration Testing) management',
+        '10+ test type coverage tracking',
+        'Finding management with CVSS scoring',
+        'Tester certification verification',
+        'Regulatory reporting for Article 24-27',
+      ]}
+      upgradeTier="professional"
+    />
+  );
+}
+
 export default async function TestingPage() {
+  // Check license access
+  const org = await getOrganization();
+  if (!org) {
+    return <TestingLockedState />;
+  }
+
+  const hasAccess = await hasModuleAccess(org.id, 'dora', 'testing');
+  if (!hasAccess) {
+    return <TestingLockedState />;
+  }
+
   // Fetch organization context for entity classification
   const orgContext = await getOrganizationContext();
   const tlptRequired = orgContext?.classification?.tlptRequired ?? false;

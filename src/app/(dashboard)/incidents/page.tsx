@@ -3,6 +3,7 @@
  *
  * ICT incident reporting and management for DORA compliance
  * Article 19 - Major ICT-related incident reporting
+ * Requires DORA Professional license for access.
  */
 
 import { Suspense } from 'react';
@@ -16,6 +17,9 @@ import { IncidentList } from '@/components/incidents';
 import { getIncidents, getIncidentStats, getPendingDeadlines } from '@/lib/incidents/queries';
 import { DeadlineBadgeStatic } from '@/components/incidents/deadline-badge';
 import { getReportTypeLabel } from '@/lib/incidents/types';
+import { getOrganization } from '@/lib/org/context';
+import { hasModuleAccess } from '@/lib/licensing/check-access-server';
+import { LockedModule } from '@/components/licensing/locked-module';
 
 export const metadata = {
   title: 'Incidents | DORA Comply',
@@ -202,7 +206,37 @@ function IncidentsListSkeleton() {
   );
 }
 
-export default function IncidentsPage() {
+// Locked state component
+function IncidentsLockedState() {
+  return (
+    <LockedModule
+      framework="dora"
+      moduleName="ICT Incident Reporting"
+      features={[
+        'Article 19 compliant incident classification',
+        'Automated deadline tracking (4h/72h/1m)',
+        'Initial, Intermediate & Final report workflows',
+        'Impact assessment with DORA criteria',
+        'Regulatory submission tracking',
+        'Incident timeline and audit trail',
+      ]}
+      upgradeTier="professional"
+    />
+  );
+}
+
+export default async function IncidentsPage() {
+  // Check license access
+  const org = await getOrganization();
+  if (!org) {
+    return <IncidentsLockedState />;
+  }
+
+  const hasAccess = await hasModuleAccess(org.id, 'dora', 'incidents');
+  if (!hasAccess) {
+    return <IncidentsLockedState />;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}

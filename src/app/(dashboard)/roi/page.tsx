@@ -2,6 +2,7 @@
  * RoI Dashboard Page
  *
  * Action-oriented dashboard for Register of Information management
+ * Requires DORA Professional license for access.
  */
 
 import { Suspense } from 'react';
@@ -27,6 +28,9 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { HelpTooltip, KPI_HELP } from '@/components/ui/help-tooltip';
+import { getOrganization } from '@/lib/org/context';
+import { hasModuleAccess } from '@/lib/licensing/check-access-server';
+import { LockedModule } from '@/components/licensing/locked-module';
 
 export const metadata = {
   title: 'Register of Information | DORA Comply',
@@ -244,7 +248,37 @@ interface RoiDashboardPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
+// Locked state component
+function RoILockedState() {
+  return (
+    <LockedModule
+      framework="dora"
+      moduleName="Register of Information"
+      features={[
+        '15 ESA-compliant RoI templates',
+        'Automated data population from documents',
+        'Cross-template relationship mapping',
+        'ESA XML/CSV export formats',
+        'Validation and completeness checks',
+        'Submission tracking and history',
+      ]}
+      upgradeTier="professional"
+    />
+  );
+}
+
 export default async function RoiDashboardPage({ searchParams }: RoiDashboardPageProps) {
+  // Check license access
+  const org = await getOrganization();
+  if (!org) {
+    return <RoILockedState />;
+  }
+
+  const hasAccess = await hasModuleAccess(org.id, 'dora', 'roi');
+  if (!hasAccess) {
+    return <RoILockedState />;
+  }
+
   const resolvedParams = await searchParams;
   const populateDocId = typeof resolvedParams.populateDoc === 'string'
     ? resolvedParams.populateDoc

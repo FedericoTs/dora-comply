@@ -1,7 +1,17 @@
+/**
+ * Concentration Risk Dashboard
+ *
+ * ICT third-party concentration risk monitoring per DORA Articles 28-29
+ * Requires DORA Professional license for access.
+ */
+
 import { Suspense } from 'react';
 import { Metadata } from 'next';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConcentrationDashboard } from './concentration-dashboard';
+import { getOrganization } from '@/lib/org/context';
+import { hasModuleAccess } from '@/lib/licensing/check-access-server';
+import { LockedModule } from '@/components/licensing/locked-module';
 
 export const metadata: Metadata = {
   title: 'Concentration Risk | DORA Comply',
@@ -56,7 +66,37 @@ function LoadingSkeleton() {
   );
 }
 
-export default function ConcentrationPage() {
+// Locked state component
+function ConcentrationLockedState() {
+  return (
+    <LockedModule
+      framework="dora"
+      moduleName="Concentration Risk"
+      features={[
+        'ICT third-party concentration analysis',
+        'HHI (Herfindahl-Hirschman Index) calculation',
+        'Critical provider identification',
+        'Spend distribution visualization',
+        'Geographic & service concentration metrics',
+        'Exit strategy risk assessment',
+      ]}
+      upgradeTier="professional"
+    />
+  );
+}
+
+export default async function ConcentrationPage() {
+  // Check license access
+  const org = await getOrganization();
+  if (!org) {
+    return <ConcentrationLockedState />;
+  }
+
+  const hasAccess = await hasModuleAccess(org.id, 'dora', 'tprm');
+  if (!hasAccess) {
+    return <ConcentrationLockedState />;
+  }
+
   return (
     <div className="flex-1 p-6 md:p-8">
       <Suspense fallback={<LoadingSkeleton />}>
