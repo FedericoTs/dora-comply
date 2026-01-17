@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { X, ArrowRight, Clock, AlertTriangle, AlertCircle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -114,8 +115,13 @@ export function ActionCard({
       })
     : null;
 
-  // Check if overdue
-  const isOverdue = dueDate && new Date(dueDate) < new Date() && !isCompleted;
+  // Check if overdue - use state to avoid hydration mismatch
+  const [isOverdue, setIsOverdue] = useState(false);
+  useEffect(() => {
+    if (dueDate && !isCompleted) {
+      setIsOverdue(new Date(dueDate) < new Date());
+    }
+  }, [dueDate, isCompleted]);
 
   // Size configurations
   const sizeConfig = {

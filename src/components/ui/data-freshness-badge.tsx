@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Clock, AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -50,13 +51,25 @@ export function DataFreshnessBadge({
   isRefreshing = false,
   className,
 }: DataFreshnessBadgeProps) {
-  // Calculate freshness
-  const { status, daysSince, displayText } = calculateFreshness(
-    lastUpdated,
-    warningThresholdDays,
-    criticalThresholdDays,
-    showRelativeTime
-  );
+  // Use state to avoid hydration mismatch - calculate only on client side
+  const [freshnessData, setFreshnessData] = useState<{
+    status: 'fresh' | 'warning' | 'stale' | 'unknown';
+    daysSince: number | null;
+    displayText: string;
+  }>({ status: 'unknown', daysSince: null, displayText: '...' });
+
+  useEffect(() => {
+    setFreshnessData(
+      calculateFreshness(
+        lastUpdated,
+        warningThresholdDays,
+        criticalThresholdDays,
+        showRelativeTime
+      )
+    );
+  }, [lastUpdated, warningThresholdDays, criticalThresholdDays, showRelativeTime]);
+
+  const { status, daysSince, displayText } = freshnessData;
 
   // Size configurations
   const sizeConfig = {
@@ -224,12 +237,21 @@ export function DataFreshnessText({
   criticalThresholdDays = 90,
   className,
 }: Pick<DataFreshnessBadgeProps, 'lastUpdated' | 'warningThresholdDays' | 'criticalThresholdDays' | 'className'>) {
-  const { status, displayText } = calculateFreshness(
-    lastUpdated,
-    warningThresholdDays,
-    criticalThresholdDays,
-    true
-  );
+  // Use state to avoid hydration mismatch
+  const [freshnessData, setFreshnessData] = useState<{
+    status: 'fresh' | 'warning' | 'stale' | 'unknown';
+    displayText: string;
+  }>({ status: 'unknown', displayText: '...' });
+
+  useEffect(() => {
+    const data = calculateFreshness(
+      lastUpdated,
+      warningThresholdDays,
+      criticalThresholdDays,
+      true
+    );
+    setFreshnessData({ status: data.status, displayText: data.displayText });
+  }, [lastUpdated, warningThresholdDays, criticalThresholdDays]);
 
   const colorMap = {
     fresh: 'text-emerald-600 dark:text-emerald-400',
@@ -239,8 +261,8 @@ export function DataFreshnessText({
   };
 
   return (
-    <span className={cn('text-sm', colorMap[status], className)}>
-      {displayText}
+    <span className={cn('text-sm', colorMap[freshnessData.status], className)}>
+      {freshnessData.displayText}
     </span>
   );
 }
