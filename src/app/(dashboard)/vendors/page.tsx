@@ -2,7 +2,9 @@ import { Suspense } from 'react';
 import { Metadata } from 'next';
 import { getVendors, getVendorStats } from '@/lib/vendors/queries';
 import { VendorListClient } from './vendor-list-client';
-import { VendorStatsDashboard, VendorAIInsights, generateMockInsights } from '@/components/vendors';
+import { VendorStatsClient } from './vendor-stats-client';
+import { VendorInsightsClient } from './vendor-insights-client';
+import { generateMockInsights } from '@/components/vendors';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { getActiveFrameworkFromCookie } from '@/lib/context/framework-cookie';
@@ -72,7 +74,7 @@ async function VendorStatsDashboardSection() {
   };
 
   return (
-    <VendorStatsDashboard
+    <VendorStatsClient
       stats={stats}
       trends={mockTrends}
       trendDeltas={mockDeltas}
@@ -104,7 +106,7 @@ async function VendorAIInsightsSection() {
   });
 
   return (
-    <VendorAIInsights
+    <VendorInsightsClient
       insights={relevantInsights}
       maxItems={4}
     />
