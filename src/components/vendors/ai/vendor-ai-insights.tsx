@@ -492,6 +492,9 @@ export function VendorAIInsightsBanner({
 // Mock Data Generator (for development)
 // ============================================================================
 
+// Static date to avoid hydration mismatch (server/client date differences)
+const MOCK_DATE = '2026-01-17T00:00:00.000Z';
+
 export function generateMockInsights(): AIInsight[] {
   return [
     {
@@ -505,7 +508,7 @@ export function generateMockInsights(): AIInsight[] {
       affectedVendorNames: ['Acme Cloud', 'Beta SaaS', 'DataFlow Inc'],
       suggestedAction: 'Review exit plans',
       actionHref: '/vendors?filter=concentration',
-      createdAt: new Date().toISOString(),
+      createdAt: MOCK_DATE,
     },
     {
       id: '2',
@@ -518,7 +521,7 @@ export function generateMockInsights(): AIInsight[] {
       affectedVendorNames: ['Vendor A', 'Vendor B', 'Vendor C', 'Vendor D', 'Vendor E', 'Vendor F'],
       suggestedAction: 'Request reports',
       actionHref: '/vendors?filter=missing_soc2',
-      createdAt: new Date().toISOString(),
+      createdAt: MOCK_DATE,
     },
     {
       id: '3',
@@ -531,7 +534,7 @@ export function generateMockInsights(): AIInsight[] {
       affectedVendorNames: ['Vendor X'],
       suggestedAction: 'Investigate',
       actionHref: '/vendors/v20/monitoring',
-      createdAt: new Date().toISOString(),
+      createdAt: MOCK_DATE,
     },
     {
       id: '4',
@@ -544,7 +547,7 @@ export function generateMockInsights(): AIInsight[] {
       affectedVendorNames: ['Contract Co', 'Service Ltd', 'Tech Partner', 'Cloud Nine', 'Data Systems'],
       suggestedAction: 'Review contracts',
       actionHref: '/vendors?filter=expiring_contracts',
-      createdAt: new Date().toISOString(),
+      createdAt: MOCK_DATE,
     },
     {
       id: '5',
@@ -556,7 +559,7 @@ export function generateMockInsights(): AIInsight[] {
       affectedVendorNames: ['Old Vendor 1', 'Old Vendor 2', 'Old Vendor 3'],
       suggestedAction: 'Schedule review',
       actionHref: '/vendors?filter=stale',
-      createdAt: new Date().toISOString(),
+      createdAt: MOCK_DATE,
     },
   ];
 }
