@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Plus, Loader2, Upload } from 'lucide-react';
 import { useUrlFilters } from '@/hooks/use-url-filters';
@@ -33,12 +34,17 @@ import {
   createVendorQuickFilters,
   type QuickFilterId,
   VendorBulkActions,
-  VendorCommandPalette,
   type BulkActionType,
   type BulkActionResult,
   type CommandAction,
   type SmartFilterId,
 } from '@/components/vendors';
+
+// Dynamic import to prevent SSR issues with cmdk library
+const VendorCommandPalette = dynamic(
+  () => import('@/components/vendors/vendor-command-palette').then(mod => mod.VendorCommandPalette),
+  { ssr: false }
+);
 import type { Vendor, VendorFilters, VendorSortOptions, ViewMode } from '@/lib/vendors/types';
 import { deleteVendor, updateVendorStatus, bulkDeleteVendors, fetchVendorsAction } from '@/lib/vendors/actions';
 
