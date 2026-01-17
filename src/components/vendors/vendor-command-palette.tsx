@@ -185,12 +185,20 @@ export function VendorCommandPalette({
   onFilterChange,
   onSearch,
 }: VendorCommandPaletteProps) {
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const router = useRouter();
 
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Keyboard shortcut handler
   useEffect(() => {
+    if (!mounted) return;
+
     const down = (e: KeyboardEvent) => {
       if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || e.key === '/') {
         e.preventDefault();
@@ -200,7 +208,7 @@ export function VendorCommandPalette({
 
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, []);
+  }, [mounted]);
 
   // Handle command selection
   const handleSelect = useCallback(
@@ -251,6 +259,11 @@ export function VendorCommandPalette({
         v.lei?.toLowerCase().includes(search.toLowerCase())
       ).slice(0, 5)
     : [];
+
+  // Don't render until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <>
