@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -268,13 +267,12 @@ export function VendorCommandPalette({
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <Command className="rounded-lg border shadow-md">
-          <CommandInput
-            placeholder="Search vendors, commands, or type / for filters..."
-            value={search}
-            onValueChange={setSearch}
-          />
-          <CommandList>
+        <CommandInput
+          placeholder="Search vendors, commands, or type / for filters..."
+          value={search}
+          onValueChange={setSearch}
+        />
+        <CommandList>
             <CommandEmpty>
               <div className="py-6 text-center">
                 <Search className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
@@ -399,25 +397,24 @@ export function VendorCommandPalette({
             </CommandGroup>
           </CommandList>
 
-          {/* Footer */}
-          <div className="border-t px-3 py-2 flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">↑</kbd>
-                <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">↓</kbd>
-                navigate
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">↵</kbd>
-                select
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">esc</kbd>
-                close
-              </span>
-            </div>
+        {/* Footer */}
+        <div className="border-t px-3 py-2 flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">↑</kbd>
+              <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">↓</kbd>
+              navigate
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">↵</kbd>
+              select
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">esc</kbd>
+              close
+            </span>
           </div>
-        </Command>
+        </div>
       </CommandDialog>
     </>
   );
