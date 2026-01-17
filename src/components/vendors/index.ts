@@ -27,6 +27,28 @@ export {
   type QuickFilterOption,
 } from './quick-filters';
 
+// Enhanced filters and actions
+export {
+  VendorQuickFiltersPlus,
+  createSmartFilters,
+  calculateSmartFilterStats,
+  type SmartFilterId,
+  type SmartFilterOption,
+  type SmartFilterStats,
+} from './vendor-quick-filters-plus';
+
+export {
+  VendorBulkActions,
+  type BulkActionType,
+  type BulkActionResult,
+} from './vendor-bulk-actions';
+
+export {
+  VendorCommandPalette,
+  useCommandPalette,
+  type CommandAction,
+} from './vendor-command-palette';
+
 // AI Insights
 export {
   VendorAIInsights,
