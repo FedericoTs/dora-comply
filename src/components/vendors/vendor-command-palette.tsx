@@ -260,11 +260,6 @@ export function VendorCommandPalette({
       ).slice(0, 5)
     : [];
 
-  // Don't render until mounted to prevent hydration mismatch
-  if (!mounted) {
-    return null;
-  }
-
   return (
     <>
       {/* Trigger button (optional - can be hidden if only using keyboard) */}
@@ -279,7 +274,9 @@ export function VendorCommandPalette({
         </kbd>
       </button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      {/* Only render CommandDialog on client to prevent hydration mismatch */}
+      {mounted && (
+        <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput
           placeholder="Search vendors, commands, or type / for filters..."
           value={search}
@@ -429,6 +426,7 @@ export function VendorCommandPalette({
           </div>
         </div>
       </CommandDialog>
+      )}
     </>
   );
 }
