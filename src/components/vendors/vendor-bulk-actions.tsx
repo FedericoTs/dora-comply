@@ -155,7 +155,8 @@ export function VendorBulkActions({
     }
   };
 
-  if (count === 0) return null;
+  // Render empty fragment instead of null to maintain consistent hook count
+  if (count === 0) return <></>;
 
   return (
     <div className={cn('flex items-center gap-2 animate-in slide-in-from-top-2', className)}>
