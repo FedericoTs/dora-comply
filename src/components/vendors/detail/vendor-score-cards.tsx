@@ -11,14 +11,13 @@ import {
   Shield,
   AlertTriangle,
   FileCheck,
-  ScrollText,
   Activity,
   TrendingUp,
   TrendingDown,
   Minus,
-  Info,
 } from 'lucide-react';
 import { GradeBadge, scoreToGrade } from '@/components/ui/grade-badge';
+import { getVendorHealthBreakdown } from '@/lib/vendors/vendor-health-utils';
 import type { Vendor, VendorWithRelations } from '@/lib/vendors/types';
 
 interface VendorScoreCardsProps {
@@ -31,7 +30,9 @@ interface ScoreCardProps {
   score: number | null;
   maxScore?: number;
   icon: React.ElementType;
-  color: string;
+  iconBgColor: string;
+  iconColor: string;
+  scoreColor: string;
   bgColor: string;
   trend?: 'up' | 'down' | 'stable';
   tooltip?: string;
@@ -43,7 +44,9 @@ function ScoreCard({
   score,
   maxScore = 100,
   icon: Icon,
-  color,
+  iconBgColor,
+  iconColor,
+  scoreColor,
   bgColor,
   trend,
   tooltip,
@@ -62,9 +65,9 @@ function ScoreCard({
             'relative p-4 rounded-xl border transition-all hover:shadow-md cursor-default',
             bgColor
           )}>
-            {/* Icon */}
-            <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center mb-3', color.replace('text-', 'bg-').replace('600', '100'), 'dark:bg-opacity-20')}>
-              <Icon className={cn('h-5 w-5', color)} />
+            {/* Icon with explicit background */}
+            <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center mb-3', iconBgColor)}>
+              <Icon className={cn('h-5 w-5', iconColor)} />
             </div>
 
             {/* Label */}
@@ -79,7 +82,7 @@ function ScoreCard({
                   {showGrade && grade ? (
                     <GradeBadge grade={grade} size="lg" />
                   ) : (
-                    <span className={cn('text-3xl font-bold', color)}>
+                    <span className={cn('text-3xl font-bold', scoreColor)}>
                       {score}
                     </span>
                   )}
@@ -112,9 +115,9 @@ function ScoreCard({
                 <div
                   className={cn(
                     'h-full rounded-full transition-all duration-500',
-                    percentage >= 80 && 'bg-emerald-500',
-                    percentage >= 60 && percentage < 80 && 'bg-amber-500',
-                    percentage < 60 && 'bg-red-500'
+                    percentage >= 70 && 'bg-emerald-500',
+                    percentage >= 40 && percentage < 70 && 'bg-amber-500',
+                    percentage < 40 && 'bg-red-500'
                   )}
                   style={{ width: `${percentage}%` }}
                 />
@@ -133,64 +136,45 @@ function ScoreCard({
 }
 
 export function VendorScoreCards({ vendor, className }: VendorScoreCardsProps) {
-  // Calculate scores
-  const riskScore = vendor.risk_score ?? null;
-  const externalScore = vendor.external_risk_score ?? null;
+  // Use centralized health calculation
+  const health = getVendorHealthBreakdown(vendor);
+  const { scores, components } = health;
 
-  // Calculate compliance score based on available data
-  const hasLei = !!vendor.lei;
-  const hasAssessment = !!vendor.last_assessment_date;
-  const hasCriticalFunctions = (vendor.critical_functions?.length ?? 0) > 0;
-  const hasMonitoring = vendor.monitoring_enabled ?? false;
-
-  let complianceScore = 0;
-  if (hasLei) complianceScore += 25;
-  if (hasAssessment) complianceScore += 30;
-  if (hasCriticalFunctions || !vendor.supports_critical_function) complianceScore += 25;
-  if (hasMonitoring) complianceScore += 20;
-
-  // Calculate documentation score
-  const vendorWithRelations = vendor as VendorWithRelations;
-  const docsCount = vendorWithRelations.documents_count ?? 0;
-  const contractsCount = vendorWithRelations.contracts_count ?? 0;
-  const contactsCount = vendorWithRelations.contacts?.length ?? 0;
-  const hasParsedSoc2 = vendorWithRelations.has_parsed_soc2 ?? false;
-
-  let docsScore = 0;
-  if (contactsCount > 0) docsScore += 25;
-  if (docsCount > 0) docsScore += 25;
-  if (contractsCount > 0) docsScore += 25;
-  if (hasParsedSoc2) docsScore += 25;
-
-  // Overall health score (weighted average)
-  const overallScore = Math.round(
-    (riskScore ?? 50) * 0.35 +
-    complianceScore * 0.35 +
-    docsScore * 0.30
-  );
+  // Determine risk score color based on value
+  const riskScoreColor = scores.risk === null
+    ? 'text-muted-foreground'
+    : scores.risk >= 70
+      ? 'text-emerald-600'
+      : scores.risk >= 40
+        ? 'text-amber-600'
+        : 'text-red-600';
 
   return (
     <div className={cn('grid grid-cols-2 md:grid-cols-4 gap-4', className)}>
       {/* Overall Health Score */}
       <ScoreCard
         label="Overall Health"
-        score={overallScore}
+        score={scores.overall}
         icon={Activity}
-        color="text-primary"
-        bgColor="bg-card border-primary/20"
+        iconBgColor="bg-emerald-100 dark:bg-emerald-900/30"
+        iconColor="text-emerald-600"
+        scoreColor="text-emerald-600"
+        bgColor="bg-card border-emerald-200 dark:border-emerald-800"
         tooltip="Combined score based on risk assessment, compliance status, and documentation completeness"
       />
 
       {/* Risk Score */}
       <ScoreCard
         label="Risk Score"
-        score={riskScore}
+        score={scores.risk}
         icon={AlertTriangle}
-        color={riskScore !== null && riskScore >= 60 ? 'text-emerald-600' : 'text-amber-600'}
+        iconBgColor={scores.risk !== null && scores.risk >= 70 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}
+        iconColor={scores.risk !== null && scores.risk >= 70 ? 'text-emerald-600' : 'text-amber-600'}
+        scoreColor={riskScoreColor}
         bgColor="bg-card"
         showGrade={true}
-        tooltip={externalScore
-          ? `Internal: ${riskScore ?? 'N/A'} | External: ${externalScore} (${vendor.external_risk_grade ?? 'N/A'})`
+        tooltip={vendor.external_risk_score
+          ? `Internal: ${scores.risk ?? 'N/A'} | External: ${vendor.external_risk_score} (${vendor.external_risk_grade ?? 'N/A'})`
           : 'Risk assessment score based on vendor evaluation'
         }
       />
@@ -198,21 +182,25 @@ export function VendorScoreCards({ vendor, className }: VendorScoreCardsProps) {
       {/* Compliance Score */}
       <ScoreCard
         label="Compliance"
-        score={complianceScore}
+        score={scores.compliance}
         icon={Shield}
-        color="text-blue-600"
+        iconBgColor="bg-blue-100 dark:bg-blue-900/30"
+        iconColor="text-blue-600"
+        scoreColor="text-blue-600"
         bgColor="bg-card"
-        tooltip={`LEI: ${hasLei ? '✓' : '✗'} | Assessment: ${hasAssessment ? '✓' : '✗'} | Monitoring: ${hasMonitoring ? '✓' : '✗'}`}
+        tooltip={`LEI: ${components.hasLei ? '✓' : '✗'}${components.leiVerified ? ' (verified)' : ''} | Assessment: ${components.hasAssessment ? '✓' : '✗'} | Monitoring: ${components.hasMonitoring ? '✓' : '✗'}`}
       />
 
       {/* Documentation Score */}
       <ScoreCard
         label="Documentation"
-        score={docsScore}
+        score={scores.documentation}
         icon={FileCheck}
-        color="text-purple-600"
+        iconBgColor="bg-purple-100 dark:bg-purple-900/30"
+        iconColor="text-purple-600"
+        scoreColor="text-purple-600"
         bgColor="bg-card"
-        tooltip={`Contacts: ${contactsCount > 0 ? '✓' : '✗'} | Documents: ${docsCount > 0 ? '✓' : '✗'} | Contracts: ${contractsCount > 0 ? '✓' : '✗'} | SOC 2: ${hasParsedSoc2 ? '✓' : '✗'}`}
+        tooltip={`Contacts: ${components.contactsCount} | Documents: ${components.documentsCount} | Contracts: ${components.contractsCount} | SOC 2: ${components.hasParsedSoc2 ? '✓' : '✗'}`}
       />
     </div>
   );

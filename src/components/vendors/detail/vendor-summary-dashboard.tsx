@@ -22,6 +22,10 @@ import { HealthScoreGauge } from '@/components/ui/health-score-gauge';
 import { TrendIndicator } from '@/components/ui/trend-indicator';
 import { DataFreshnessBadge } from '@/components/ui/data-freshness-badge';
 import { ActionCard, ActionList, type ActionCardProps } from '@/components/ui/action-card';
+import {
+  getVendorHealthBreakdown,
+  type VendorHealthDimension as CentralizedHealthDimension,
+} from '@/lib/vendors/vendor-health-utils';
 import type { VendorWithRelations } from '@/lib/vendors/types';
 
 // ============================================================================
@@ -66,60 +70,21 @@ function calculateHealthScore(vendor: VendorWithRelations): {
   score: number;
   dimensions: VendorHealthDimension[];
 } {
-  const dimensions: VendorHealthDimension[] = [];
+  // Use centralized health calculation
+  const health = getVendorHealthBreakdown(vendor);
 
-  // 1. Documentation Score (0-25)
-  const docScore = Math.min(25, (vendor.documents_count || 0) * 5);
-  dimensions.push({
-    id: 'documentation',
-    label: 'Documentation',
-    score: docScore,
+  // Convert centralized dimensions to local format (scaled to /25 for display)
+  const dimensions: VendorHealthDimension[] = health.dimensions.map((dim) => ({
+    id: dim.id,
+    label: dim.label,
+    score: Math.round(dim.score / 4), // Scale 0-100 to 0-25
     maxScore: 25,
-    status: docScore >= 20 ? 'good' : docScore >= 10 ? 'warning' : 'critical',
-    details: `${vendor.documents_count || 0} documents uploaded`,
-  });
+    status: dim.status,
+    details: dim.details,
+  }));
 
-  // 2. Compliance Score (0-25)
-  let complianceScore = 0;
-  if (vendor.lei) complianceScore += 10;
-  if (vendor.lei_verified_at) complianceScore += 5;
-  if (vendor.has_parsed_soc2) complianceScore += 10;
-  dimensions.push({
-    id: 'compliance',
-    label: 'Compliance',
-    score: complianceScore,
-    maxScore: 25,
-    status: complianceScore >= 20 ? 'good' : complianceScore >= 10 ? 'warning' : 'critical',
-    details: vendor.has_parsed_soc2 ? 'SOC 2 report on file' : 'SOC 2 report needed',
-  });
-
-  // 3. Risk Score (0-25) - inverted (lower risk = higher health)
-  const riskScoreRaw = vendor.risk_score ?? 50;
-  const riskHealthScore = Math.round(25 * (1 - riskScoreRaw / 100));
-  dimensions.push({
-    id: 'risk',
-    label: 'Risk',
-    score: riskHealthScore,
-    maxScore: 25,
-    status: riskHealthScore >= 18 ? 'good' : riskHealthScore >= 10 ? 'warning' : 'critical',
-    details: vendor.risk_score !== null ? `Risk score: ${vendor.risk_score}/100` : 'Not assessed',
-  });
-
-  // 4. Contracts Score (0-25)
-  const hasContracts = (vendor.contracts_count || 0) > 0;
-  const contractScore = hasContracts ? 25 : 0;
-  dimensions.push({
-    id: 'contracts',
-    label: 'Contractual',
-    score: contractScore,
-    maxScore: 25,
-    status: hasContracts ? 'good' : 'critical',
-    details: `${vendor.contracts_count || 0} contracts on file`,
-  });
-
-  const totalScore = dimensions.reduce((sum, d) => sum + d.score, 0);
-
-  return { score: totalScore, dimensions };
+  // Overall score is already 0-100, scale to 0-100 display
+  return { score: health.scores.overall, dimensions };
 }
 
 function generateNextActions(vendor: VendorWithRelations): VendorAction[] {
