@@ -105,34 +105,55 @@ export async function getOrganizationLicensing(
   try {
     const supabase = await createClient();
 
-    // Fetch organization licensing data
-    const { data: org, error: orgError } = await supabase
+    // First verify the organization exists with guaranteed columns
+    const { data: baseOrg, error: baseError } = await supabase
       .from("organizations")
-      .select("id, name, license_tier, licensed_frameworks, trial_ends_at, billing_status")
+      .select("id, name")
       .eq("id", organizationId)
       .single();
 
-    // If error or missing licensing columns, use defaults
-    if (orgError || !org) {
-      console.log("Licensing columns not available, using defaults");
+    if (baseError || !baseOrg) {
+      console.log("Organization not found, using defaults");
       return DEFAULT_LICENSING;
     }
 
-    const orgData = org as unknown as OrganizationRow;
+    // Try to fetch licensing columns separately to gracefully handle missing columns
+    let licenseTier: LicenseTier = "professional";
+    let licensedFrameworks: FrameworkCode[] = ["nis2", "dora"];
+    let trialEndsAt: string | null = null;
+    let billingStatus: BillingStatus = "active";
 
-    // Check if licensing columns actually exist (not null)
-    if (!orgData.license_tier && !orgData.licensed_frameworks) {
-      console.log("Licensing not configured, using defaults");
-      return DEFAULT_LICENSING;
+    try {
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("license_tier, licensed_frameworks, trial_ends_at, billing_status")
+        .eq("id", organizationId)
+        .single();
+
+      if (org) {
+        const orgData = org as unknown as OrganizationRow;
+        licenseTier = orgData.license_tier || "professional";
+        licensedFrameworks = orgData.licensed_frameworks || ["nis2", "dora"];
+        trialEndsAt = orgData.trial_ends_at;
+        billingStatus = orgData.billing_status || "active";
+      }
+    } catch {
+      // Licensing columns don't exist yet, use defaults
+      console.log("Licensing columns not available, using defaults");
     }
 
     // Fetch entitlements (may not exist yet)
-    const { data: entitlements } = await supabase
-      .from("organization_framework_entitlements")
-      .select("*")
-      .eq("organization_id", organizationId);
-
-    const entitlementRows = (entitlements || []) as unknown as EntitlementRow[];
+    let entitlementRows: EntitlementRow[] = [];
+    try {
+      const { data: entitlements } = await supabase
+        .from("organization_framework_entitlements")
+        .select("*")
+        .eq("organization_id", organizationId);
+      entitlementRows = (entitlements || []) as unknown as EntitlementRow[];
+    } catch {
+      // Entitlements table doesn't exist yet
+      console.log("Entitlements table not available");
+    }
 
     // Build entitlements map
     const entitlementsMap: Record<FrameworkCode, FrameworkEntitlement> = {} as Record<
@@ -155,7 +176,6 @@ export async function getOrganizationLicensing(
     }
 
     // Use defaults for missing framework entitlements
-    const licensedFrameworks = orgData.licensed_frameworks || ["nis2", "dora"];
     for (const fw of licensedFrameworks) {
       if (!entitlementsMap[fw] && DEFAULT_LICENSING.entitlements[fw]) {
         entitlementsMap[fw] = {
@@ -166,10 +186,10 @@ export async function getOrganizationLicensing(
     }
 
     return {
-      license_tier: orgData.license_tier || "professional",
+      license_tier: licenseTier,
       licensed_frameworks: licensedFrameworks,
-      trial_ends_at: orgData.trial_ends_at,
-      billing_status: orgData.billing_status || "active",
+      trial_ends_at: trialEndsAt,
+      billing_status: billingStatus,
       entitlements: entitlementsMap,
     };
   } catch (error) {
