@@ -19,6 +19,9 @@ import type {
 // Default Licensing (for new/demo organizations)
 // ============================================================================
 
+// Use static date to avoid hydration mismatch between server and client
+const STATIC_DATE = "2026-01-01T00:00:00.000Z";
+
 const DEFAULT_LICENSING: OrganizationLicensing = {
   license_tier: "professional",
   licensed_frameworks: ["nis2", "dora"],
@@ -30,7 +33,7 @@ const DEFAULT_LICENSING: OrganizationLicensing = {
       organization_id: "",
       framework: "nis2",
       enabled: true,
-      activated_at: new Date().toISOString(),
+      activated_at: STATIC_DATE,
       expires_at: null,
       modules_enabled: {
         dashboard: true,
@@ -38,15 +41,15 @@ const DEFAULT_LICENSING: OrganizationLicensing = {
         gaps: true,
         reports: true,
       },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: STATIC_DATE,
+      updated_at: STATIC_DATE,
     },
     dora: {
       id: "default-dora",
       organization_id: "",
       framework: "dora",
       enabled: true,
-      activated_at: new Date().toISOString(),
+      activated_at: STATIC_DATE,
       expires_at: null,
       modules_enabled: {
         dashboard: true,
@@ -58,8 +61,8 @@ const DEFAULT_LICENSING: OrganizationLicensing = {
         tprm: true,
         reports: true,
       },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: STATIC_DATE,
+      updated_at: STATIC_DATE,
     },
   } as Record<FrameworkCode, FrameworkEntitlement>,
 };

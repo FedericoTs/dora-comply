@@ -13,7 +13,10 @@ import { FrameworkProvider } from '@/lib/context';
 import { getCurrentOrganizationLicensing } from '@/lib/licensing/queries';
 import type { OrganizationLicensing } from '@/lib/licensing/types';
 
-// Default licensing for fallback - use type assertion to avoid requiring all frameworks
+// Default licensing for fallback - use STATIC dates to avoid hydration mismatch
+// Using a fixed date string to ensure server and client render the same values
+const STATIC_DATE = "2026-01-01T00:00:00.000Z";
+
 const DEFAULT_LICENSING: OrganizationLicensing = {
   license_tier: "professional",
   licensed_frameworks: ["nis2", "dora"],
@@ -25,44 +28,44 @@ const DEFAULT_LICENSING: OrganizationLicensing = {
       organization_id: "",
       framework: "nis2",
       enabled: true,
-      activated_at: new Date().toISOString(),
+      activated_at: STATIC_DATE,
       expires_at: null,
       modules_enabled: { dashboard: true, scoring: true, gaps: true, reports: true },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: STATIC_DATE,
+      updated_at: STATIC_DATE,
     },
     dora: {
       id: "default-dora",
       organization_id: "",
       framework: "dora",
       enabled: true,
-      activated_at: new Date().toISOString(),
+      activated_at: STATIC_DATE,
       expires_at: null,
       modules_enabled: { dashboard: true, scoring: true, gaps: true, roi: true, incidents: true, testing: true, tprm: true, reports: true },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: STATIC_DATE,
+      updated_at: STATIC_DATE,
     },
     gdpr: {
       id: "default-gdpr",
       organization_id: "",
       framework: "gdpr",
       enabled: false,
-      activated_at: new Date().toISOString(),
+      activated_at: STATIC_DATE,
       expires_at: null,
       modules_enabled: { dashboard: false, scoring: false, gaps: false, reports: false },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: STATIC_DATE,
+      updated_at: STATIC_DATE,
     },
     iso27001: {
       id: "default-iso27001",
       organization_id: "",
       framework: "iso27001",
       enabled: false,
-      activated_at: new Date().toISOString(),
+      activated_at: STATIC_DATE,
       expires_at: null,
       modules_enabled: { dashboard: false, scoring: false, gaps: false, reports: false },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: STATIC_DATE,
+      updated_at: STATIC_DATE,
     },
   },
 };
