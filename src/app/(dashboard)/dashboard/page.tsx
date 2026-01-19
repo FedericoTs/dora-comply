@@ -34,32 +34,66 @@ export const metadata: Metadata = {
   description: 'Your DORA compliance command center',
 };
 
+// Default/fallback values for when queries fail
+const DEFAULT_VENDOR_STATS = {
+  total: 0,
+  by_status: { active: 0, inactive: 0, pending_review: 0, offboarding: 0 },
+  by_tier: { critical: 0, important: 0, standard: 0 },
+  by_risk: { critical: 0, high: 0, medium: 0, low: 0 },
+  pending_reviews: 0,
+};
+
+const DEFAULT_DOCUMENT_STATS = { total: 0, by_type: {}, by_status: {} };
+
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   const firstName = user?.fullName?.split(' ')[0] || '';
 
-  // Fetch all data in parallel
-  const [
-    vendorStats,
-    roiStats,
-    recentActivity,
-    incidentStatsResult,
-    pendingDeadlinesResult,
-    testingStatsResult,
-    orgContext,
-    documentStats,
-    maturitySnapshot,
-  ] = await Promise.all([
-    getVendorStats(),
-    fetchAllTemplateStats(),
-    getRecentActivity(5),
-    getIncidentStatsEnhanced(),
-    getPendingDeadlines(5),
-    getTestingStats(),
-    getOrganizationContext(),
-    getDocumentStats(),
-    getLatestSnapshot(),
-  ]);
+  // Fetch all data in parallel with error handling
+  let vendorStats = DEFAULT_VENDOR_STATS;
+  let roiStats: Awaited<ReturnType<typeof fetchAllTemplateStats>> = [];
+  let recentActivity: Awaited<ReturnType<typeof getRecentActivity>> = [];
+  let incidentStatsResult: Awaited<ReturnType<typeof getIncidentStatsEnhanced>> = { data: null, error: null };
+  let pendingDeadlinesResult: Awaited<ReturnType<typeof getPendingDeadlines>> = { data: null, error: null };
+  let testingStatsResult: Awaited<ReturnType<typeof getTestingStats>> = { data: null, error: null };
+  let orgContext: Awaited<ReturnType<typeof getOrganizationContext>> = null;
+  let documentStats = DEFAULT_DOCUMENT_STATS;
+  let maturitySnapshot: Awaited<ReturnType<typeof getLatestSnapshot>> = { data: null, error: null };
+
+  try {
+    const results = await Promise.allSettled([
+      getVendorStats(),
+      fetchAllTemplateStats(),
+      getRecentActivity(5),
+      getIncidentStatsEnhanced(),
+      getPendingDeadlines(5),
+      getTestingStats(),
+      getOrganizationContext(),
+      getDocumentStats(),
+      getLatestSnapshot(),
+    ]);
+
+    // Extract results with fallbacks
+    if (results[0].status === 'fulfilled') vendorStats = results[0].value;
+    if (results[1].status === 'fulfilled') roiStats = results[1].value;
+    if (results[2].status === 'fulfilled') recentActivity = results[2].value;
+    if (results[3].status === 'fulfilled') incidentStatsResult = results[3].value;
+    if (results[4].status === 'fulfilled') pendingDeadlinesResult = results[4].value;
+    if (results[5].status === 'fulfilled') testingStatsResult = results[5].value;
+    if (results[6].status === 'fulfilled') orgContext = results[6].value;
+    if (results[7].status === 'fulfilled') documentStats = results[7].value;
+    if (results[8].status === 'fulfilled') maturitySnapshot = results[8].value;
+
+    // Log any failures for debugging
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const queryNames = ['vendorStats', 'roiStats', 'recentActivity', 'incidentStats', 'pendingDeadlines', 'testingStats', 'orgContext', 'documentStats', 'maturitySnapshot'];
+        console.error(`Dashboard query failed [${queryNames[index]}]:`, result.reason);
+      }
+    });
+  } catch (error) {
+    console.error('Dashboard data fetch failed:', error);
+  }
 
   const incidentStats = incidentStatsResult.data;
   const pendingDeadlines = pendingDeadlinesResult.data;
