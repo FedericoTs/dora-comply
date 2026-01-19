@@ -22,6 +22,7 @@ import {
   VendorEnrichmentTab,
   CTTPOversightPanel,
   VendorSummaryDashboard,
+  VendorScoreCards,
 } from '@/components/vendors/detail';
 import { AssessmentProgress } from '@/components/vendors/assessment-progress';
 import { VendorMonitoringTab } from '@/components/vendors/monitoring';
@@ -299,6 +300,9 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
 
       {/* Alert Banner */}
       <VendorAlertBanner vendor={vendor} />
+
+      {/* Score Cards - Prominent at-a-glance metrics */}
+      <VendorScoreCards vendor={vendor} />
 
       {/* Enhanced Tabs with New Navigation */}
       <VendorTabsEnhanced

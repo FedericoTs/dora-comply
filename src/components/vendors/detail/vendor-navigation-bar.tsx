@@ -57,6 +57,7 @@ interface VendorNavigationBarProps {
 }
 
 const complianceItems: NavItem[] = [
+  { id: 'nis2', label: 'NIS2', icon: Shield },
   { id: 'dora', label: 'DORA', icon: Shield },
   { id: 'frameworks', label: 'Frameworks', icon: Gauge },
 ];

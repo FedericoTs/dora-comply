@@ -16,6 +16,7 @@ import {
 } from '@/components/vendors/detail';
 import { VendorAIAnalysis } from '@/components/vendors/ai';
 import { VendorRiskIntelligence } from '@/components/vendors/intelligence';
+import { VendorNIS2Dashboard } from '@/components/vendors/vendor-nis2-dashboard';
 import type { VendorWithRelations } from '@/lib/vendors/types';
 
 interface VendorTabsEnhancedProps {
@@ -115,13 +116,7 @@ export function VendorTabsEnhanced({
         return doraContent;
 
       case 'nis2':
-        // NIS2 content - can reuse DORA or show placeholder
-        return (
-          <div className="p-8 text-center text-muted-foreground">
-            <p>NIS2 compliance view coming soon.</p>
-            <p className="text-sm mt-2">Currently showing DORA compliance data.</p>
-          </div>
-        );
+        return <VendorNIS2Dashboard vendorId={vendor.id} vendorName={vendor.name} />;
 
       case 'frameworks':
         return frameworksContent;

@@ -26,3 +26,4 @@ export {
   type VendorAction,
   type VendorSummaryDashboardProps,
 } from './vendor-summary-dashboard';
+export { VendorScoreCards, VendorScoreCompact } from './vendor-score-cards';
