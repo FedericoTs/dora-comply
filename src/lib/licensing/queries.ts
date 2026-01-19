@@ -101,22 +101,21 @@ export async function getCurrentOrganizationLicensing(): Promise<OrganizationLic
     let trialEndsAt: string | null = null;
     let billingStatus: BillingStatus = "active";
 
-    try {
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("license_tier, licensed_frameworks, trial_ends_at, billing_status")
-        .eq("id", organizationId)
-        .single();
+    // Supabase returns errors in the error property, not as exceptions
+    const { data: org, error: orgError } = await supabase
+      .from("organizations")
+      .select("license_tier, licensed_frameworks, trial_ends_at, billing_status")
+      .eq("id", organizationId)
+      .single();
 
-      if (org) {
-        licenseTier = (org.license_tier as LicenseTier) || "professional";
-        licensedFrameworks = (org.licensed_frameworks as FrameworkCode[]) || ["nis2", "dora"];
-        trialEndsAt = org.trial_ends_at as string | null;
-        billingStatus = (org.billing_status as BillingStatus) || "active";
-      }
-    } catch {
-      // Licensing columns don't exist yet, use defaults
-      console.log("Licensing columns not available, using defaults");
+    // If error (likely column doesn't exist), use defaults
+    if (orgError) {
+      console.log("Licensing columns not available:", orgError.message);
+    } else if (org) {
+      licenseTier = (org.license_tier as LicenseTier) || "professional";
+      licensedFrameworks = (org.licensed_frameworks as FrameworkCode[]) || ["nis2", "dora"];
+      trialEndsAt = org.trial_ends_at as string | null;
+      billingStatus = (org.billing_status as BillingStatus) || "active";
     }
 
     // Fetch entitlements

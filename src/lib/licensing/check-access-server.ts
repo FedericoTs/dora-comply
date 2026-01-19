@@ -123,36 +123,35 @@ export async function getOrganizationLicensing(
     let trialEndsAt: string | null = null;
     let billingStatus: BillingStatus = "active";
 
-    try {
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("license_tier, licensed_frameworks, trial_ends_at, billing_status")
-        .eq("id", organizationId)
-        .single();
+    // Supabase returns errors in the error property, not as exceptions
+    const { data: org, error: orgError } = await supabase
+      .from("organizations")
+      .select("license_tier, licensed_frameworks, trial_ends_at, billing_status")
+      .eq("id", organizationId)
+      .single();
 
-      if (org) {
-        const orgData = org as unknown as OrganizationRow;
-        licenseTier = orgData.license_tier || "professional";
-        licensedFrameworks = orgData.licensed_frameworks || ["nis2", "dora"];
-        trialEndsAt = orgData.trial_ends_at;
-        billingStatus = orgData.billing_status || "active";
-      }
-    } catch {
-      // Licensing columns don't exist yet, use defaults
-      console.log("Licensing columns not available, using defaults");
+    // If error (likely column doesn't exist), use defaults
+    if (orgError) {
+      console.log("Licensing columns not available:", orgError.message);
+    } else if (org) {
+      const orgData = org as unknown as OrganizationRow;
+      licenseTier = orgData.license_tier || "professional";
+      licensedFrameworks = orgData.licensed_frameworks || ["nis2", "dora"];
+      trialEndsAt = orgData.trial_ends_at;
+      billingStatus = orgData.billing_status || "active";
     }
 
     // Fetch entitlements (may not exist yet)
+    const { data: entitlements, error: entitlementsError } = await supabase
+      .from("organization_framework_entitlements")
+      .select("*")
+      .eq("organization_id", organizationId);
+
     let entitlementRows: EntitlementRow[] = [];
-    try {
-      const { data: entitlements } = await supabase
-        .from("organization_framework_entitlements")
-        .select("*")
-        .eq("organization_id", organizationId);
+    if (entitlementsError) {
+      console.log("Entitlements table not available:", entitlementsError.message);
+    } else {
       entitlementRows = (entitlements || []) as unknown as EntitlementRow[];
-    } catch {
-      // Entitlements table doesn't exist yet
-      console.log("Entitlements table not available");
     }
 
     // Build entitlements map
