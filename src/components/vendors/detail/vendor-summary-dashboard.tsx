@@ -298,7 +298,7 @@ export function VendorSummaryDashboard({
             />
 
             {/* Dimension Breakdown */}
-            <div className="w-full mt-6 space-y-3">
+            <div className="w-full mt-8 pt-6 border-t space-y-3">
               {dimensions.map((dim) => (
                 <DimensionBar key={dim.id} dimension={dim} />
               ))}
