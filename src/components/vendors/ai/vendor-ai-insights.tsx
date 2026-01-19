@@ -37,6 +37,8 @@ export type InsightType =
   | 'score_deterioration'
   | 'contract_risk'
   | 'data_staleness'
+  | 'monitoring_gap'
+  | 'positive_trend'
   | 'recommendation';
 
 export type InsightPriority = 'critical' | 'high' | 'medium' | 'low';
@@ -107,6 +109,18 @@ const INSIGHT_CONFIG: Record<InsightType, {
     label: 'Stale Data',
     colorClass: 'text-blue-500',
     bgClass: 'bg-blue-500/10',
+  },
+  monitoring_gap: {
+    icon: AlertTriangle,
+    label: 'Monitoring Gap',
+    colorClass: 'text-amber-500',
+    bgClass: 'bg-amber-500/10',
+  },
+  positive_trend: {
+    icon: Lightbulb,
+    label: 'Positive Trend',
+    colorClass: 'text-emerald-500',
+    bgClass: 'bg-emerald-500/10',
   },
   recommendation: {
     icon: Lightbulb,

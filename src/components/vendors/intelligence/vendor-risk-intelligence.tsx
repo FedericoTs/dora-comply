@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,9 +32,11 @@ import {
   Globe,
   Building2,
   Scale,
+  Loader2,
 } from 'lucide-react';
 import { Sparkline } from '@/components/ui/sparkline';
 import type { Vendor, VendorWithRelations } from '@/lib/vendors/types';
+import { fetchPeerBenchmark, type PeerBenchmark } from '@/lib/vendors/actions';
 
 // Risk factor types
 interface RiskFactor {
@@ -93,14 +95,21 @@ const categoryColors = {
   concentration: 'text-rose-600 bg-rose-100 dark:bg-rose-900/30',
 };
 
-// Generate mock data
-function generateMockData(vendor: Vendor | VendorWithRelations): {
+// Generate mock data, enhanced with real peer benchmark when available
+function generateMockData(
+  vendor: Vendor | VendorWithRelations,
+  peerBenchmark?: PeerBenchmark | null
+): {
   factors: RiskFactor[];
   concentrationRisks: ConcentrationRisk[];
   predictiveInsights: PredictiveInsight[];
   historicalScores: number[];
 } {
   const baseScore = vendor.risk_score ?? 60;
+
+  // Use real industry averages from peer benchmark if available
+  const industryAvgRisk = peerBenchmark?.industryAvgRiskScore ?? 72;
+  const doraReadiness = peerBenchmark?.doraReadiness ?? { org: 65, industryAvg: 65 };
 
   const factors: RiskFactor[] = [
     {
@@ -269,8 +278,26 @@ export function VendorRiskIntelligence({
   historicalScores: providedHistory,
 }: VendorRiskIntelligenceProps) {
   const [selectedFactor, setSelectedFactor] = useState<string | null>(null);
+  const [peerBenchmark, setPeerBenchmark] = useState<PeerBenchmark | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  const mockData = generateMockData(vendor);
+  // Fetch peer benchmark data on mount
+  useEffect(() => {
+    startTransition(async () => {
+      try {
+        const benchmark = await fetchPeerBenchmark();
+        setPeerBenchmark(benchmark);
+      } catch (error) {
+        console.error('Failed to fetch peer benchmark:', error);
+      } finally {
+        setHasLoaded(true);
+      }
+    });
+  }, []);
+
+  // Use peer benchmark data to enhance mock data with real comparisons
+  const mockData = generateMockData(vendor, peerBenchmark);
   const factors = providedFactors || mockData.factors;
   const concentrationRisks = providedConcentration || mockData.concentrationRisks;
   const predictiveInsights = providedInsights || mockData.predictiveInsights;

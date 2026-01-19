@@ -73,17 +73,17 @@ function calculateHealthScore(vendor: VendorWithRelations): {
   // Use centralized health calculation
   const health = getVendorHealthBreakdown(vendor);
 
-  // Convert centralized dimensions to local format (scaled to /25 for display)
+  // Convert centralized dimensions to local format (keep on 0-100 scale)
   const dimensions: VendorHealthDimension[] = health.dimensions.map((dim) => ({
     id: dim.id,
     label: dim.label,
-    score: Math.round(dim.score / 4), // Scale 0-100 to 0-25
-    maxScore: 25,
+    score: dim.score, // Keep on 0-100 scale
+    maxScore: 100,
     status: dim.status,
     details: dim.details,
   }));
 
-  // Overall score is already 0-100, scale to 0-100 display
+  // Overall score is already 0-100
   return { score: health.scores.overall, dimensions };
 }
 

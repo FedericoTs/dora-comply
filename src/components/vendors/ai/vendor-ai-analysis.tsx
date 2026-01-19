@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { Vendor, VendorWithRelations } from '@/lib/vendors/types';
+import { fetchVendorAnalysis, type VendorAIAnalysis as ServerAnalysis } from '@/lib/vendors/actions';
 
 interface AIAnalysisData {
   summary: string;
@@ -177,24 +178,91 @@ const trendColors = {
   declining: 'text-red-600',
 };
 
+// Map server analysis to component format
+function mapServerAnalysis(serverAnalysis: ServerAnalysis): AIAnalysisData {
+  return {
+    summary: serverAnalysis.summary,
+    strengths: serverAnalysis.strengths.map(s => s.description),
+    concerns: serverAnalysis.concerns.map(c => c.description),
+    recommendations: serverAnalysis.recommendations.map(r => ({
+      id: r.id,
+      priority: r.priority === 'critical' ? 'high' : r.priority,
+      title: r.title,
+      description: r.description,
+      actionUrl: r.actionHref,
+    })),
+    peerComparison: {
+      percentile: serverAnalysis.peerComparison.tierComparison.percentile,
+      avgIndustryScore: serverAnalysis.peerComparison.tierComparison.tierAverage,
+      vendorScore: serverAnalysis.peerComparison.tierComparison.vendorScore || 0,
+      comparison: serverAnalysis.peerComparison.tierComparison.verdict === 'above_average' ? 'above' :
+                  serverAnalysis.peerComparison.tierComparison.verdict === 'below_average' ? 'below' : 'at',
+    },
+    riskTrend: {
+      direction: serverAnalysis.riskPrediction.trend,
+      confidence: serverAnalysis.riskPrediction.confidence === 'high' ? 85 :
+                  serverAnalysis.riskPrediction.confidence === 'medium' ? 65 : 45,
+      factors: serverAnalysis.riskPrediction.factors,
+    },
+    generatedAt: serverAnalysis.metadata.generatedAt,
+  };
+}
+
 export function VendorAIAnalysis({
   vendor,
   analysis: providedAnalysis,
-  isLoading = false,
+  isLoading: externalLoading = false,
   onRefresh,
 }: VendorAIAnalysisProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const analysis = providedAnalysis || generateMockAnalysis(vendor);
+  const [analysis, setAnalysis] = useState<AIAnalysisData | null>(providedAnalysis || null);
+  const [isPending, startTransition] = useTransition();
+  const [hasLoaded, setHasLoaded] = useState(!!providedAnalysis);
+
+  // Fetch real analysis on mount if not provided
+  useEffect(() => {
+    if (providedAnalysis) {
+      setAnalysis(providedAnalysis);
+      setHasLoaded(true);
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const serverAnalysis = await fetchVendorAnalysis(vendor.id);
+        if (serverAnalysis) {
+          setAnalysis(mapServerAnalysis(serverAnalysis));
+        } else {
+          // Fallback to mock if no analysis returned
+          setAnalysis(generateMockAnalysis(vendor));
+        }
+      } catch (error) {
+        console.error('Failed to fetch vendor analysis:', error);
+        setAnalysis(generateMockAnalysis(vendor));
+      } finally {
+        setHasLoaded(true);
+      }
+    });
+  }, [vendor.id, providedAnalysis, vendor]);
+
+  const isLoading = externalLoading || (isPending && !hasLoaded);
+  const displayAnalysis = analysis || generateMockAnalysis(vendor);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await onRefresh?.();
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const serverAnalysis = await fetchVendorAnalysis(vendor.id);
+      if (serverAnalysis) {
+        setAnalysis(mapServerAnalysis(serverAnalysis));
+      }
+      await onRefresh?.();
+    } catch (error) {
+      console.error('Failed to refresh analysis:', error);
+    }
     setIsRefreshing(false);
   };
 
-  const TrendIcon = trendIcons[analysis.riskTrend.direction];
+  const TrendIcon = trendIcons[displayAnalysis.riskTrend.direction];
 
   if (isLoading) {
     return (
@@ -236,7 +304,7 @@ export function VendorAIAnalysis({
       <CardContent className="space-y-6">
         {/* Summary */}
         <div className="p-4 bg-muted/50 rounded-lg">
-          <p className="text-sm leading-relaxed">{analysis.summary}</p>
+          <p className="text-sm leading-relaxed">{displayAnalysis.summary}</p>
         </div>
 
         {/* Strengths & Concerns */}
@@ -248,7 +316,7 @@ export function VendorAIAnalysis({
               Strengths
             </h4>
             <ul className="space-y-1.5">
-              {analysis.strengths.map((strength, i) => (
+              {displayAnalysis.strengths.map((strength, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
                   <span className="text-emerald-600 mt-0.5">+</span>
                   <span className="text-muted-foreground">{strength}</span>
@@ -264,7 +332,7 @@ export function VendorAIAnalysis({
               Concerns
             </h4>
             <ul className="space-y-1.5">
-              {analysis.concerns.map((concern, i) => (
+              {displayAnalysis.concerns.map((concern, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
                   <span className="text-amber-600 mt-0.5">!</span>
                   <span className="text-muted-foreground">{concern}</span>
@@ -275,14 +343,14 @@ export function VendorAIAnalysis({
         </div>
 
         {/* Recommendations */}
-        {analysis.recommendations.length > 0 && (
+        {displayAnalysis.recommendations.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium flex items-center gap-2">
               <Lightbulb className="h-4 w-4 text-primary" />
               Recommendations
             </h4>
             <div className="space-y-2">
-              {analysis.recommendations.slice(0, 3).map((rec) => (
+              {displayAnalysis.recommendations.slice(0, 3).map((rec) => (
                 <div
                   key={rec.id}
                   className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors group"
@@ -316,15 +384,15 @@ export function VendorAIAnalysis({
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Industry Percentile</span>
-                <span className="font-medium">{analysis.peerComparison.percentile}th</span>
+                <span className="font-medium">{displayAnalysis.peerComparison.percentile}th</span>
               </div>
-              <Progress value={analysis.peerComparison.percentile} className="h-2" />
+              <Progress value={displayAnalysis.peerComparison.percentile} className="h-2" />
               <p className="text-xs text-muted-foreground">
-                {analysis.peerComparison.comparison === 'above'
-                  ? `Performing above average (${analysis.peerComparison.avgIndustryScore} avg)`
-                  : analysis.peerComparison.comparison === 'below'
-                  ? `Performing below average (${analysis.peerComparison.avgIndustryScore} avg)`
-                  : `Performing at industry average (${analysis.peerComparison.avgIndustryScore})`}
+                {displayAnalysis.peerComparison.comparison === 'above'
+                  ? `Performing above average (${displayAnalysis.peerComparison.avgIndustryScore} avg)`
+                  : displayAnalysis.peerComparison.comparison === 'below'
+                  ? `Performing below average (${displayAnalysis.peerComparison.avgIndustryScore} avg)`
+                  : `Performing at industry average (${displayAnalysis.peerComparison.avgIndustryScore})`}
               </p>
             </div>
           </div>
@@ -332,7 +400,7 @@ export function VendorAIAnalysis({
           {/* Risk Trend */}
           <div className="p-4 border rounded-lg space-y-3">
             <h4 className="text-sm font-medium flex items-center gap-2">
-              <TrendIcon className={cn('h-4 w-4', trendColors[analysis.riskTrend.direction])} />
+              <TrendIcon className={cn('h-4 w-4', trendColors[displayAnalysis.riskTrend.direction])} />
               Risk Trend
             </h4>
             <div className="space-y-2">
@@ -340,19 +408,19 @@ export function VendorAIAnalysis({
                 <Badge
                   className={cn(
                     'capitalize',
-                    analysis.riskTrend.direction === 'improving' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-                    analysis.riskTrend.direction === 'stable' && 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-                    analysis.riskTrend.direction === 'declining' && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    displayAnalysis.riskTrend.direction === 'improving' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                    displayAnalysis.riskTrend.direction === 'stable' && 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+                    displayAnalysis.riskTrend.direction === 'declining' && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                   )}
                 >
-                  {analysis.riskTrend.direction}
+                  {displayAnalysis.riskTrend.direction}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
-                  {analysis.riskTrend.confidence}% confidence
+                  {displayAnalysis.riskTrend.confidence}% confidence
                 </span>
               </div>
               <ul className="space-y-1">
-                {analysis.riskTrend.factors.map((factor, i) => (
+                {displayAnalysis.riskTrend.factors.map((factor, i) => (
                   <li key={i} className="text-xs text-muted-foreground flex items-center gap-1">
                     <ArrowRight className="h-3 w-3" />
                     {factor}
@@ -365,7 +433,7 @@ export function VendorAIAnalysis({
 
         {/* Footer */}
         <p className="text-xs text-muted-foreground text-center">
-          Analysis generated {new Date(analysis.generatedAt).toLocaleDateString('en-GB', {
+          Analysis generated {new Date(displayAnalysis.generatedAt).toLocaleDateString('en-GB', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',

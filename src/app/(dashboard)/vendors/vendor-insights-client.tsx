@@ -1,9 +1,11 @@
 'use client';
 
+import { useState, useEffect, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import type { AIInsight } from '@/components/vendors/ai/vendor-ai-insights';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
+import { fetchPortfolioInsights } from '@/lib/vendors/actions';
 
 // Dynamic import with ssr:false to prevent hydration issues
 const VendorAIInsights = dynamic(
@@ -29,15 +31,83 @@ const VendorAIInsights = dynamic(
 );
 
 interface VendorInsightsClientProps {
-  insights: AIInsight[];
+  insights?: AIInsight[];
   maxItems?: number;
 }
 
-export function VendorInsightsClient({ insights, maxItems = 4 }: VendorInsightsClientProps) {
+export function VendorInsightsClient({ insights: providedInsights, maxItems = 4 }: VendorInsightsClientProps) {
+  const [insights, setInsights] = useState<AIInsight[]>(providedInsights || []);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [hasLoaded, setHasLoaded] = useState(!!providedInsights);
+
+  // Fetch real insights on mount if not provided
+  useEffect(() => {
+    if (providedInsights) {
+      setInsights(providedInsights);
+      setHasLoaded(true);
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const serverInsights = await fetchPortfolioInsights();
+        // Map server insights to component format
+        const mappedInsights: AIInsight[] = serverInsights.map(i => ({
+          id: i.id,
+          type: i.type,
+          priority: i.priority,
+          title: i.title,
+          summary: i.summary,
+          details: i.details,
+          affectedVendorIds: i.affectedVendorIds,
+          affectedVendorNames: i.affectedVendorNames,
+          suggestedAction: i.suggestedAction,
+          actionHref: i.actionHref,
+          createdAt: i.createdAt,
+        }));
+        setInsights(mappedInsights);
+      } catch (error) {
+        console.error('Failed to fetch portfolio insights:', error);
+      } finally {
+        setHasLoaded(true);
+      }
+    });
+  }, [providedInsights]);
+
+  const handleRefresh = async () => {
+    setIsGenerating(true);
+    try {
+      const serverInsights = await fetchPortfolioInsights();
+      const mappedInsights: AIInsight[] = serverInsights.map(i => ({
+        id: i.id,
+        type: i.type,
+        priority: i.priority,
+        title: i.title,
+        summary: i.summary,
+        details: i.details,
+        affectedVendorIds: i.affectedVendorIds,
+        affectedVendorNames: i.affectedVendorNames,
+        suggestedAction: i.suggestedAction,
+        actionHref: i.actionHref,
+        createdAt: i.createdAt,
+      }));
+      setInsights(mappedInsights);
+    } catch (error) {
+      console.error('Failed to refresh portfolio insights:', error);
+    }
+    setIsGenerating(false);
+  };
+
+  const isLoading = isPending && !hasLoaded;
+
   return (
     <VendorAIInsights
       insights={insights}
       maxItems={maxItems}
+      isLoading={isLoading}
+      isGenerating={isGenerating}
+      onRefresh={handleRefresh}
     />
   );
 }

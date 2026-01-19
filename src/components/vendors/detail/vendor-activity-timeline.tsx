@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,8 +27,10 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  Loader2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { fetchVendorActivities } from '@/lib/vendors/actions';
 
 // Activity types
 export type ActivityType =
@@ -104,7 +106,27 @@ const filterConfig: Record<FilterOption, { label: string; types: ActivityType[] 
   },
 };
 
-// Mock data generator for demonstration
+// Map server activity types to component activity types
+function mapActivityType(serverType: string): ActivityType {
+  const typeMap: Record<string, ActivityType> = {
+    vendor_created: 'created',
+    vendor_updated: 'status_changed',
+    document_uploaded: 'document_uploaded',
+    contract_added: 'contract_added',
+    contract_expiring: 'contract_expiring',
+    assessment_completed: 'assessment_completed',
+    risk_score_changed: 'risk_score_changed',
+    monitoring_alert: 'monitoring_alert',
+    soc2_parsed: 'document_analyzed',
+    lei_verified: 'lei_verified',
+    contact_added: 'contact_added',
+    status_changed: 'status_changed',
+    maturity_change: 'compliance_updated',
+  };
+  return typeMap[serverType] || 'status_changed';
+}
+
+// Mock data generator for demonstration (fallback)
 function generateMockActivities(vendorId: string): VendorActivity[] {
   const now = new Date();
   return [
@@ -184,14 +206,50 @@ function generateMockActivities(vendorId: string): VendorActivity[] {
 export function VendorActivityTimeline({
   vendorId,
   activities: providedActivities,
-  isLoading = false,
+  isLoading: externalLoading = false,
   maxItems = 5,
 }: VendorActivityTimelineProps) {
   const [filter, setFilter] = useState<FilterOption>('all');
   const [expanded, setExpanded] = useState(false);
+  const [activities, setActivities] = useState<VendorActivity[]>(providedActivities || []);
+  const [isPending, startTransition] = useTransition();
+  const [hasLoaded, setHasLoaded] = useState(!!providedActivities);
 
-  // Use provided activities or generate mock data
-  const allActivities = providedActivities || generateMockActivities(vendorId);
+  // Fetch real activities on mount if not provided
+  useEffect(() => {
+    if (providedActivities) {
+      setActivities(providedActivities);
+      setHasLoaded(true);
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        // Map the activity types from server to component types
+        const serverActivities = await fetchVendorActivities(vendorId, 30);
+        const mappedActivities: VendorActivity[] = serverActivities.map(a => ({
+          id: a.id,
+          vendorId: a.vendorId,
+          type: mapActivityType(a.type),
+          title: a.title,
+          description: a.description,
+          metadata: a.metadata,
+          createdAt: a.createdAt,
+          createdBy: a.createdBy,
+        }));
+        setActivities(mappedActivities);
+      } catch (error) {
+        console.error('Failed to fetch activities:', error);
+        // Fall back to mock data on error
+        setActivities(generateMockActivities(vendorId));
+      } finally {
+        setHasLoaded(true);
+      }
+    });
+  }, [vendorId, providedActivities]);
+
+  const isLoading = externalLoading || (isPending && !hasLoaded);
+  const allActivities = activities.length > 0 ? activities : (hasLoaded ? [] : generateMockActivities(vendorId));
 
   // Filter activities
   const filteredActivities = filter === 'all'

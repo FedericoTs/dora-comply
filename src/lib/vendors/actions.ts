@@ -1208,3 +1208,147 @@ function mapVendorFromDatabase(row: Record<string, unknown>): Vendor {
     deleted_at: row.deleted_at as string | null,
   };
 }
+
+// ============================================================================
+// AI & Timeline Server Actions (Phase 5)
+// ============================================================================
+
+import {
+  getVendorActivities,
+  getRecentActivities,
+  getPeerBenchmark,
+  type VendorActivity,
+  type PeerBenchmark,
+} from './trend-queries';
+import {
+  generatePortfolioInsights,
+  getInsightSummary,
+  type AIInsight,
+  type InsightSummary,
+} from './ai/insights-generator';
+import {
+  generateVendorAnalysis,
+  generateQuickAnalysis,
+  type VendorAIAnalysis,
+  type QuickAnalysis,
+} from './ai/analysis-generator';
+import { getVendorWithRelations } from './queries';
+
+// Re-export types for client components
+export type { VendorActivity, PeerBenchmark, AIInsight, InsightSummary, VendorAIAnalysis, QuickAnalysis };
+
+/**
+ * Fetch activities for a specific vendor
+ */
+export async function fetchVendorActivities(
+  vendorId: string,
+  limit: number = 20
+): Promise<VendorActivity[]> {
+  try {
+    return await getVendorActivities(vendorId, limit);
+  } catch (error) {
+    console.error('Error fetching vendor activities:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch recent activities across all vendors (for dashboard)
+ */
+export async function fetchRecentActivities(
+  limit: number = 10
+): Promise<VendorActivity[]> {
+  try {
+    return await getRecentActivities(limit);
+  } catch (error) {
+    console.error('Error fetching recent activities:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch AI-generated portfolio insights
+ */
+export async function fetchPortfolioInsights(): Promise<AIInsight[]> {
+  try {
+    return await generatePortfolioInsights();
+  } catch (error) {
+    console.error('Error generating portfolio insights:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch insight summary counts
+ */
+export async function fetchInsightSummary(): Promise<InsightSummary> {
+  try {
+    return await getInsightSummary();
+  } catch (error) {
+    console.error('Error fetching insight summary:', error);
+    return {
+      totalInsights: 0,
+      bySeverity: {
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+      },
+      topInsights: [],
+    };
+  }
+}
+
+/**
+ * Fetch AI analysis for a specific vendor
+ */
+export async function fetchVendorAnalysis(
+  vendorId: string
+): Promise<VendorAIAnalysis | null> {
+  try {
+    const vendor = await getVendorWithRelations(vendorId);
+    if (!vendor) return null;
+
+    return await generateVendorAnalysis(vendor);
+  } catch (error) {
+    console.error('Error generating vendor analysis:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch quick analysis for a vendor (for list views)
+ */
+export async function fetchQuickAnalysis(
+  vendorId: string
+): Promise<QuickAnalysis | null> {
+  try {
+    const vendor = await getVendorWithRelations(vendorId);
+    if (!vendor) return null;
+
+    return generateQuickAnalysis(vendor);
+  } catch (error) {
+    console.error('Error generating quick analysis:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch peer benchmark data
+ */
+export async function fetchPeerBenchmark(): Promise<PeerBenchmark> {
+  try {
+    return await getPeerBenchmark();
+  } catch (error) {
+    console.error('Error fetching peer benchmark:', error);
+    return {
+      orgAvgRiskScore: null,
+      industryAvgRiskScore: 72,
+      percentileRank: 50,
+      orgCriticalRatio: 0,
+      industryCriticalRatio: 0.15,
+      doraReadiness: { org: 0, industryAvg: 65 },
+      sampleSize: 150,
+    };
+  }
+}
