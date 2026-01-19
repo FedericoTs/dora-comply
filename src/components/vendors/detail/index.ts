@@ -1,4 +1,5 @@
 export { VendorHero } from './vendor-hero';
+export { VendorHeroEnhanced } from './vendor-hero-enhanced';
 export { VendorLEIStatus } from './vendor-lei-status';
 export { VendorRiskGauge } from './vendor-risk-gauge';
 export { VendorParentHierarchy } from './vendor-parent-hierarchy';
@@ -9,6 +10,15 @@ export { VendorAlertBanner } from './vendor-alert-banner';
 export { VendorEnrichmentTab } from './vendor-enrichment-tab';
 export { VendorCertifications } from './vendor-certifications';
 export { CTTPOversightPanel } from './ctpp-oversight-panel';
+export {
+  VendorNavigationBar,
+  type VendorNavSection,
+} from './vendor-navigation-bar';
+export {
+  VendorActivityTimeline,
+  type VendorActivity,
+  type ActivityType,
+} from './vendor-activity-timeline';
 export {
   VendorSummaryDashboard,
   VendorQuickMetrics,
