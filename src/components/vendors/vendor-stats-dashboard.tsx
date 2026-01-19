@@ -145,7 +145,7 @@ export function VendorStatsDashboard({
     },
     {
       id: 'roiReady',
-      label: 'DORA Ready',
+      label: 'NIS2 Ready',
       value: stats.roi_ready_percentage,
       icon: FileCheck,
       color: 'text-emerald-500',
@@ -365,7 +365,7 @@ export function VendorStatsMini({ stats, onStatClick, className }: VendorStatsMi
       >
         <FileCheck className="h-4 w-4 text-primary" />
         <span className="font-medium">{stats.roi_ready_percentage}%</span>
-        <span className="text-sm text-muted-foreground">DORA ready</span>
+        <span className="text-sm text-muted-foreground">NIS2 ready</span>
       </button>
     </div>
   );

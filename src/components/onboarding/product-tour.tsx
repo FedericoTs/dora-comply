@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { driver, DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
-const TOUR_STORAGE_KEY = 'dora-comply-tour-completed';
+const TOUR_STORAGE_KEY = 'nis2-comply-tour-completed';
 const TOUR_VERSION = '1.0'; // Increment to re-show tour after major updates
 
 interface ProductTourProps {
@@ -22,7 +22,7 @@ const dashboardTourSteps: DriveStep[] = [
   {
     element: '[data-tour="welcome"]',
     popover: {
-      title: 'Welcome to DORA Comply!',
+      title: 'Welcome to NIS2 Comply!',
       description: 'Let\'s take a quick tour to help you get started with your compliance journey. This will only take a minute.',
       side: 'bottom',
       align: 'start',
@@ -59,7 +59,7 @@ const dashboardTourSteps: DriveStep[] = [
     element: '[data-tour="getting-started"]',
     popover: {
       title: 'Getting Started Checklist',
-      description: 'Follow these steps to complete your DORA compliance setup. Each step takes you to the relevant section.',
+      description: 'Follow these steps to complete your NIS2 compliance setup. Each step takes you to the relevant section.',
       side: 'top',
       align: 'start',
     },
@@ -68,7 +68,7 @@ const dashboardTourSteps: DriveStep[] = [
     element: '[data-tour="add-vendor"]',
     popover: {
       title: 'Add Your First Vendor',
-      description: 'Click here to register your first ICT third-party provider. This is the foundation of your compliance program.',
+      description: 'Click here to register your first third-party provider. This is the foundation of your NIS2 supply chain security program.',
       side: 'bottom',
       align: 'end',
     },
@@ -86,7 +86,7 @@ const dashboardTourSteps: DriveStep[] = [
     element: '[data-tour="copilot"]',
     popover: {
       title: 'AI Compliance Copilot',
-      description: 'Need help? Click the chat button to ask questions about DORA compliance, get guidance, or analyze your vendor data.',
+      description: 'Need help? Click the chat button to ask questions about NIS2 and DORA compliance, get guidance, or analyze your vendor data.',
       side: 'left',
       align: 'end',
     },
@@ -163,7 +163,7 @@ export function ProductTour({ forceShow = false, onComplete, onDismiss }: Produc
         prevBtnText: 'Back',
         doneBtnText: 'Get Started!',
         progressText: '{{current}} of {{total}}',
-        popoverClass: 'dora-tour-popover',
+        popoverClass: 'nis2-tour-popover',
         onDestroyStarted: () => {
           if (!driverObj.hasNextStep()) {
             completeTour();

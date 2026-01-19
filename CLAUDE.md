@@ -1,10 +1,18 @@
-# DORA Comply - Project Documentation
+# NIS2 & DORA Compliance Platform - Project Documentation
 
 ## Overview
 
-**DORA Comply** is an AI-powered compliance platform for EU financial institutions facing DORA (Digital Operational Resilience Act) requirements. The platform automates vendor assessments, generates the Register of Information (RoI), manages ICT incident reporting, and provides resilience testing tracking.
+**NIS2 & DORA Compliance Platform** is an AI-powered compliance platform for EU organizations. The **PRIMARY FOCUS is NIS2** (Network and Information Security Directive 2), with DORA (Digital Operational Resilience Act) as a secondary framework for financial institutions.
 
-**DORA Enforcement Deadline:** January 17, 2026
+The platform automates vendor assessments, manages third-party risk, handles incident reporting, and provides compliance tracking across multiple frameworks.
+
+### Regulatory Deadlines
+- **NIS2 Transposition Deadline:** October 17, 2024 (Member states must have transposed into national law)
+- **NIS2 Compliance:** Organizations in essential/important sectors must comply NOW
+- **DORA Enforcement:** January 17, 2026 (for financial entities)
+
+### Framework Priority
+> **IMPORTANT:** When building features, always prioritize NIS2 first. DORA is one of many supported frameworks, not the primary focus. UI labels should show "NIS2 Ready" not "DORA Ready".
 
 ## Tech Stack
 
@@ -314,41 +322,45 @@ Premium utility classes from `globals.css`:
 
 ## Key Features
 
-### 1. Vendor Management
+### 1. Third-Party Risk Management (TPRM)
 - Centralized vendor registry with risk tiering
 - LEI validation via GLEIF API
 - Contract and certification tracking
 - 4th party (subcontractor) detection
+- NIS2 supply chain security compliance
 
 ### 2. AI Document Parsing
 - SOC 2 report analysis (60 seconds)
 - Contract clause extraction
-- Auto-population of RoI fields
-- Control mapping to DORA articles
+- Auto-population of compliance fields
+- Control mapping to NIS2/DORA articles
 
-### 3. Register of Information (RoI)
-- All 15 ESA templates supported
-- Cross-reference validation
-- Export to regulatory format
-- Gap analysis and suggestions
+### 3. Compliance Dashboard
+- **NIS2 compliance tracking (PRIMARY)**
+- DORA coverage visualization (for financial entities)
+- Multi-framework support (NIS2, DORA, ISO 27001, SOC 2)
+- Maturity scoring (L0-L4)
+- Gap remediation tracking
+- Board-ready reports
 
 ### 4. Incident Reporting
-- DORA Article 19 compliant
-- Timeline tracking (4h/72h/1m deadlines)
-- Classification (Critical/Major/Minor)
+- NIS2 Article 23 compliant (significant incident reporting)
+- DORA Article 19 compliant (for financial entities)
+- Timeline tracking (24h/72h notification deadlines)
+- Classification (Significant/Major/Minor)
 - PDF report generation
 
 ### 5. Resilience Testing
 - Test tracking across 10 types
-- TLPT engagement management
+- TLPT engagement management (DORA)
 - Finding remediation workflow
 - Tester certification tracking
 
-### 6. Compliance Dashboard
-- DORA coverage visualization
-- Maturity scoring (L0-L4)
-- Gap remediation tracking
-- Board-ready reports
+### 6. Register of Information (RoI)
+- All 15 ESA templates supported (DORA-specific)
+- Cross-reference validation
+- Export to regulatory format
+- Gap analysis and suggestions
 
 ---
 

@@ -9,8 +9,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { getActiveFrameworkFromCookie } from '@/lib/context/framework-cookie';
 
 export const metadata: Metadata = {
-  title: 'Third Parties | DORA Comply',
-  description: 'Manage your ICT third-party service providers',
+  title: 'Third Parties | NIS2 Comply',
+  description: 'Manage your third-party service providers and supply chain security',
 };
 
 // Stats Dashboard Section - fetches data server-side
@@ -53,7 +53,7 @@ export default function VendorsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Third Parties</h1>
         <p className="text-muted-foreground mt-1">
-          Manage your ICT third-party service providers and track DORA compliance
+          Manage your third-party service providers and track NIS2 supply chain compliance
         </p>
       </div>
 
