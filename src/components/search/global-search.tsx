@@ -65,6 +65,7 @@ const typeLabels: Record<SearchResultType, string> = {
 
 export function GlobalSearch({ placeholder = 'Search anything...' }: GlobalSearchProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResults | null>(null);
@@ -72,6 +73,11 @@ export function GlobalSearch({ placeholder = 'Search anything...' }: GlobalSearc
   const [isPending, startTransition] = useTransition();
 
   const debouncedQuery = useDebounce(query, 200);
+
+  // Prevent hydration mismatch by only rendering dialog after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Load recent items when dialog opens
   useEffect(() => {
@@ -101,6 +107,8 @@ export function GlobalSearch({ placeholder = 'Search anything...' }: GlobalSearc
 
   // Keyboard shortcut
   useEffect(() => {
+    if (!mounted) return;
+
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -110,7 +118,7 @@ export function GlobalSearch({ placeholder = 'Search anything...' }: GlobalSearc
 
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, []);
+  }, [mounted]);
 
   // Handle selection
   const handleSelect = useCallback((result: SearchResult) => {
@@ -147,13 +155,14 @@ export function GlobalSearch({ placeholder = 'Search anything...' }: GlobalSearc
         </kbd>
       </button>
 
-      {/* Command Dialog */}
-      <CommandDialog
-        open={open}
-        onOpenChange={handleOpenChange}
-        title="Global Search"
-        description="Search across vendors, documents, incidents, and pages"
-      >
+      {/* Command Dialog - only render on client to prevent hydration mismatch */}
+      {mounted && (
+        <CommandDialog
+          open={open}
+          onOpenChange={handleOpenChange}
+          title="Global Search"
+          description="Search across vendors, documents, incidents, and pages"
+        >
         <CommandInput
           placeholder="Search vendors, documents, incidents..."
           value={query}
@@ -297,6 +306,7 @@ export function GlobalSearch({ placeholder = 'Search anything...' }: GlobalSearc
           </div>
         </div>
       </CommandDialog>
+      )}
     </>
   );
 }
