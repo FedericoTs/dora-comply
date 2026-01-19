@@ -11,6 +11,61 @@ import { GlobalSearch } from '@/components/search/global-search';
 import { getOnboardingProgress } from '@/lib/onboarding/progress';
 import { FrameworkProvider } from '@/lib/context';
 import { getCurrentOrganizationLicensing } from '@/lib/licensing/queries';
+import type { OrganizationLicensing } from '@/lib/licensing/types';
+
+// Default licensing for fallback - use type assertion to avoid requiring all frameworks
+const DEFAULT_LICENSING: OrganizationLicensing = {
+  license_tier: "professional",
+  licensed_frameworks: ["nis2", "dora"],
+  trial_ends_at: null,
+  billing_status: "active",
+  entitlements: {
+    nis2: {
+      id: "default-nis2",
+      organization_id: "",
+      framework: "nis2",
+      enabled: true,
+      activated_at: new Date().toISOString(),
+      expires_at: null,
+      modules_enabled: { dashboard: true, scoring: true, gaps: true, reports: true },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    dora: {
+      id: "default-dora",
+      organization_id: "",
+      framework: "dora",
+      enabled: true,
+      activated_at: new Date().toISOString(),
+      expires_at: null,
+      modules_enabled: { dashboard: true, scoring: true, gaps: true, roi: true, incidents: true, testing: true, tprm: true, reports: true },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    gdpr: {
+      id: "default-gdpr",
+      organization_id: "",
+      framework: "gdpr",
+      enabled: false,
+      activated_at: new Date().toISOString(),
+      expires_at: null,
+      modules_enabled: { dashboard: false, scoring: false, gaps: false, reports: false },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    iso27001: {
+      id: "default-iso27001",
+      organization_id: "",
+      framework: "iso27001",
+      enabled: false,
+      activated_at: new Date().toISOString(),
+      expires_at: null,
+      modules_enabled: { dashboard: false, scoring: false, gaps: false, reports: false },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  },
+};
 
 export default async function DashboardLayout({
   children,
@@ -30,8 +85,14 @@ export default async function DashboardLayout({
   // Fetch onboarding progress for sidebar
   const onboardingProgress = await getOnboardingProgress();
 
-  // Fetch licensing data for framework context
-  const licensing = await getCurrentOrganizationLicensing();
+  // Fetch licensing data for framework context with fallback
+  let licensing: OrganizationLicensing;
+  try {
+    licensing = await getCurrentOrganizationLicensing();
+  } catch (error) {
+    console.error('Failed to fetch licensing, using defaults:', error);
+    licensing = DEFAULT_LICENSING;
+  }
 
   return (
     <FrameworkProvider initialLicensing={licensing}>
