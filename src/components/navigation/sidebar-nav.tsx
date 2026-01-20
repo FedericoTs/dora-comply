@@ -27,6 +27,7 @@ import {
   FileCheck,
   ClipboardList,
   Lock,
+  FileQuestion,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -68,6 +69,7 @@ interface SidebarNavProps {
   /** Badge counts for navigation items */
   badges?: {
     thirdParties?: number;
+    questionnaires?: number;
     documents?: number;
     incidents?: number;
   };
@@ -87,6 +89,7 @@ const HOME_NAV: NavItem = {
 // Manage section - Day-to-day operations
 const MANAGE_NAV: NavItem[] = [
   { name: 'Third Parties', href: '/vendors', icon: Building2 },
+  { name: 'Questionnaires', href: '/questionnaires', icon: FileQuestion },
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
 ];
@@ -461,6 +464,9 @@ function UnifiedSidebarNav({
     if (item.href === '/vendors' && badges?.thirdParties) {
       return { ...item, badge: badges.thirdParties };
     }
+    if (item.href === '/questionnaires' && badges?.questionnaires) {
+      return { ...item, badge: badges.questionnaires };
+    }
     if (item.href === '/documents' && badges?.documents) {
       return { ...item, badge: badges.documents };
     }
@@ -553,6 +559,9 @@ function FrameworkSidebarNav({
   const manageNavWithBadges = MANAGE_NAV.map(item => {
     if (item.href === '/vendors' && badges?.thirdParties) {
       return { ...item, badge: badges.thirdParties };
+    }
+    if (item.href === '/questionnaires' && badges?.questionnaires) {
+      return { ...item, badge: badges.questionnaires };
     }
     if (item.href === '/documents' && badges?.documents) {
       return { ...item, badge: badges.documents };
