@@ -1,19 +1,19 @@
 /**
  * Vendor Portal - Documents Upload Page
  *
- * Upload documents for AI-assisted answer extraction
+ * Upload documents for AI-assisted answer extraction.
+ * Documents are automatically processed after upload.
  */
 
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Sparkles, CheckCircle2, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileText, Sparkles, CheckCircle2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getVendorPortalData } from '@/lib/nis2-questionnaire/queries';
 import { DocumentUploadZone } from '@/components/questionnaires/vendor-portal/document-upload-zone';
 import { VendorPortalSteps } from '@/components/questionnaires/vendor-portal/vendor-portal-steps';
-import { ProcessAndContinueButton } from '@/components/questionnaires/vendor-portal/process-and-continue-button';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -127,9 +127,12 @@ export default async function DocumentsPage({ params }: PageProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              Uploaded Documents
+              Previously Uploaded Documents
               <Badge variant="secondary">{documents.length}</Badge>
             </CardTitle>
+            <CardDescription>
+              These documents have already been uploaded and processed
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -139,8 +142,12 @@ export default async function DocumentsPage({ params }: PageProps) {
                   className="flex items-center justify-between p-3 rounded-lg border bg-white"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-gray-600" />
+                    <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${doc.ai_processed ? 'bg-emerald-100' : 'bg-gray-100'}`}>
+                      {doc.ai_processed ? (
+                        <Sparkles className="h-5 w-5 text-emerald-600" />
+                      ) : (
+                        <FileText className="h-5 w-5 text-gray-600" />
+                      )}
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">{doc.file_name}</p>
@@ -154,16 +161,13 @@ export default async function DocumentsPage({ params }: PageProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     {doc.ai_processed ? (
-                      <Badge variant="secondary" className="gap-1">
+                      <Badge variant="secondary" className="gap-1 bg-emerald-100 text-emerald-700">
                         <CheckCircle2 className="h-3 w-3" />
-                        Processed
+                        AI Analyzed
                       </Badge>
                     ) : (
-                      <Badge variant="outline">Pending</Badge>
+                      <Badge variant="outline">Pending Analysis</Badge>
                     )}
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
               ))}
@@ -190,11 +194,12 @@ export default async function DocumentsPage({ params }: PageProps) {
             Back
           </Link>
         </Button>
-        <ProcessAndContinueButton
-          token={token}
-          hasDocuments={documents.length > 0}
-          hasUnprocessedDocuments={documents.some((d) => !d.ai_processed)}
-        />
+        <Button asChild>
+          <Link href={`/q/${token}/questions`}>
+            Continue to Questions
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
       </div>
     </div>
   );
