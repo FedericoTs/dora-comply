@@ -1,0 +1,259 @@
+/**
+ * Vendor Portal Document Processing API
+ *
+ * POST /api/vendor-portal/[token]/process - Trigger AI extraction for documents
+ * GET /api/vendor-portal/[token]/process - Get extraction status
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { parseDocumentForAnswers, applyExtractedAnswers } from '@/lib/nis2-questionnaire/ai/parser';
+import type { TemplateQuestion, DocumentType } from '@/lib/nis2-questionnaire/types';
+
+interface RouteParams {
+  params: Promise<{ token: string }>;
+}
+
+/**
+ * Validate questionnaire token
+ */
+async function validateToken(token: string) {
+  const supabase = createServiceRoleClient();
+
+  const { data: questionnaire, error } = await supabase
+    .from('nis2_vendor_questionnaires')
+    .select('id, status, token_expires_at, template_id, organization_id')
+    .eq('access_token', token)
+    .single();
+
+  if (error || !questionnaire) {
+    return { valid: false, error: 'Invalid access link' };
+  }
+
+  if (new Date(questionnaire.token_expires_at) < new Date()) {
+    return { valid: false, error: 'Access link has expired' };
+  }
+
+  return { valid: true, questionnaire };
+}
+
+/**
+ * Trigger AI extraction for all unprocessed documents
+ */
+export async function POST(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { token } = await params;
+
+    // Validate token
+    const validation = await validateToken(token);
+    if (!validation.valid || !validation.questionnaire) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: validation.error === 'Access link has expired' ? 410 : 401 }
+      );
+    }
+
+    const questionnaire = validation.questionnaire;
+    const supabase = createServiceRoleClient();
+
+    // Check for API key
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      return NextResponse.json(
+        { error: 'AI extraction is not configured' },
+        { status: 503 }
+      );
+    }
+
+    // Get unprocessed documents
+    const { data: documents, error: docsError } = await supabase
+      .from('nis2_questionnaire_documents')
+      .select('*')
+      .eq('questionnaire_id', questionnaire.id)
+      .eq('ai_processed', false);
+
+    if (docsError) {
+      console.error('Error fetching documents:', docsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch documents' },
+        { status: 500 }
+      );
+    }
+
+    if (!documents || documents.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'No documents to process',
+        processed: 0,
+        extracted: 0,
+      });
+    }
+
+    // Get template questions
+    const { data: questions, error: questionsError } = await supabase
+      .from('nis2_template_questions')
+      .select('*')
+      .eq('template_id', questionnaire.template_id)
+      .order('display_order', { ascending: true });
+
+    if (questionsError || !questions) {
+      console.error('Error fetching questions:', questionsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch template questions' },
+        { status: 500 }
+      );
+    }
+
+    let totalExtracted = 0;
+    let documentsProcessed = 0;
+    const errors: string[] = [];
+
+    // Process each document
+    for (const doc of documents) {
+      try {
+        // Download document from storage
+        const { data: fileData, error: downloadError } = await supabase.storage
+          .from('questionnaire-documents')
+          .download(doc.storage_path);
+
+        if (downloadError || !fileData) {
+          console.error('Failed to download document:', downloadError);
+          errors.push(`Failed to download ${doc.file_name}`);
+          continue;
+        }
+
+        // Convert to buffer
+        const pdfBuffer = Buffer.from(await fileData.arrayBuffer());
+
+        // Parse document
+        const result = await parseDocumentForAnswers({
+          questionnaireId: questionnaire.id,
+          documentId: doc.id,
+          questions: questions as TemplateQuestion[],
+          documentType: doc.document_type as DocumentType,
+          pdfBuffer,
+        });
+
+        if (result.success && result.extractedAnswers.length > 0 && result.extractionId) {
+          // Apply extracted answers
+          const { applied } = await applyExtractedAnswers(
+            questionnaire.id,
+            result.extractedAnswers,
+            result.extractionId
+          );
+          totalExtracted += applied;
+
+          // Update AI-filled count on questionnaire
+          await supabase
+            .from('nis2_vendor_questionnaires')
+            .update({
+              questions_ai_filled: supabase.rpc('increment', { x: applied }),
+            })
+            .eq('id', questionnaire.id);
+        }
+
+        documentsProcessed++;
+      } catch (error) {
+        console.error('Error processing document:', error);
+        errors.push(`Error processing ${doc.file_name}`);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      processed: documentsProcessed,
+      extracted: totalExtracted,
+      total_documents: documents.length,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error) {
+    console.error('Document processing error:', error);
+    return NextResponse.json(
+      { error: 'An unexpected error occurred during processing' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Get extraction status for questionnaire
+ */
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { token } = await params;
+
+    const validation = await validateToken(token);
+    if (!validation.valid || !validation.questionnaire) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: validation.error === 'Access link has expired' ? 410 : 401 }
+      );
+    }
+
+    const supabase = createServiceRoleClient();
+
+    // Get all extractions for this questionnaire
+    const { data: extractions, error } = await supabase
+      .from('nis2_ai_extractions')
+      .select(`
+        *,
+        document:nis2_questionnaire_documents!nis2_ai_extractions_document_id_fkey(
+          id,
+          file_name,
+          document_type
+        )
+      `)
+      .eq('questionnaire_id', validation.questionnaire.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Fetch extractions error:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch extraction status' },
+        { status: 500 }
+      );
+    }
+
+    // Get document processing status
+    const { data: documents } = await supabase
+      .from('nis2_questionnaire_documents')
+      .select('id, file_name, ai_processed')
+      .eq('questionnaire_id', validation.questionnaire.id);
+
+    const processedCount = documents?.filter((d) => d.ai_processed).length || 0;
+    const pendingCount = (documents?.length || 0) - processedCount;
+
+    // Calculate overall stats
+    const completedExtractions = extractions?.filter((e) => e.status === 'completed') || [];
+    const totalExtracted = completedExtractions.reduce(
+      (sum, e) => sum + (e.extraction_summary?.total_extracted || 0),
+      0
+    );
+    const avgConfidence =
+      completedExtractions.length > 0
+        ? completedExtractions.reduce(
+            (sum, e) => sum + (e.extraction_summary?.avg_confidence || 0),
+            0
+          ) / completedExtractions.length
+        : 0;
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        extractions,
+        summary: {
+          total_documents: documents?.length || 0,
+          processed_documents: processedCount,
+          pending_documents: pendingCount,
+          total_extracted: totalExtracted,
+          avg_confidence: avgConfidence,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Get extraction status error:', error);
+    return NextResponse.json(
+      { error: 'An unexpected error occurred' },
+      { status: 500 }
+    );
+  }
+}
