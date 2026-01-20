@@ -3,10 +3,11 @@
 /**
  * DocumentUploadZone Component
  *
- * Drag-and-drop file upload for vendor portal with automatic AI processing
+ * Professional document upload with automatic AI processing.
+ * Displays corporate-style progress indicators during analysis.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useRouter } from 'next/navigation';
 import {
@@ -16,9 +17,9 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
-  Sparkles,
-  Brain,
-  Zap,
+  Server,
+  Cpu,
+  Database,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -45,10 +46,10 @@ type FileStatus =
   | 'pending'
   | 'uploading'
   | 'uploaded'
-  | 'ai_downloading'
-  | 'ai_analyzing'
-  | 'ai_extracting'
-  | 'ai_complete'
+  | 'processing_init'
+  | 'processing_analyze'
+  | 'processing_extract'
+  | 'processing_save'
   | 'complete'
   | 'error';
 
@@ -71,37 +72,17 @@ const DOCUMENT_TYPE_OPTIONS: { value: DocumentType; label: string }[] = [
 
 const STATUS_CONFIG: Record<
   FileStatus,
-  { label: string; icon: typeof Loader2; color: string; progress: number }
+  { label: string; icon: typeof Loader2; progress: number }
 > = {
-  pending: { label: 'Ready to upload', icon: FileText, color: 'text-gray-400', progress: 0 },
-  uploading: { label: 'Uploading...', icon: Loader2, color: 'text-blue-600', progress: 20 },
-  uploaded: { label: 'Upload complete', icon: CheckCircle2, color: 'text-blue-600', progress: 30 },
-  ai_downloading: {
-    label: 'Preparing document...',
-    icon: FileText,
-    color: 'text-emerald-600',
-    progress: 40,
-  },
-  ai_analyzing: {
-    label: 'AI analyzing document...',
-    icon: Brain,
-    color: 'text-emerald-600',
-    progress: 60,
-  },
-  ai_extracting: {
-    label: 'Extracting answers...',
-    icon: Zap,
-    color: 'text-emerald-600',
-    progress: 80,
-  },
-  ai_complete: {
-    label: 'Extraction complete!',
-    icon: Sparkles,
-    color: 'text-emerald-600',
-    progress: 100,
-  },
-  complete: { label: 'Complete', icon: CheckCircle2, color: 'text-emerald-600', progress: 100 },
-  error: { label: 'Error', icon: AlertCircle, color: 'text-destructive', progress: 0 },
+  pending: { label: 'Ready', icon: FileText, progress: 0 },
+  uploading: { label: 'Uploading document...', icon: Upload, progress: 15 },
+  uploaded: { label: 'Upload complete', icon: CheckCircle2, progress: 25 },
+  processing_init: { label: 'Initializing document processing...', icon: Server, progress: 35 },
+  processing_analyze: { label: 'Analyzing document content...', icon: Cpu, progress: 55 },
+  processing_extract: { label: 'Extracting compliance information...', icon: Cpu, progress: 75 },
+  processing_save: { label: 'Saving extracted answers...', icon: Database, progress: 90 },
+  complete: { label: 'Processing complete', icon: CheckCircle2, progress: 100 },
+  error: { label: 'Error', icon: AlertCircle, progress: 0 },
 };
 
 export function DocumentUploadZone({
@@ -179,7 +160,7 @@ export function DocumentUploadZone({
         setUploadingFiles((prev) =>
           prev.map((f, i) =>
             i === index && f.status === 'uploading'
-              ? { ...f, progress: Math.min(f.progress + 5, 28) }
+              ? { ...f, progress: Math.min(f.progress + 3, 23) }
               : f
           )
         );
@@ -197,7 +178,6 @@ export function DocumentUploadZone({
       }
 
       updateFileStatus(index, 'uploaded');
-      toast.success(`${file.file.name} uploaded`);
 
       // Phase 2: AI Processing - automatically start
       await processDocument(index, file.file.name);
@@ -209,23 +189,35 @@ export function DocumentUploadZone({
   }
 
   async function processDocument(index: number, filename: string) {
-    // Show AI processing stages with animated progress
-    updateFileStatus(index, 'ai_downloading');
+    // Show processing stages with smooth progress animation
+    updateFileStatus(index, 'processing_init');
 
-    // Animate through stages
-    const stages: { status: FileStatus; delay: number }[] = [
-      { status: 'ai_analyzing', delay: 800 },
-      { status: 'ai_extracting', delay: 1500 },
-    ];
+    // Animate through stages while waiting for API
+    const stages: FileStatus[] = ['processing_analyze', 'processing_extract', 'processing_save'];
+    let currentStage = 0;
 
-    // Start stage transitions (will be overridden when actual response comes)
-    let currentStageIndex = 0;
     const stageInterval = setInterval(() => {
-      if (currentStageIndex < stages.length) {
-        updateFileStatus(index, stages[currentStageIndex].status);
-        currentStageIndex++;
+      if (currentStage < stages.length) {
+        updateFileStatus(index, stages[currentStage]);
+        currentStage++;
       }
-    }, 2000);
+    }, 3000);
+
+    // Also animate progress within stages
+    const progressInterval = setInterval(() => {
+      setUploadingFiles((prev) =>
+        prev.map((f, i) => {
+          if (i !== index) return f;
+          if (f.status === 'complete' || f.status === 'error') return f;
+          const maxProgress = STATUS_CONFIG[f.status]?.progress || 90;
+          const minProgress = maxProgress - 15;
+          if (f.progress < maxProgress - 2) {
+            return { ...f, progress: Math.min(f.progress + 1, maxProgress - 2) };
+          }
+          return f;
+        })
+      );
+    }, 500);
 
     try {
       // Call the process API
@@ -234,44 +226,46 @@ export function DocumentUploadZone({
       });
 
       clearInterval(stageInterval);
+      clearInterval(progressInterval);
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'AI processing failed');
+        throw new Error(errorData.error || 'Processing failed');
       }
 
       const data = await response.json();
 
       // Show completion with extracted count
-      updateFileStatus(index, 'ai_complete', {
+      updateFileStatus(index, 'complete', {
         extractedCount: data.extracted || 0,
       });
 
       if (data.extracted > 0) {
-        toast.success(`${data.extracted} answers extracted from ${filename}`, {
-          icon: <Sparkles className="h-4 w-4 text-emerald-600" />,
-        });
+        toast.success(`${data.extracted} answers extracted and saved from ${filename}`);
       } else {
         toast.info(`Document processed. No answers could be extracted.`);
       }
 
-      // Transition to final complete state after a moment
+      // Refresh the page to show updated data
+      onUploadComplete?.();
+
+      // Force a hard refresh to ensure all data is reloaded
       setTimeout(() => {
-        updateFileStatus(index, 'complete', { extractedCount: data.extracted });
-        onUploadComplete?.();
         router.refresh();
-      }, 2000);
+      }, 500);
+
     } catch (error) {
       clearInterval(stageInterval);
-      const errorMessage = error instanceof Error ? error.message : 'AI processing failed';
+      clearInterval(progressInterval);
+      const errorMessage = error instanceof Error ? error.message : 'Processing failed';
 
-      // Still mark as complete but show AI failed
+      // Mark as complete but show error
       updateFileStatus(index, 'complete', {
-        error: `AI extraction failed: ${errorMessage}`,
+        error: `Extraction failed: ${errorMessage}`,
         extractedCount: 0,
       });
 
-      toast.error(`AI processing failed for ${filename}. You can fill answers manually.`);
+      toast.error(`Processing failed for ${filename}. You can fill answers manually.`);
       onUploadComplete?.();
       router.refresh();
     }
@@ -290,7 +284,14 @@ export function DocumentUploadZone({
 
   const pendingCount = uploadingFiles.filter((f) => f.status === 'pending').length;
   const isProcessing = uploadingFiles.some((f) =>
-    ['uploading', 'uploaded', 'ai_downloading', 'ai_analyzing', 'ai_extracting'].includes(f.status)
+    [
+      'uploading',
+      'uploaded',
+      'processing_init',
+      'processing_analyze',
+      'processing_extract',
+      'processing_save',
+    ].includes(f.status)
   );
 
   return (
@@ -325,8 +326,8 @@ export function DocumentUploadZone({
       {/* AI Feature Note */}
       {uploadingFiles.length === 0 && (
         <div className="flex items-center gap-2 text-sm text-gray-500 justify-center">
-          <Sparkles className="h-4 w-4 text-emerald-600" />
-          <span>Documents will be automatically analyzed by AI to pre-fill answers</span>
+          <Cpu className="h-4 w-4 text-emerald-600" />
+          <span>Documents are automatically analyzed to pre-fill questionnaire answers</span>
         </div>
       )}
 
@@ -338,18 +339,19 @@ export function DocumentUploadZone({
             const StatusIcon = config.icon;
             const isAnimating = [
               'uploading',
-              'ai_downloading',
-              'ai_analyzing',
-              'ai_extracting',
+              'processing_init',
+              'processing_analyze',
+              'processing_extract',
+              'processing_save',
             ].includes(file.status);
-            const isAIPhase = file.status.startsWith('ai_');
+            const isProcessing = file.status.startsWith('processing_');
 
             return (
               <Card
                 key={index}
                 className={cn(
                   'overflow-hidden transition-all',
-                  isAIPhase && 'border-emerald-200 bg-emerald-50/30'
+                  isProcessing && 'border-emerald-200'
                 )}
               >
                 <CardContent className="p-4">
@@ -358,14 +360,20 @@ export function DocumentUploadZone({
                     <div
                       className={cn(
                         'h-10 w-10 rounded-lg flex items-center justify-center shrink-0',
-                        isAIPhase ? 'bg-emerald-100' : 'bg-gray-100'
+                        isProcessing ? 'bg-emerald-50' : 'bg-gray-100'
                       )}
                     >
                       <StatusIcon
                         className={cn(
                           'h-5 w-5',
-                          config.color,
-                          isAnimating && 'animate-spin'
+                          file.status === 'error'
+                            ? 'text-red-500'
+                            : file.status === 'complete'
+                              ? 'text-emerald-600'
+                              : isProcessing
+                                ? 'text-emerald-600'
+                                : 'text-gray-500',
+                          isAnimating && 'animate-pulse'
                         )}
                       />
                     </div>
@@ -374,12 +382,16 @@ export function DocumentUploadZone({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-gray-900 truncate">{file.file.name}</p>
-                        {file.extractedCount !== undefined && file.extractedCount > 0 && (
-                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
-                            <Sparkles className="h-3 w-3 mr-1" />
-                            {file.extractedCount} answers
-                          </Badge>
-                        )}
+                        {file.status === 'complete' &&
+                          file.extractedCount !== undefined &&
+                          file.extractedCount > 0 && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-emerald-100 text-emerald-700 font-medium"
+                            >
+                              {file.extractedCount} answers saved
+                            </Badge>
+                          )}
                       </div>
                       <p className="text-sm text-gray-500">
                         {(file.file.size / 1024 / 1024).toFixed(1)} MB
@@ -387,35 +399,37 @@ export function DocumentUploadZone({
 
                       {/* Progress Bar */}
                       {file.status !== 'pending' && file.status !== 'complete' && (
-                        <div className="mt-2">
+                        <div className="mt-3">
                           <Progress
                             value={file.progress}
-                            className={cn('h-2', isAIPhase && '[&>div]:bg-emerald-500')}
+                            className={cn(
+                              'h-2',
+                              isProcessing && '[&>div]:bg-emerald-500'
+                            )}
                           />
-                          <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
-                            {isAIPhase && <Sparkles className="h-3 w-3 text-emerald-600" />}
+                          <p className="text-xs text-gray-600 mt-1.5 font-medium">
                             {config.label}
                           </p>
                         </div>
                       )}
 
-                      {/* Complete state with AI info */}
+                      {/* Complete state */}
                       {file.status === 'complete' && (
                         <div className="mt-2">
                           {file.extractedCount !== undefined && file.extractedCount > 0 ? (
-                            <p className="text-sm text-emerald-600 flex items-center gap-1">
+                            <p className="text-sm text-emerald-600 font-medium flex items-center gap-1.5">
                               <CheckCircle2 className="h-4 w-4" />
-                              AI extracted {file.extractedCount} answers
+                              {file.extractedCount} answers extracted and saved to questionnaire
                             </p>
                           ) : file.error ? (
-                            <p className="text-sm text-amber-600 flex items-center gap-1">
+                            <p className="text-sm text-amber-600 flex items-center gap-1.5">
                               <AlertCircle className="h-4 w-4" />
                               {file.error}
                             </p>
                           ) : (
-                            <p className="text-sm text-gray-500 flex items-center gap-1">
+                            <p className="text-sm text-gray-500 flex items-center gap-1.5">
                               <CheckCircle2 className="h-4 w-4" />
-                              Upload complete
+                              Document uploaded successfully
                             </p>
                           )}
                         </div>
@@ -423,7 +437,7 @@ export function DocumentUploadZone({
 
                       {/* Error Message */}
                       {file.status === 'error' && (
-                        <p className="text-sm text-destructive mt-1">{file.error}</p>
+                        <p className="text-sm text-red-600 mt-1">{file.error}</p>
                       )}
                     </div>
 
@@ -473,8 +487,8 @@ export function DocumentUploadZone({
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" />
-                  Upload & Analyze {pendingCount} File{pendingCount > 1 ? 's' : ''}
+                  <Upload className="h-4 w-4" />
+                  Upload and Analyze {pendingCount} Document{pendingCount > 1 ? 's' : ''}
                 </>
               )}
             </Button>
