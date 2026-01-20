@@ -52,9 +52,18 @@ export async function parseDocumentForAnswers(
 ): Promise<ParseResult> {
   const { questionnaireId, documentId, questions, documentType, pdfBuffer } = options;
 
+  console.log('[Parser] Starting document parsing:', {
+    questionnaireId,
+    documentId,
+    documentType,
+    questionCount: questions.length,
+    bufferSize: pdfBuffer.length,
+  });
+
   const supabase = createServiceRoleClient();
 
   // Create extraction job record
+  console.log('[Parser] Creating extraction job record...');
   const { data: extraction, error: insertError } = await supabase
     .from('nis2_ai_extractions')
     .insert({
@@ -68,7 +77,7 @@ export async function parseDocumentForAnswers(
     .single();
 
   if (insertError || !extraction) {
-    console.error('Failed to create extraction record:', insertError);
+    console.error('[Parser] Failed to create extraction record:', insertError);
     return {
       success: false,
       extractedAnswers: [],
@@ -77,8 +86,11 @@ export async function parseDocumentForAnswers(
     };
   }
 
+  console.log('[Parser] Extraction job created:', extraction.id);
+
   try {
     // Select appropriate prompt based on document type
+    console.log('[Parser] Selecting prompt for document type:', documentType);
     let userPrompt: string;
     if (documentType === 'soc2') {
       userPrompt = generateSOC2ExtractionPrompt(questions);
@@ -88,14 +100,19 @@ export async function parseDocumentForAnswers(
       userPrompt = generateExtractionPrompt(questions, documentType);
     }
 
+    console.log('[Parser] User prompt length:', userPrompt.length);
+
     // Process with retries
     let result: unknown = null;
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
+        console.log(`[Parser] Attempt ${attempt + 1}/${MAX_RETRIES} - Calling Gemini API...`);
         // Call Gemini with PDF using Vercel AI SDK
         const pdfBase64 = pdfBuffer.toString('base64');
+        console.log('[Parser] PDF base64 length:', pdfBase64.length);
+
         const response = await generateText({
           model: google(GEMINI_MODEL),
           messages: [
@@ -119,20 +136,26 @@ export async function parseDocumentForAnswers(
         });
 
         const responseText = response.text;
+        console.log('[Parser] Gemini response length:', responseText.length);
+        console.log('[Parser] Response preview:', responseText.substring(0, 200));
 
         // Parse JSON from response
         result = extractJsonFromResponse(responseText);
+        console.log('[Parser] Parsed result type:', typeof result);
 
         if (validateExtractionResult(result)) {
+          console.log('[Parser] Extraction result validated successfully');
           break;
         }
 
         lastError = new Error('Invalid extraction result format');
+        console.warn('[Parser] Invalid extraction result format, retrying...');
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        console.error(`Extraction attempt ${attempt + 1} failed:`, lastError);
+        console.error(`[Parser] Extraction attempt ${attempt + 1} failed:`, lastError.message);
 
         if (attempt < MAX_RETRIES - 1) {
+          console.log(`[Parser] Waiting ${RETRY_DELAY_MS * (attempt + 1)}ms before retry...`);
           await delay(RETRY_DELAY_MS * (attempt + 1));
         }
       }
@@ -159,6 +182,7 @@ export async function parseDocumentForAnswers(
     };
 
     // Process extracted answers
+    console.log('[Parser] Processing', extractionResult.extractions.length, 'extractions');
     const extractedAnswers: ExtractedAnswer[] = extractionResult.extractions
       .filter((e) => e.confidence >= 0)
       .map((e) => ({
@@ -168,6 +192,8 @@ export async function parseDocumentForAnswers(
         citation: e.citation,
         extraction_notes: e.extraction_notes,
       }));
+
+    console.log('[Parser] Extracted', extractedAnswers.length, 'answers with positive confidence');
 
     // Calculate summary
     const summary: ExtractionSummary = {

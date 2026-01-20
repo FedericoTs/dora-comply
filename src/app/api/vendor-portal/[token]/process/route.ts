@@ -41,12 +41,16 @@ async function validateToken(token: string) {
  * Trigger AI extraction for all unprocessed documents
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
+  console.log('[ProcessAPI] Starting document processing...');
+
   try {
     const { token } = await params;
+    console.log('[ProcessAPI] Token received:', token?.substring(0, 8) + '...');
 
     // Validate token
     const validation = await validateToken(token);
     if (!validation.valid || !validation.questionnaire) {
+      console.log('[ProcessAPI] Token validation failed:', validation.error);
       return NextResponse.json(
         { error: validation.error },
         { status: validation.error === 'Access link has expired' ? 410 : 401 }
@@ -54,15 +58,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const questionnaire = validation.questionnaire;
+    console.log('[ProcessAPI] Questionnaire found:', questionnaire.id);
+
     const supabase = createServiceRoleClient();
 
     // Check for API key
     if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      console.error('[ProcessAPI] GOOGLE_GENERATIVE_AI_API_KEY is not configured');
       return NextResponse.json(
-        { error: 'AI extraction is not configured' },
+        { error: 'AI extraction is not configured. Please contact support.' },
         { status: 503 }
       );
     }
+    console.log('[ProcessAPI] API key configured');
 
     // Get unprocessed documents
     const { data: documents, error: docsError } = await supabase
@@ -72,12 +80,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .eq('ai_processed', false);
 
     if (docsError) {
-      console.error('Error fetching documents:', docsError);
+      console.error('[ProcessAPI] Error fetching documents:', docsError);
       return NextResponse.json(
         { error: 'Failed to fetch documents' },
         { status: 500 }
       );
     }
+
+    console.log('[ProcessAPI] Found', documents?.length || 0, 'unprocessed documents');
 
     if (!documents || documents.length === 0) {
       return NextResponse.json({
@@ -96,12 +106,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .order('display_order', { ascending: true });
 
     if (questionsError || !questions) {
-      console.error('Error fetching questions:', questionsError);
+      console.error('[ProcessAPI] Error fetching questions:', questionsError);
       return NextResponse.json(
         { error: 'Failed to fetch template questions' },
         { status: 500 }
       );
     }
+
+    console.log('[ProcessAPI] Found', questions.length, 'template questions');
 
     let totalExtracted = 0;
     let documentsProcessed = 0;
@@ -109,22 +121,29 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Process each document
     for (const doc of documents) {
+      console.log('[ProcessAPI] Processing document:', doc.file_name, 'type:', doc.document_type);
+
       try {
         // Download document from storage
+        console.log('[ProcessAPI] Downloading from path:', doc.storage_path);
         const { data: fileData, error: downloadError } = await supabase.storage
           .from('questionnaire-documents')
           .download(doc.storage_path);
 
         if (downloadError || !fileData) {
-          console.error('Failed to download document:', downloadError);
-          errors.push(`Failed to download ${doc.file_name}`);
+          console.error('[ProcessAPI] Failed to download document:', downloadError);
+          errors.push(`Failed to download ${doc.file_name}: ${downloadError?.message || 'Unknown error'}`);
           continue;
         }
 
+        console.log('[ProcessAPI] Document downloaded, size:', fileData.size, 'bytes');
+
         // Convert to buffer
         const pdfBuffer = Buffer.from(await fileData.arrayBuffer());
+        console.log('[ProcessAPI] Buffer created, size:', pdfBuffer.length, 'bytes');
 
         // Parse document
+        console.log('[ProcessAPI] Starting AI extraction...');
         const result = await parseDocumentForAnswers({
           questionnaireId: questionnaire.id,
           documentId: doc.id,
@@ -133,30 +152,55 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           pdfBuffer,
         });
 
+        console.log('[ProcessAPI] Extraction result:', {
+          success: result.success,
+          extractedCount: result.extractedAnswers.length,
+          error: result.error,
+        });
+
         if (result.success && result.extractedAnswers.length > 0 && result.extractionId) {
           // Apply extracted answers
-          const { applied } = await applyExtractedAnswers(
+          console.log('[ProcessAPI] Applying', result.extractedAnswers.length, 'extracted answers...');
+          const { applied, skipped } = await applyExtractedAnswers(
             questionnaire.id,
             result.extractedAnswers,
             result.extractionId
           );
           totalExtracted += applied;
+          console.log('[ProcessAPI] Applied:', applied, 'Skipped:', skipped);
 
           // Update AI-filled count on questionnaire
-          await supabase
-            .from('nis2_vendor_questionnaires')
-            .update({
-              questions_ai_filled: supabase.rpc('increment', { x: applied }),
-            })
-            .eq('id', questionnaire.id);
+          if (applied > 0) {
+            // Get current count first
+            const { data: currentQ } = await supabase
+              .from('nis2_vendor_questionnaires')
+              .select('questions_ai_filled')
+              .eq('id', questionnaire.id)
+              .single();
+
+            const currentCount = currentQ?.questions_ai_filled || 0;
+            await supabase
+              .from('nis2_vendor_questionnaires')
+              .update({ questions_ai_filled: currentCount + applied })
+              .eq('id', questionnaire.id);
+          }
+        } else if (result.error) {
+          errors.push(`${doc.file_name}: ${result.error}`);
         }
 
         documentsProcessed++;
       } catch (error) {
-        console.error('Error processing document:', error);
-        errors.push(`Error processing ${doc.file_name}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[ProcessAPI] Error processing document:', errorMessage);
+        errors.push(`Error processing ${doc.file_name}: ${errorMessage}`);
       }
     }
+
+    console.log('[ProcessAPI] Processing complete:', {
+      documentsProcessed,
+      totalExtracted,
+      errors: errors.length,
+    });
 
     return NextResponse.json({
       success: true,
@@ -166,9 +210,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error) {
-    console.error('Document processing error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[ProcessAPI] Document processing error:', errorMessage);
     return NextResponse.json(
-      { error: 'An unexpected error occurred during processing' },
+      { error: `Processing failed: ${errorMessage}` },
       { status: 500 }
     );
   }

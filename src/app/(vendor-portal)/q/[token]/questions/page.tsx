@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 import { getVendorPortalData } from '@/lib/nis2-questionnaire/queries';
 import { VendorPortalSteps } from '@/components/questionnaires/vendor-portal/vendor-portal-steps';
 import { QuestionnaireForm } from '@/components/questionnaires/vendor-portal/questionnaire-form';
+import { ProcessDocumentsCard } from '@/components/questionnaires/vendor-portal/process-documents-card';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -21,7 +22,11 @@ export default async function QuestionsPage({ params }: PageProps) {
     redirect('/');
   }
 
-  const { questionnaire, questions, answers } = data;
+  const { questionnaire, questions, answers, documents } = data;
+
+  // Calculate unprocessed documents
+  const unprocessedDocuments = documents.filter((d) => !d.ai_processed);
+  const hasAIAnswers = answers.some((a) => a.source === 'ai_extracted');
 
   // If already completed
   if (['approved', 'submitted'].includes(questionnaire.status)) {
@@ -60,6 +65,15 @@ export default async function QuestionsPage({ params }: PageProps) {
           Complete all required questions. AI suggestions are highlighted - review and confirm them.
         </p>
       </div>
+
+      {/* Process Documents Card - show if there are unprocessed documents */}
+      {documents.length > 0 && (
+        <ProcessDocumentsCard
+          token={token}
+          unprocessedCount={unprocessedDocuments.length}
+          totalDocuments={documents.length}
+        />
+      )}
 
       {/* Questionnaire Form */}
       <QuestionnaireForm
