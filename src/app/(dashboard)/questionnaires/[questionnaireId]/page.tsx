@@ -22,6 +22,9 @@ import {
   Download,
   Flag,
   MessageSquare,
+  Link2,
+  Copy,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -57,6 +60,7 @@ import {
 } from '@/lib/nis2-questionnaire/types';
 import { cn } from '@/lib/utils';
 import { QuestionnaireReviewActions } from '@/components/questionnaires/company/questionnaire-review-actions';
+import { CopyLinkButton } from '@/components/questionnaires/company/copy-link-button';
 
 export const metadata = {
   title: 'Review Questionnaire | NIS2 Comply',
@@ -427,6 +431,49 @@ async function QuestionnaireContent({ questionnaireId }: { questionnaireId: stri
                 <div>
                   <p className="text-sm font-medium">Review Notes</p>
                   <p className="text-sm text-muted-foreground mt-1">{questionnaire.review_notes}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Vendor Portal Link */}
+          {questionnaire.access_token && (
+            <div className="mt-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-3">
+                <Link2 className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Vendor Portal Link</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                    Share this link with the vendor if they lost their invitation email
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-white dark:bg-blue-950 px-2 py-1.5 rounded border border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 truncate">
+                      {process.env.NEXT_PUBLIC_APP_URL || 'https://dora-comply.vercel.app'}/q/{questionnaire.access_token}
+                    </code>
+                    <CopyLinkButton
+                      url={`${process.env.NEXT_PUBLIC_APP_URL || 'https://dora-comply.vercel.app'}/q/${questionnaire.access_token}`}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 shrink-0"
+                      asChild
+                    >
+                      <a
+                        href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://dora-comply.vercel.app'}/q/${questionnaire.access_token}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Open
+                      </a>
+                    </Button>
+                  </div>
+                  {questionnaire.token_expires_at && (
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                      Link expires: {format(new Date(questionnaire.token_expires_at), 'PPP')}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
