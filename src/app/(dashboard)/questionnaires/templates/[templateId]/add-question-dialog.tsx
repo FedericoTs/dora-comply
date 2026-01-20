@@ -56,7 +56,6 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import {
@@ -247,8 +246,8 @@ export function AddQuestionDialog({ templateId, category, trigger }: AddQuestion
       <DialogTrigger asChild>
         {trigger || defaultTrigger}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl p-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>Add Question</DialogTitle>
           <DialogDescription>
             Create a customized question for your NIS2 vendor assessment
@@ -256,9 +255,9 @@ export function AddQuestionDialog({ templateId, category, trigger }: AddQuestion
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Basic Information */}
-            <div className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 pb-6 space-y-4">
+            {/* Row 1: Question Text and Help Text side by side */}
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="question_text"
@@ -267,14 +266,11 @@ export function AddQuestionDialog({ templateId, category, trigger }: AddQuestion
                     <FormLabel>Question Text *</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enter your question..."
-                        className="resize-none min-h-[80px]"
+                        placeholder="e.g., Does your organization have a documented incident response plan?"
+                        className="resize-none h-[72px]"
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Be specific and clear. Example: &quot;Does your organization have a documented incident response plan?&quot;
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -285,26 +281,22 @@ export function AddQuestionDialog({ templateId, category, trigger }: AddQuestion
                 name="help_text"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Help Text</FormLabel>
+                    <FormLabel>Help Text <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Optional guidance for vendors answering this question"
+                      <Textarea
+                        placeholder="Guidance for vendors answering this question"
+                        className="resize-none h-[72px]"
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Provide context, examples, or NIS2 requirements to help vendors understand what&apos;s expected
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            <Separator />
-
-            {/* Question Type and Category */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Row 2: Answer Type, Category, and Toggles in one row */}
+            <div className="grid grid-cols-4 gap-4 items-end">
               <FormField
                 control={form.control}
                 name="question_type"
@@ -320,10 +312,7 @@ export function AddQuestionDialog({ templateId, category, trigger }: AddQuestion
                       <SelectContent>
                         {questionTypes.map((type) => (
                           <SelectItem key={type.value} value={type.value}>
-                            <div className="flex flex-col">
-                              <span>{type.label}</span>
-                              <span className="text-xs text-muted-foreground">{type.description}</span>
-                            </div>
+                            {type.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -349,10 +338,7 @@ export function AddQuestionDialog({ templateId, category, trigger }: AddQuestion
                         {(Object.entries(NIS2_CATEGORIES) as [NIS2Category, { label: string; article: string }][]).map(
                           ([key, value]) => (
                             <SelectItem key={key} value={key}>
-                              <div className="flex flex-col">
-                                <span>{value.label}</span>
-                                <span className="text-xs text-muted-foreground">Article {value.article}</span>
-                              </div>
+                              {value.label}
                             </SelectItem>
                           )
                         )}
@@ -362,95 +348,16 @@ export function AddQuestionDialog({ templateId, category, trigger }: AddQuestion
                   </FormItem>
                 )}
               />
-            </div>
 
-            {/* Options Editor (for select/multiselect) */}
-            {hasOptions && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Answer Options *</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => appendOption({ value: `option_${optionFields.length + 1}`, label: '', description: '' })}
-                  >
-                    <Plus className="mr-1 h-3 w-3" />
-                    Add Option
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {optionFields.map((field, index) => (
-                    <div key={field.id} className="flex items-start gap-2 p-3 border rounded-lg bg-muted/30">
-                      <div className="mt-2 text-muted-foreground cursor-grab">
-                        <GripVertical className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 grid grid-cols-3 gap-2">
-                        <FormField
-                          control={form.control}
-                          name={`options.${index}.value`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input placeholder="value_key" {...field} className="font-mono text-sm" />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`options.${index}.label`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input placeholder="Display Label" {...field} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`options.${index}.description`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input placeholder="Description (optional)" {...field} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeOption(index)}
-                        disabled={optionFields.length <= 2}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Each option needs a unique value (used internally) and a label (shown to vendors).
-                  Minimum 2 options required.
-                </p>
-              </div>
-            )}
-
-            {/* Required and AI Extraction toggles */}
-            <div className="flex items-center gap-6">
               <FormField
                 control={form.control}
                 name="is_required"
                 render={({ field }) => (
-                  <FormItem className="flex items-center gap-2 space-y-0">
+                  <FormItem className="flex items-center gap-2 space-y-0 h-10 pt-1">
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
-                    <FormLabel className="font-normal">Required Question</FormLabel>
+                    <FormLabel className="font-normal">Required</FormLabel>
                   </FormItem>
                 )}
               />
@@ -459,7 +366,7 @@ export function AddQuestionDialog({ templateId, category, trigger }: AddQuestion
                 control={form.control}
                 name="ai_extraction_enabled"
                 render={({ field }) => (
-                  <FormItem className="flex items-center gap-2 space-y-0">
+                  <FormItem className="flex items-center gap-2 space-y-0 h-10 pt-1">
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
@@ -472,211 +379,266 @@ export function AddQuestionDialog({ templateId, category, trigger }: AddQuestion
               />
             </div>
 
-            {/* AI Extraction Settings */}
-            {aiEnabled && (
-              <Collapsible open={showAISettings} onOpenChange={setShowAISettings}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full justify-between">
-                    <span className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-purple-500" />
-                      AI Extraction Settings
-                    </span>
-                    {showAISettings ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {/* Options Editor (for select/multiselect) - compact inline version */}
+            {hasOptions && (
+              <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Answer Options</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => appendOption({ value: `option_${optionFields.length + 1}`, label: '', description: '' })}
+                  >
+                    <Plus className="mr-1 h-3 w-3" />
+                    Add
                   </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-4 pt-4">
-                  <FormField
-                    control={form.control}
-                    name="ai_extraction_keywords"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          Extraction Keywords
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p>Keywords help AI identify relevant content in vendor documents. Example: &quot;incident response, IRP, security incident&quot;</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="keyword1, keyword2, keyword3..."
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Comma-separated keywords to help AI find answers in documents
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="ai_confidence_threshold"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center justify-between">
-                          <span>Confidence Threshold</span>
-                          <Badge variant="outline">{Math.round(confidenceThreshold * 100)}%</Badge>
-                        </FormLabel>
-                        <FormControl>
-                          <Slider
-                            min={0}
-                            max={100}
-                            step={5}
-                            value={[confidenceThreshold * 100]}
-                            onValueChange={([val]) => field.onChange(val / 100)}
-                            className="py-4"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          AI answers below this threshold will require manual review.
-                          Lower = more auto-fills, Higher = more accuracy.
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="ai_extraction_prompt"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Custom Extraction Prompt</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Optional: Provide specific instructions for AI extraction..."
-                            className="resize-none min-h-[60px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Advanced: Custom prompt for AI to better understand how to extract the answer
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-                </CollapsibleContent>
-              </Collapsible>
+                </div>
+                <div className="space-y-1.5">
+                  {optionFields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 cursor-grab flex-shrink-0" />
+                      <FormField
+                        control={form.control}
+                        name={`options.${index}.value`}
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormControl>
+                              <Input placeholder="value" {...field} className="h-8 font-mono text-xs" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`options.${index}.label`}
+                        render={({ field }) => (
+                          <FormItem className="flex-[2]">
+                            <FormControl>
+                              <Input placeholder="Display Label" {...field} className="h-8" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0"
+                        onClick={() => removeOption(index)}
+                        disabled={optionFields.length <= 2}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
-            {/* Advanced Settings */}
-            <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-between">
-                  <span className="flex items-center gap-2">
-                    <Settings2 className="h-4 w-4" />
-                    Advanced Settings
-                  </span>
-                  {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 pt-4">
-                <FormField
-                  control={form.control}
-                  name="subcategory"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subcategory</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Governance, Technical Controls" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Group related questions within a category
-                      </FormDescription>
-                    </FormItem>
+            {/* Collapsible sections in a single row */}
+            <div className="flex gap-2">
+              {/* AI Extraction Settings */}
+              {aiEnabled && (
+                <Collapsible open={showAISettings} onOpenChange={setShowAISettings} className="flex-1">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full justify-between h-8 text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                        AI Settings
+                      </span>
+                      {showAISettings ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-3 pt-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField
+                        control={form.control}
+                        name="ai_extraction_keywords"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs flex items-center gap-1">
+                              Keywords
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-3 w-3 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <p>Keywords help AI find relevant content in documents</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="incident response, IRP..."
+                                {...field}
+                                className="h-8"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="ai_confidence_threshold"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs flex items-center justify-between">
+                              <span>Confidence</span>
+                              <Badge variant="outline" className="text-[10px] h-5">{Math.round(confidenceThreshold * 100)}%</Badge>
+                            </FormLabel>
+                            <FormControl>
+                              <Slider
+                                min={0}
+                                max={100}
+                                step={5}
+                                value={[confidenceThreshold * 100]}
+                                onValueChange={([val]) => field.onChange(val / 100)}
+                                className="py-2"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="ai_extraction_prompt"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Custom Prompt</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Specific instructions for AI extraction..."
+                              {...field}
+                              className="h-8"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+
+              {/* Advanced Settings */}
+              <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced} className="flex-1">
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-between h-8 text-xs">
+                    <span className="flex items-center gap-1.5">
+                      <Settings2 className="h-3.5 w-3.5" />
+                      Advanced
+                    </span>
+                    {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 pt-3">
+                  <FormField
+                    control={form.control}
+                    name="subcategory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Subcategory</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Governance, Technical Controls" {...field} className="h-8" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Validation rules for text types */}
+                  {(questionType === 'text' || questionType === 'textarea') && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField
+                        control={form.control}
+                        name="validation_min_length"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Min Length</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                {...field}
+                                className="h-8"
+                                onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="validation_max_length"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Max Length</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="∞"
+                                {...field}
+                                className="h-8"
+                                onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   )}
-                />
 
-                {/* Validation rules for text types */}
-                {(questionType === 'text' || questionType === 'textarea') && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="validation_min_length"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Min Length</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="No minimum"
-                              {...field}
-                              onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="validation_max_length"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Max Length</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="No maximum"
-                              {...field}
-                              onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
+                  {/* Validation rules for number type */}
+                  {questionType === 'number' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField
+                        control={form.control}
+                        name="validation_min"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Min Value</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="-∞"
+                                {...field}
+                                className="h-8"
+                                onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="validation_max"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Max Value</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="∞"
+                                {...field}
+                                className="h-8"
+                                onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
 
-                {/* Validation rules for number type */}
-                {questionType === 'number' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="validation_min"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Minimum Value</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="No minimum"
-                              {...field}
-                              onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="validation_max"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Maximum Value</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="No maximum"
-                              {...field}
-                              onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
-
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>

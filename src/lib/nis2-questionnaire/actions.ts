@@ -31,6 +31,12 @@ import type {
   QuestionnaireDocument,
 } from './types';
 import { getDefaultQuestionsWithOrder } from './questions-library';
+import {
+  sendEmail,
+  generateQuestionnaireInviteEmail,
+  generateQuestionnaireReminderEmail,
+  generateQuestionnaireSubmittedEmail,
+} from '@/lib/email';
 
 // ============================================================================
 // RESULT TYPES
@@ -412,8 +418,45 @@ export async function sendQuestionnaire(
       return { success: false, error: 'Failed to create questionnaire' };
     }
 
-    // TODO: Send email notification if send_email is true
-    // This would integrate with Resend/SendGrid
+    // Send email notification if send_email is true
+    if (parsed.send_email && data.access_token) {
+      try {
+        // Get template details for email
+        const { data: template } = await supabase
+          .from('nis2_questionnaire_templates')
+          .select('name, estimated_completion_minutes')
+          .eq('id', parsed.template_id)
+          .single();
+
+        // Get organization name for email
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('name')
+          .eq('id', organizationId)
+          .single();
+
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.nis2comply.io';
+
+        const emailContent = generateQuestionnaireInviteEmail({
+          vendorName: parsed.vendor_contact_name || parsed.vendor_name || '',
+          companyName: org?.name || 'Our company',
+          templateName: template?.name || 'NIS2 Security Questionnaire',
+          estimatedMinutes: template?.estimated_completion_minutes || 30,
+          dueDate: parsed.due_date,
+          accessToken: data.access_token,
+          baseUrl,
+        });
+
+        await sendEmail({
+          to: parsed.vendor_email,
+          subject: emailContent.subject,
+          html: emailContent.html,
+        });
+      } catch (emailError) {
+        console.error('Failed to send questionnaire email:', emailError);
+        // Don't fail the whole operation if email fails
+      }
+    }
 
     revalidatePath('/questionnaires');
     return { success: true, data };
@@ -433,26 +476,36 @@ export async function resendQuestionnaireEmail(
   questionnaireId: string
 ): Promise<ActionResult> {
   try {
-    await getCurrentUser();
+    const { organizationId } = await getCurrentUser();
     const supabase = await createClient();
 
-    // Get current reminder count
-    const { data: current } = await supabase
+    // Get current questionnaire details
+    const { data: questionnaire } = await supabase
       .from('nis2_vendor_questionnaires')
-      .select('reminder_count')
+      .select(`
+        *,
+        template:nis2_questionnaire_templates(name, estimated_completion_minutes)
+      `)
       .eq('id', questionnaireId)
       .single();
+
+    if (!questionnaire) {
+      return { success: false, error: 'Questionnaire not found' };
+    }
+
+    // Generate new access token
+    const newToken = crypto.randomUUID();
 
     // Update questionnaire status and generate new token
     const { error } = await supabase
       .from('nis2_vendor_questionnaires')
       .update({
-        access_token: crypto.randomUUID(),
+        access_token: newToken,
         token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         sent_at: new Date().toISOString(),
-        reminder_count: (current?.reminder_count || 0) + 1,
+        reminder_count: (questionnaire.reminder_count || 0) + 1,
         last_reminder_at: new Date().toISOString(),
-        status: 'sent',
+        status: questionnaire.status === 'draft' ? 'sent' : questionnaire.status,
       })
       .eq('id', questionnaireId);
 
@@ -461,7 +514,36 @@ export async function resendQuestionnaireEmail(
       return { success: false, error: 'Failed to resend questionnaire' };
     }
 
-    // TODO: Send email notification
+    // Send reminder email
+    try {
+      // Get organization name
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', organizationId)
+        .single();
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.nis2comply.io';
+
+      const emailContent = generateQuestionnaireReminderEmail({
+        vendorName: questionnaire.vendor_contact_name || questionnaire.vendor_name || '',
+        companyName: org?.name || 'Our company',
+        templateName: questionnaire.template?.name || 'NIS2 Security Questionnaire',
+        progressPercentage: questionnaire.progress_percentage || 0,
+        dueDate: questionnaire.due_date,
+        accessToken: newToken,
+        baseUrl,
+      });
+
+      await sendEmail({
+        to: questionnaire.vendor_email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+      });
+    } catch (emailError) {
+      console.error('Failed to send reminder email:', emailError);
+      // Don't fail the whole operation if email fails
+    }
 
     revalidatePath('/questionnaires');
     return { success: true };
@@ -689,9 +771,14 @@ export async function submitQuestionnaire(
 
     const supabase = await createClient();
 
+    // Get full questionnaire details for notification
     const { data: questionnaire, error: fetchError } = await supabase
       .from('nis2_vendor_questionnaires')
-      .select('id, status, token_expires_at, questions_total')
+      .select(`
+        *,
+        template:nis2_questionnaire_templates(name),
+        organization:organizations(name)
+      `)
       .eq('access_token', token)
       .single();
 
@@ -733,7 +820,39 @@ export async function submitQuestionnaire(
       return { success: false, error: 'Failed to submit questionnaire' };
     }
 
-    // TODO: Send notification to company about submission
+    // Send notification to company about submission
+    try {
+      // Get creator's email (the person who sent the questionnaire)
+      const { data: creator } = await supabase
+        .from('users')
+        .select('email, full_name')
+        .eq('id', questionnaire.created_by)
+        .single();
+
+      if (creator?.email) {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.nis2comply.io';
+
+        const emailContent = generateQuestionnaireSubmittedEmail({
+          recipientName: creator.full_name || '',
+          vendorName: questionnaire.vendor_contact_name || questionnaire.vendor_name || '',
+          vendorCompany: questionnaire.vendor_company_name || '',
+          templateName: questionnaire.template?.name || 'NIS2 Security Questionnaire',
+          questionsTotal: questionnaire.questions_total,
+          questionsAiFilled: questionnaire.questions_ai_filled || 0,
+          questionnaireId: questionnaire.id,
+          baseUrl,
+        });
+
+        await sendEmail({
+          to: creator.email,
+          subject: emailContent.subject,
+          html: emailContent.html,
+        });
+      }
+    } catch (emailError) {
+      console.error('Failed to send submission notification:', emailError);
+      // Don't fail the whole operation if email fails
+    }
 
     return { success: true };
   } catch (error) {
