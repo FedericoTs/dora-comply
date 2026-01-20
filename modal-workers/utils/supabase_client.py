@@ -259,3 +259,162 @@ class SupabaseClient:
             assessments,
             on_conflict="vendor_id,control_id,organization_id,valid_from",
         ).execute()
+
+    # ========================================================================
+    # Questionnaire Operations
+    # ========================================================================
+
+    def get_questionnaire_document(self, document_id: str) -> Optional[dict[str, Any]]:
+        """Get questionnaire document metadata by ID."""
+        try:
+            response = self.client.table("nis2_questionnaire_documents").select(
+                "id, file_name, storage_path, document_type, questionnaire_id, ai_processed"
+            ).eq("id", document_id).limit(1).execute()
+
+            if response and response.data and len(response.data) > 0:
+                return response.data[0]
+            return None
+        except Exception as e:
+            raise ValueError(f"Failed to get questionnaire document {document_id}: {e}")
+
+    def download_questionnaire_document(self, storage_path: str) -> bytes:
+        """Download document from questionnaire-documents bucket."""
+        response = self.client.storage.from_("questionnaire-documents").download(storage_path)
+        return response
+
+    def get_template_questions(self, template_id: str) -> list[dict[str, Any]]:
+        """Get all questions for a template."""
+        response = self.client.table("nis2_template_questions").select(
+            "id, question_text, question_type, help_text, options, is_required, category"
+        ).eq("template_id", template_id).order("display_order").execute()
+
+        return response.data or []
+
+    def get_questionnaire_by_id(self, questionnaire_id: str) -> Optional[dict[str, Any]]:
+        """Get questionnaire by ID."""
+        try:
+            response = self.client.table("nis2_vendor_questionnaires").select(
+                "id, template_id, organization_id, status, questions_ai_filled"
+            ).eq("id", questionnaire_id).limit(1).execute()
+
+            if response and response.data and len(response.data) > 0:
+                return response.data[0]
+            return None
+        except Exception as e:
+            raise ValueError(f"Failed to get questionnaire {questionnaire_id}: {e}")
+
+    def update_questionnaire_extraction_progress(
+        self,
+        extraction_id: str,
+        status: str,
+        progress: int,
+        message: Optional[str] = None,
+    ) -> None:
+        """Update questionnaire AI extraction job progress."""
+        update_data: dict[str, Any] = {
+            "status": status,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+
+        if message:
+            update_data["current_message"] = message
+
+        self.client.table("nis2_ai_extractions").update(update_data).eq("id", extraction_id).execute()
+
+    def complete_questionnaire_extraction(
+        self,
+        extraction_id: str,
+        extracted_answers: list[dict],
+        summary: dict,
+    ) -> None:
+        """Mark questionnaire extraction as complete."""
+        self.client.table("nis2_ai_extractions").update({
+            "status": "completed",
+            "completed_at": datetime.utcnow().isoformat(),
+            "extracted_answers": extracted_answers,
+            "extraction_summary": summary,
+        }).eq("id", extraction_id).execute()
+
+    def fail_questionnaire_extraction(
+        self,
+        extraction_id: str,
+        error_message: str,
+    ) -> None:
+        """Mark questionnaire extraction as failed."""
+        self.client.table("nis2_ai_extractions").update({
+            "status": "failed",
+            "completed_at": datetime.utcnow().isoformat(),
+            "error_message": error_message[:1000],  # Limit error message length
+        }).eq("id", extraction_id).execute()
+
+    def mark_questionnaire_document_processed(
+        self,
+        document_id: str,
+        extraction_id: str,
+    ) -> None:
+        """Mark questionnaire document as AI-processed."""
+        self.client.table("nis2_questionnaire_documents").update({
+            "ai_processed": True,
+            "ai_processed_at": datetime.utcnow().isoformat(),
+            "ai_extraction_id": extraction_id,
+        }).eq("id", document_id).execute()
+
+    def upsert_questionnaire_answer(
+        self,
+        questionnaire_id: str,
+        question_id: str,
+        answer_text: str,
+        confidence: float,
+        citation: str,
+        extraction_id: str,
+    ) -> bool:
+        """
+        Upsert a questionnaire answer from AI extraction.
+        Only overwrites if existing answer is also AI-extracted.
+        Returns True if answer was applied.
+        """
+        try:
+            # Check existing answer
+            existing = self.client.table("nis2_questionnaire_answers").select(
+                "id, source"
+            ).eq("questionnaire_id", questionnaire_id).eq("question_id", question_id).execute()
+
+            # Don't overwrite manual or confirmed answers
+            if existing.data and len(existing.data) > 0:
+                if existing.data[0]["source"] not in ["ai_extracted"]:
+                    return False
+
+            # Upsert answer
+            self.client.table("nis2_questionnaire_answers").upsert({
+                "questionnaire_id": questionnaire_id,
+                "question_id": question_id,
+                "answer_text": answer_text,
+                "source": "ai_extracted",
+                "ai_confidence": confidence,
+                "ai_citation": citation,
+                "ai_extraction_id": extraction_id,
+                "vendor_confirmed": False,
+            }, on_conflict="questionnaire_id,question_id").execute()
+
+            return True
+        except Exception as e:
+            print(f"Failed to upsert answer: {e}")
+            return False
+
+    def update_questionnaire_ai_filled_count(
+        self,
+        questionnaire_id: str,
+        count_to_add: int,
+    ) -> None:
+        """Update the AI-filled question count on questionnaire."""
+        # Get current count
+        current = self.get_questionnaire_by_id(questionnaire_id)
+        if not current:
+            return
+
+        current_count = current.get("questions_ai_filled") or 0
+        new_count = current_count + count_to_add
+
+        self.client.table("nis2_vendor_questionnaires").update({
+            "questions_ai_filled": new_count,
+        }).eq("id", questionnaire_id).execute()

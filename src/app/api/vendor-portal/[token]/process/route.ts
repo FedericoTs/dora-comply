@@ -3,16 +3,19 @@
  *
  * POST /api/vendor-portal/[token]/process - Trigger AI extraction for documents
  * GET /api/vendor-portal/[token]/process - Get extraction status
+ *
+ * Uses Modal.com for heavy AI processing to avoid Vercel timeouts and rate limits.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { parseDocumentForAnswers, applyExtractedAnswers } from '@/lib/nis2-questionnaire/ai/parser';
-import type { TemplateQuestion, DocumentType } from '@/lib/nis2-questionnaire/types';
 
 interface RouteParams {
   params: Promise<{ token: string }>;
 }
+
+// Modal endpoint for questionnaire parsing
+const MODAL_PARSE_QUESTIONNAIRE_URL = process.env.MODAL_PARSE_QUESTIONNAIRE_URL;
 
 /**
  * Validate questionnaire token
@@ -35,6 +38,76 @@ async function validateToken(token: string) {
   }
 
   return { valid: true, questionnaire };
+}
+
+/**
+ * Create extraction job in database
+ */
+async function createExtractionJob(
+  questionnaireId: string,
+  documentId: string,
+  documentType: string
+) {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('nis2_ai_extractions')
+    .insert({
+      questionnaire_id: questionnaireId,
+      document_id: documentId,
+      status: 'pending',
+      extraction_summary: {
+        document_type: documentType,
+        started_at: new Date().toISOString(),
+      },
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('[ProcessAPI] Failed to create extraction job:', error);
+    throw new Error('Failed to create extraction job');
+  }
+
+  return data.id;
+}
+
+/**
+ * Call Modal endpoint to start processing
+ */
+async function triggerModalProcessing(
+  documentId: string,
+  extractionId: string,
+  questionnaireId: string
+) {
+  if (!MODAL_PARSE_QUESTIONNAIRE_URL) {
+    throw new Error('MODAL_PARSE_QUESTIONNAIRE_URL is not configured');
+  }
+
+  console.log('[ProcessAPI] Calling Modal endpoint:', MODAL_PARSE_QUESTIONNAIRE_URL);
+
+  const response = await fetch(MODAL_PARSE_QUESTIONNAIRE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      document_id: documentId,
+      extraction_id: extractionId,
+      questionnaire_id: questionnaireId,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[ProcessAPI] Modal request failed:', response.status, errorText);
+    throw new Error(`Modal processing failed: ${response.status}`);
+  }
+
+  const result = await response.json();
+  console.log('[ProcessAPI] Modal response:', result);
+
+  return result;
 }
 
 /**
@@ -62,15 +135,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const supabase = createServiceRoleClient();
 
-    // Check for API key
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      console.error('[ProcessAPI] GOOGLE_GENERATIVE_AI_API_KEY is not configured');
+    // Check Modal endpoint is configured
+    if (!MODAL_PARSE_QUESTIONNAIRE_URL) {
+      console.error('[ProcessAPI] MODAL_PARSE_QUESTIONNAIRE_URL is not configured');
       return NextResponse.json(
         { error: 'AI extraction is not configured. Please contact support.' },
         { status: 503 }
       );
     }
-    console.log('[ProcessAPI] API key configured');
+    console.log('[ProcessAPI] Modal endpoint configured');
 
     // Get unprocessed documents
     const { data: documents, error: docsError } = await supabase
@@ -98,114 +171,47 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    // Get template questions
-    const { data: questions, error: questionsError } = await supabase
-      .from('nis2_template_questions')
-      .select('*')
-      .eq('template_id', questionnaire.template_id)
-      .order('display_order', { ascending: true });
-
-    if (questionsError || !questions) {
-      console.error('[ProcessAPI] Error fetching questions:', questionsError);
-      return NextResponse.json(
-        { error: 'Failed to fetch template questions' },
-        { status: 500 }
-      );
-    }
-
-    console.log('[ProcessAPI] Found', questions.length, 'template questions');
-
-    let totalExtracted = 0;
-    let documentsProcessed = 0;
+    // Process each document via Modal
+    const extractionJobs: { documentId: string; extractionId: string; fileName: string }[] = [];
     const errors: string[] = [];
 
-    // Process each document
     for (const doc of documents) {
-      console.log('[ProcessAPI] Processing document:', doc.file_name, 'type:', doc.document_type);
+      console.log('[ProcessAPI] Creating extraction job for:', doc.file_name);
 
       try {
-        // Download document from storage
-        console.log('[ProcessAPI] Downloading from path:', doc.storage_path);
-        const { data: fileData, error: downloadError } = await supabase.storage
-          .from('questionnaire-documents')
-          .download(doc.storage_path);
+        // Create extraction job in database
+        const extractionId = await createExtractionJob(
+          questionnaire.id,
+          doc.id,
+          doc.document_type
+        );
+        console.log('[ProcessAPI] Created extraction job:', extractionId);
 
-        if (downloadError || !fileData) {
-          console.error('[ProcessAPI] Failed to download document:', downloadError);
-          errors.push(`Failed to download ${doc.file_name}: ${downloadError?.message || 'Unknown error'}`);
-          continue;
-        }
+        // Trigger Modal processing (fire-and-forget)
+        await triggerModalProcessing(doc.id, extractionId, questionnaire.id);
+        console.log('[ProcessAPI] Modal processing triggered for:', doc.file_name);
 
-        console.log('[ProcessAPI] Document downloaded, size:', fileData.size, 'bytes');
-
-        // Convert to buffer
-        const pdfBuffer = Buffer.from(await fileData.arrayBuffer());
-        console.log('[ProcessAPI] Buffer created, size:', pdfBuffer.length, 'bytes');
-
-        // Parse document
-        console.log('[ProcessAPI] Starting AI extraction...');
-        const result = await parseDocumentForAnswers({
-          questionnaireId: questionnaire.id,
+        extractionJobs.push({
           documentId: doc.id,
-          questions: questions as TemplateQuestion[],
-          documentType: doc.document_type as DocumentType,
-          pdfBuffer,
+          extractionId,
+          fileName: doc.file_name,
         });
-
-        console.log('[ProcessAPI] Extraction result:', {
-          success: result.success,
-          extractedCount: result.extractedAnswers.length,
-          error: result.error,
-        });
-
-        if (result.success && result.extractedAnswers.length > 0 && result.extractionId) {
-          // Apply extracted answers
-          console.log('[ProcessAPI] Applying', result.extractedAnswers.length, 'extracted answers...');
-          const { applied, skipped } = await applyExtractedAnswers(
-            questionnaire.id,
-            result.extractedAnswers,
-            result.extractionId
-          );
-          totalExtracted += applied;
-          console.log('[ProcessAPI] Applied:', applied, 'Skipped:', skipped);
-
-          // Update AI-filled count on questionnaire
-          if (applied > 0) {
-            // Get current count first
-            const { data: currentQ } = await supabase
-              .from('nis2_vendor_questionnaires')
-              .select('questions_ai_filled')
-              .eq('id', questionnaire.id)
-              .single();
-
-            const currentCount = currentQ?.questions_ai_filled || 0;
-            await supabase
-              .from('nis2_vendor_questionnaires')
-              .update({ questions_ai_filled: currentCount + applied })
-              .eq('id', questionnaire.id);
-          }
-        } else if (result.error) {
-          errors.push(`${doc.file_name}: ${result.error}`);
-        }
-
-        documentsProcessed++;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[ProcessAPI] Error processing document:', errorMessage);
-        errors.push(`Error processing ${doc.file_name}: ${errorMessage}`);
+        console.error('[ProcessAPI] Error triggering processing:', errorMessage);
+        errors.push(`Failed to process ${doc.file_name}: ${errorMessage}`);
       }
     }
 
-    console.log('[ProcessAPI] Processing complete:', {
-      documentsProcessed,
-      totalExtracted,
+    console.log('[ProcessAPI] Processing triggered:', {
+      jobsCreated: extractionJobs.length,
       errors: errors.length,
     });
 
     return NextResponse.json({
       success: true,
-      processed: documentsProcessed,
-      extracted: totalExtracted,
+      message: `Processing started for ${extractionJobs.length} document(s)`,
+      jobs: extractionJobs,
       total_documents: documents.length,
       errors: errors.length > 0 ? errors : undefined,
     });

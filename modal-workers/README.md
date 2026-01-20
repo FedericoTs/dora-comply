@@ -1,6 +1,14 @@
-# Modal Workers - SOC 2 Document Parser
+# Modal Workers - Document Processing
 
-Optimized SOC 2 document parsing using Modal.com and Gemini 2.5 Flash.
+Optimized document processing using Modal.com and Gemini 2.5 Flash.
+
+## Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/parse-soc2` | Parse SOC 2 reports to extract controls and map to DORA |
+| `/parse-questionnaire` | Extract answers from documents for vendor questionnaires |
+| `/health` | Health check |
 
 ## Architecture
 
@@ -64,9 +72,17 @@ https://your-username--dora-comply-soc2-parser-parse-soc2.modal.run
 Add these environment variables to Vercel:
 
 ```bash
+# SOC 2 Parsing
 MODAL_PARSE_SOC2_URL=https://your-username--dora-comply-soc2-parser-parse-soc2.modal.run
-MODAL_AUTH_KEY=your-modal-key  # Optional, for auth
-MODAL_AUTH_SECRET=your-modal-secret  # Optional, for auth
+
+# Vendor Questionnaire Parsing
+MODAL_PARSE_QUESTIONNAIRE_URL=https://your-username--dora-comply-soc2-parser-parse-questionnaire.modal.run
+
+# Optional auth
+MODAL_AUTH_KEY=your-modal-key
+MODAL_AUTH_SECRET=your-modal-secret
+
+# Enable Modal processing
 USE_MODAL_PARSING=true
 ```
 
@@ -79,13 +95,22 @@ modal serve app.py
 # Test the health endpoint
 curl http://localhost:8000/health
 
-# Test parsing (you'll need a real document in Supabase)
+# Test SOC 2 parsing (you'll need a real document in Supabase)
 curl -X POST http://localhost:8000/parse-soc2 \
   -H "Content-Type: application/json" \
   -d '{
     "document_id": "uuid-here",
     "job_id": "uuid-here",
     "organization_id": "uuid-here"
+  }'
+
+# Test questionnaire parsing
+curl -X POST http://localhost:8000/parse-questionnaire \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document_id": "uuid-here",
+    "extraction_id": "uuid-here",
+    "questionnaire_id": "uuid-here"
   }'
 ```
 
@@ -130,18 +155,19 @@ modal app list
 
 ```
 modal-workers/
-├── app.py                    # Modal app with FastAPI endpoints
+├── app.py                        # Modal app with FastAPI endpoints
 ├── parsers/
 │   ├── __init__.py
-│   ├── soc2_parser_optimized.py  # Main parser with strategies
-│   ├── types.py              # Pydantic models
-│   ├── schemas.py            # JSON schemas for structured output
-│   ├── prompts.py            # Extraction prompts
-│   └── dora_mapping.py       # DORA article mapping
+│   ├── soc2_parser_optimized.py  # SOC 2 parser with strategies
+│   ├── questionnaire_parser.py   # Questionnaire answer extraction
+│   ├── types.py                  # Pydantic models
+│   ├── schemas.py                # JSON schemas for structured output
+│   ├── prompts.py                # Extraction prompts
+│   └── dora_mapping.py           # DORA article mapping
 ├── utils/
 │   ├── __init__.py
-│   ├── supabase_client.py    # Supabase operations
-│   └── gemini_client.py      # Gemini with caching
+│   ├── supabase_client.py        # Supabase operations (docs + questionnaires)
+│   └── gemini_client.py          # Gemini with caching
 ├── requirements.txt
 ├── modal.toml
 └── README.md

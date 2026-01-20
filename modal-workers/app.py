@@ -81,6 +81,24 @@ class HealthResponse(BaseModel):
     timestamp: str
 
 
+class QuestionnaireParseRequest(BaseModel):
+    """Request body for questionnaire parsing endpoint."""
+    document_id: str
+    extraction_id: str
+    questionnaire_id: str
+
+
+class QuestionnaireParseResponse(BaseModel):
+    """Response body for questionnaire parsing endpoint."""
+    success: bool
+    message: str
+    extraction_id: str
+    answers_extracted: int = 0
+    answers_applied: int = 0
+    error: Optional[str] = None
+    processing_time_ms: Optional[int] = None
+
+
 # ============================================================================
 # Modal Functions
 # ============================================================================
@@ -404,17 +422,245 @@ async def parse_soc2(request: ParseRequest) -> ParseResponse:
 
 
 # ============================================================================
+# Questionnaire Parsing
+# ============================================================================
+
+@app.function(
+    image=image,
+    timeout=600,   # 10 minute timeout
+    memory=2048,   # 2GB memory
+    cpu=1.0,       # 1 CPU core
+)
+async def parse_questionnaire_document(
+    document_id: str,
+    extraction_id: str,
+    questionnaire_id: str,
+) -> dict:
+    """
+    Parse a document and extract questionnaire answers using Gemini.
+
+    This function:
+    1. Downloads the PDF from Supabase Storage
+    2. Fetches template questions
+    3. Extracts answers using Gemini AI
+    4. Stores results in questionnaire_answers table
+    5. Updates extraction job status
+
+    Args:
+        document_id: UUID of the document to parse
+        extraction_id: UUID of the extraction job
+        questionnaire_id: UUID of the questionnaire
+
+    Returns:
+        Dict with success status and extraction statistics
+    """
+    import time
+    start_time = time.time()
+
+    # Import modules
+    from parsers import QuestionnaireParser
+    from utils import SupabaseClient
+
+    # Get credentials
+    supabase_url = os.environ["SUPABASE_URL"]
+    supabase_key = os.environ["SUPABASE_SERVICE_KEY"]
+    gemini_api_key = os.environ["GEMINI_API_KEY"]
+
+    # Initialize clients
+    supabase = SupabaseClient(supabase_url, supabase_key)
+    parser = QuestionnaireParser(gemini_api_key)
+
+    try:
+        # Update progress: starting
+        supabase.update_questionnaire_extraction_progress(
+            extraction_id=extraction_id,
+            status="processing",
+            progress=5,
+            message="Initializing document parser",
+        )
+
+        # Get document metadata
+        document = supabase.get_questionnaire_document(document_id)
+        if not document:
+            raise ValueError(f"Document not found: {document_id}")
+
+        # Get questionnaire to find template
+        questionnaire = supabase.get_questionnaire_by_id(questionnaire_id)
+        if not questionnaire:
+            raise ValueError(f"Questionnaire not found: {questionnaire_id}")
+
+        # Get template questions
+        questions = supabase.get_template_questions(questionnaire["template_id"])
+        if not questions:
+            raise ValueError("No questions found for template")
+
+        # Update progress: downloading
+        supabase.update_questionnaire_extraction_progress(
+            extraction_id=extraction_id,
+            status="processing",
+            progress=15,
+            message="Downloading document",
+        )
+
+        # Download PDF
+        pdf_bytes = supabase.download_questionnaire_document(document["storage_path"])
+
+        # Progress callback
+        def on_progress(phase: str, percentage: int, message: str = None):
+            # Map percentage to our range (20-90%)
+            adjusted = 20 + int(percentage * 0.7)
+            supabase.update_questionnaire_extraction_progress(
+                extraction_id=extraction_id,
+                status="processing",
+                progress=adjusted,
+                message=message or f"Processing: {phase}",
+            )
+
+        # Parse document
+        result = await parser.parse(
+            pdf_bytes=pdf_bytes,
+            questions=questions,
+            document_type=document["document_type"],
+            on_progress=on_progress,
+        )
+
+        if not result.success:
+            raise ValueError(result.error or "Parsing failed")
+
+        # Apply extracted answers
+        supabase.update_questionnaire_extraction_progress(
+            extraction_id=extraction_id,
+            status="processing",
+            progress=90,
+            message="Saving extracted answers",
+        )
+
+        CONFIDENCE_THRESHOLD = 0.6
+        applied_count = 0
+
+        for answer in result.extracted_answers:
+            if answer.confidence >= CONFIDENCE_THRESHOLD:
+                success = supabase.upsert_questionnaire_answer(
+                    questionnaire_id=questionnaire_id,
+                    question_id=answer.question_id,
+                    answer_text=answer.answer,
+                    confidence=answer.confidence,
+                    citation=answer.citation,
+                    extraction_id=extraction_id,
+                )
+                if success:
+                    applied_count += 1
+
+        # Update AI-filled count
+        if applied_count > 0:
+            supabase.update_questionnaire_ai_filled_count(questionnaire_id, applied_count)
+
+        # Mark document as processed
+        supabase.mark_questionnaire_document_processed(document_id, extraction_id)
+
+        # Complete extraction
+        summary = {
+            "total_questions": result.total_questions,
+            "total_extracted": len(result.extracted_answers),
+            "high_confidence_count": result.high_confidence_count,
+            "medium_confidence_count": result.medium_confidence_count,
+            "low_confidence_count": result.low_confidence_count,
+            "avg_confidence": result.avg_confidence,
+            "answers_applied": applied_count,
+        }
+
+        extracted_answers_data = [
+            {
+                "question_id": a.question_id,
+                "answer": a.answer,
+                "confidence": a.confidence,
+                "citation": a.citation,
+                "extraction_notes": a.extraction_notes,
+            }
+            for a in result.extracted_answers
+        ]
+
+        supabase.complete_questionnaire_extraction(
+            extraction_id=extraction_id,
+            extracted_answers=extracted_answers_data,
+            summary=summary,
+        )
+
+        processing_time_ms = int((time.time() - start_time) * 1000)
+
+        return {
+            "success": True,
+            "message": "Extraction complete",
+            "answers_extracted": len(result.extracted_answers),
+            "answers_applied": applied_count,
+            "processing_time_ms": processing_time_ms,
+            "token_usage": result.token_usage,
+        }
+
+    except Exception as e:
+        # Mark extraction as failed
+        supabase.fail_questionnaire_extraction(
+            extraction_id=extraction_id,
+            error_message=str(e),
+        )
+
+        return {
+            "success": False,
+            "message": "Extraction failed",
+            "error": str(e),
+            "processing_time_ms": int((time.time() - start_time) * 1000),
+        }
+
+
+@app.function(image=image, timeout=10)
+@modal.fastapi_endpoint(method="POST")
+async def parse_questionnaire(request: QuestionnaireParseRequest) -> QuestionnaireParseResponse:
+    """
+    Trigger questionnaire document parsing.
+
+    This endpoint:
+    1. Validates the request
+    2. Spawns the parsing function asynchronously
+    3. Returns immediately with extraction_id
+
+    Progress updates are sent via Supabase to nis2_ai_extractions table.
+    """
+    try:
+        # Spawn the parsing function (fire-and-forget)
+        parse_questionnaire_document.spawn(
+            document_id=request.document_id,
+            extraction_id=request.extraction_id,
+            questionnaire_id=request.questionnaire_id,
+        )
+
+        return QuestionnaireParseResponse(
+            success=True,
+            message="Parsing started",
+            extraction_id=request.extraction_id,
+        )
+
+    except Exception as e:
+        return QuestionnaireParseResponse(
+            success=False,
+            message="Failed to start parsing",
+            extraction_id=request.extraction_id,
+            error=str(e),
+        )
+
+
+# ============================================================================
 # Local Development Entry Point
 # ============================================================================
 
 @app.local_entrypoint()
 def main():
     """Local development entry point."""
-    print("SOC 2 Parser Modal App")
+    print("DORA Comply Parser Modal App")
     print("=" * 40)
     print("Endpoints:")
-    print("  GET  /health      - Health check")
-    print("  POST /parse-soc2  - Start parsing")
+    print("  GET  /health              - Health check")
+    print("  POST /parse-soc2          - Start SOC 2 parsing")
+    print("  POST /parse-questionnaire - Start questionnaire parsing")
     print()
     print("To deploy: modal deploy app.py")
     print("To serve:  modal serve app.py")

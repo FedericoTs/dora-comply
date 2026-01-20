@@ -24,8 +24,9 @@ import {
 
 // Constants
 const GEMINI_MODEL = 'gemini-2.0-flash';
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 2000;
+const MAX_RETRIES = 5;
+const BASE_RETRY_DELAY_MS = 5000;
+const RATE_LIMIT_RETRY_DELAY_MS = 30000; // 30 seconds for rate limits
 const CONFIDENCE_THRESHOLD = 0.6;
 
 interface ParseDocumentOptions {
@@ -155,8 +156,15 @@ export async function parseDocumentForAnswers(
         console.error(`[Parser] Extraction attempt ${attempt + 1} failed:`, lastError.message);
 
         if (attempt < MAX_RETRIES - 1) {
-          console.log(`[Parser] Waiting ${RETRY_DELAY_MS * (attempt + 1)}ms before retry...`);
-          await delay(RETRY_DELAY_MS * (attempt + 1));
+          // Use longer delay for rate limit errors
+          const isRateLimit = lastError.message.includes('429') ||
+            lastError.message.includes('Resource exhausted') ||
+            lastError.message.includes('rate limit');
+          const delayMs = isRateLimit
+            ? RATE_LIMIT_RETRY_DELAY_MS * (attempt + 1)
+            : BASE_RETRY_DELAY_MS * (attempt + 1);
+          console.log(`[Parser] Waiting ${delayMs}ms before retry (rate limit: ${isRateLimit})...`);
+          await delay(delayMs);
         }
       }
     }
