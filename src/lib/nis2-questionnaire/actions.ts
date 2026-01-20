@@ -56,15 +56,15 @@ async function getCurrentUser() {
     throw new Error('Unauthorized');
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
+  const { data: userData } = await supabase
+    .from('users')
     .select('organization_id')
     .eq('id', user.id)
     .single();
 
   return {
     userId: user.id,
-    organizationId: profile?.organization_id,
+    organizationId: userData?.organization_id,
   };
 }
 
