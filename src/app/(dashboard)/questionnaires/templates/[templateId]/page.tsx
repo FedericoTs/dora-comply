@@ -71,6 +71,7 @@ import { getCategoryLabel, getCategoryArticle } from '@/lib/nis2-questionnaire/q
 import { cn } from '@/lib/utils';
 import { TemplateActions } from './template-actions';
 import { AddQuestionButton } from './add-question-button';
+import { AddQuestionDialog } from './add-question-dialog';
 
 export const metadata = {
   title: 'Template Details | NIS2 Comply',
@@ -317,7 +318,7 @@ async function TemplateContent({ templateId }: { templateId: string }) {
               Manage questions organized by NIS2 Article 21 categories
             </p>
           </div>
-          <AddQuestionButton templateId={template.id} />
+          <AddQuestionDialog templateId={template.id} />
         </div>
 
         <Accordion

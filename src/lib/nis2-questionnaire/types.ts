@@ -55,24 +55,77 @@ export type NIS2Category =
   | 'incident_handling'
   | 'business_continuity'
   | 'supply_chain'
-  | 'access_control'
-  | 'cryptography'
   | 'vulnerability_management'
+  | 'effectiveness_assessment'
   | 'security_awareness'
+  | 'cryptography'
+  | 'access_control'
+  | 'mfa_secure_comms'
   | 'asset_management'
   | 'hr_security';
 
-export const NIS2_CATEGORIES: Record<NIS2Category, { label: string; article: string }> = {
-  policies: { label: 'Policies on Risk Analysis & ISMS', article: '21(2)(a)' },
-  incident_handling: { label: 'Incident Handling', article: '21(2)(b)' },
-  business_continuity: { label: 'Business Continuity', article: '21(2)(c)' },
-  supply_chain: { label: 'Supply Chain Security', article: '21(2)(d)' },
-  access_control: { label: 'Access Control', article: '21(2)(i)' },
-  cryptography: { label: 'Cryptography', article: '21(2)(h)' },
-  vulnerability_management: { label: 'Vulnerability Handling', article: '21(2)(e)' },
-  security_awareness: { label: 'Cyber Hygiene & Training', article: '21(2)(g)' },
-  asset_management: { label: 'Asset Management', article: '21(2)(i)' },
-  hr_security: { label: 'HR Security', article: '21(2)(j)' },
+export const NIS2_CATEGORIES: Record<NIS2Category, { label: string; article: string; description: string }> = {
+  policies: {
+    label: 'Risk Analysis & Security Policies',
+    article: '21(2)(a)',
+    description: 'Policies on risk analysis and information system security'
+  },
+  incident_handling: {
+    label: 'Incident Handling',
+    article: '21(2)(b)',
+    description: 'Procedures for detecting, responding to, and managing security incidents'
+  },
+  business_continuity: {
+    label: 'Business Continuity & Crisis Management',
+    article: '21(2)(c)',
+    description: 'Backup management, disaster recovery, and crisis management'
+  },
+  supply_chain: {
+    label: 'Supply Chain Security',
+    article: '21(2)(d)',
+    description: 'Security aspects concerning relationships with suppliers and service providers'
+  },
+  vulnerability_management: {
+    label: 'System Security & Vulnerability Handling',
+    article: '21(2)(e)',
+    description: 'Security in network and information systems acquisition, development, maintenance, and vulnerability disclosure'
+  },
+  effectiveness_assessment: {
+    label: 'Effectiveness Assessment',
+    article: '21(2)(f)',
+    description: 'Policies and procedures to assess the effectiveness of cybersecurity risk-management measures'
+  },
+  security_awareness: {
+    label: 'Cyber Hygiene & Training',
+    article: '21(2)(g)',
+    description: 'Basic cyber hygiene practices and cybersecurity training'
+  },
+  cryptography: {
+    label: 'Cryptography & Encryption',
+    article: '21(2)(h)',
+    description: 'Policies and procedures regarding the use of cryptography and encryption'
+  },
+  access_control: {
+    label: 'HR Security, Access Control & Assets',
+    article: '21(2)(i)',
+    description: 'Human resources security, access control policies and asset management'
+  },
+  mfa_secure_comms: {
+    label: 'MFA & Secure Communications',
+    article: '21(2)(j)',
+    description: 'Multi-factor authentication, continuous authentication, and secured communications'
+  },
+  // Legacy aliases for backward compatibility
+  asset_management: {
+    label: 'Asset Management',
+    article: '21(2)(i)',
+    description: 'Asset inventory and management (part of Article 21(2)(i))'
+  },
+  hr_security: {
+    label: 'HR Security',
+    article: '21(2)(i)',
+    description: 'Human resources security (part of Article 21(2)(i))'
+  },
 };
 
 // ============================================================================
