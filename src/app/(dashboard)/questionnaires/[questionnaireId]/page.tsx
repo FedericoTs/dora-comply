@@ -1,197 +1,290 @@
 /**
- * Questionnaire Detail Page
+ * Questionnaire Review Page
  *
  * View and review vendor questionnaire responses
  */
 
 import { Suspense } from 'react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import { formatDistanceToNow, format } from 'date-fns';
 import {
   ArrowLeft,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Sparkles,
-  FileText,
+  Building2,
   Mail,
   Calendar,
-  Building2,
   Clock,
+  CheckCircle2,
+  AlertCircle,
+  Send,
+  FileText,
+  Sparkles,
   Download,
-  RefreshCw,
   Flag,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { getQuestionnaireWithDetails } from '@/lib/nis2-questionnaire/queries';
 import {
-  QuestionnaireStatus,
-  AnswerSource,
-  QuestionnaireAnswer,
-  TemplateQuestion,
+  NIS2_CATEGORIES,
+  type NIS2Category,
+  type QuestionnaireStatus,
+  type TemplateQuestion,
+  type QuestionnaireAnswer,
+  type AnswerSource,
 } from '@/lib/nis2-questionnaire/types';
-import { getCategoryLabel } from '@/lib/nis2-questionnaire/questions-library';
+import { cn } from '@/lib/utils';
 import { QuestionnaireReviewActions } from '@/components/questionnaires/company/questionnaire-review-actions';
+
+export const metadata = {
+  title: 'Review Questionnaire | NIS2 Comply',
+  description: 'Review vendor questionnaire responses',
+};
 
 interface PageProps {
   params: Promise<{ questionnaireId: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps) {
-  const { questionnaireId } = await params;
-  return {
-    title: `Questionnaire Review | NIS2 Comply`,
-    description: `Review vendor questionnaire responses`,
-  };
-}
-
+// Status configuration
 const statusConfig: Record<
   QuestionnaireStatus,
-  { label: string; icon: typeof Clock; className: string }
+  { label: string; icon: typeof Clock; color: string }
 > = {
-  draft: { label: 'Draft', icon: Clock, className: 'text-muted-foreground' },
-  sent: { label: 'Sent', icon: Mail, className: 'text-blue-500' },
-  in_progress: { label: 'In Progress', icon: Clock, className: 'text-amber-500' },
-  submitted: { label: 'Submitted', icon: AlertCircle, className: 'text-amber-500' },
-  approved: { label: 'Approved', icon: CheckCircle2, className: 'text-emerald-500' },
-  rejected: { label: 'Rejected', icon: XCircle, className: 'text-destructive' },
-  expired: { label: 'Expired', icon: Clock, className: 'text-muted-foreground' },
+  draft: { label: 'Draft', icon: Clock, color: 'text-muted-foreground' },
+  sent: { label: 'Sent', icon: Send, color: 'text-blue-500' },
+  in_progress: { label: 'In Progress', icon: Clock, color: 'text-amber-500' },
+  submitted: { label: 'Pending Review', icon: AlertCircle, color: 'text-primary' },
+  approved: { label: 'Approved', icon: CheckCircle2, color: 'text-emerald-500' },
+  rejected: { label: 'Changes Requested', icon: AlertCircle, color: 'text-destructive' },
+  expired: { label: 'Expired', icon: Clock, color: 'text-muted-foreground' },
 };
 
-function getSourceBadge(source: AnswerSource, confidence?: number | null) {
-  switch (source) {
-    case 'ai_extracted':
-      return (
-        <Badge variant="secondary" className="gap-1 text-xs">
-          <Sparkles className="h-3 w-3" />
-          AI {confidence ? `(${Math.round(confidence * 100)}%)` : ''}
-        </Badge>
-      );
-    case 'ai_confirmed':
-      return (
-        <Badge variant="secondary" className="gap-1 text-xs bg-emerald-100 text-emerald-700">
-          <CheckCircle2 className="h-3 w-3" />
-          AI Confirmed
-        </Badge>
-      );
-    case 'ai_modified':
-      return (
-        <Badge variant="secondary" className="gap-1 text-xs bg-amber-100 text-amber-700">
-          <Sparkles className="h-3 w-3" />
-          AI Modified
-        </Badge>
-      );
-    default:
-      return (
-        <Badge variant="outline" className="text-xs">
-          Manual
-        </Badge>
-      );
-  }
+// Answer source badges
+const sourceConfig: Record<AnswerSource, { label: string; color: string }> = {
+  manual: { label: 'Manual', color: 'bg-slate-100 text-slate-700' },
+  ai_extracted: { label: 'AI Extracted', color: 'bg-purple-100 text-purple-700' },
+  ai_confirmed: { label: 'AI Confirmed', color: 'bg-emerald-100 text-emerald-700' },
+  ai_modified: { label: 'AI Modified', color: 'bg-amber-100 text-amber-700' },
+};
+
+function AnswerSourceBadge({ source, confidence }: { source: AnswerSource; confidence?: number | null }) {
+  const config = sourceConfig[source];
+  const isAI = source !== 'manual';
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <Badge variant="secondary" className={cn('gap-1 text-xs', config.color)}>
+            {isAI && <Sparkles className="h-3 w-3" />}
+            {config.label}
+            {confidence !== null && confidence !== undefined && (
+              <span className="ml-1 opacity-70">{Math.round(confidence * 100)}%</span>
+            )}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          {isAI ? (
+            <div className="text-xs">
+              <p>Answer was {source === 'ai_extracted' ? 'extracted by AI' : source === 'ai_confirmed' ? 'confirmed by vendor' : 'modified by vendor'}</p>
+              {confidence && <p>Confidence: {Math.round(confidence * 100)}%</p>}
+            </div>
+          ) : (
+            <p className="text-xs">Answer entered manually by vendor</p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
-interface QuestionAnswerCardProps {
+function AnswerCard({
+  question,
+  answer,
+}: {
   question: TemplateQuestion;
   answer?: QuestionnaireAnswer;
-}
-
-function QuestionAnswerCard({ question, answer }: QuestionAnswerCardProps) {
+}) {
   const hasAnswer = answer && (answer.answer_text || answer.answer_json);
 
   return (
-    <Card className={answer?.is_flagged ? 'border-destructive/50' : ''}>
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          {/* Question */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <p className="font-medium">{question.question_text}</p>
-              {question.help_text && (
-                <p className="text-sm text-muted-foreground">{question.help_text}</p>
-              )}
-            </div>
+    <div className={cn(
+      'rounded-lg border p-4 space-y-3',
+      answer?.is_flagged && 'border-amber-500 bg-amber-50/50'
+    )}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1 flex-1">
+          <div className="flex items-center gap-2">
             {question.is_required && (
-              <Badge variant="outline" className="shrink-0 text-xs">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                 Required
               </Badge>
             )}
+            {answer?.is_flagged && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500 text-amber-700">
+                <Flag className="h-3 w-3 mr-1" />
+                Flagged
+              </Badge>
+            )}
           </div>
-
-          <Separator />
-
-          {/* Answer */}
-          {hasAnswer ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground">Answer:</span>
-                {getSourceBadge(answer.source, answer.ai_confidence)}
-                {answer.is_flagged && (
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Flag className="h-4 w-4 text-destructive" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Flagged: {answer.flag_reason}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-
-              <div className="rounded-md bg-muted/50 p-3">
-                {question.question_type === 'boolean' ? (
-                  <span className="font-medium">
-                    {answer.answer_text === 'true' || answer.answer_json === true ? 'Yes' : 'No'}
-                  </span>
-                ) : question.question_type === 'multiselect' && Array.isArray(answer.answer_json) ? (
-                  <div className="flex flex-wrap gap-1">
-                    {(answer.answer_json as string[]).map((val) => {
-                      const option = question.options?.find((o) => o.value === val);
-                      return (
-                        <Badge key={val} variant="secondary">
-                          {option?.label || val}
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                ) : question.question_type === 'select' ? (
-                  <span>
-                    {question.options?.find((o) => o.value === answer.answer_text)?.label ||
-                      answer.answer_text}
-                  </span>
-                ) : (
-                  <p className="whitespace-pre-wrap">{answer.answer_text}</p>
-                )}
-              </div>
-
-              {/* AI Citation */}
-              {answer.ai_citation && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <FileText className="h-3 w-3" />
-                  Source: {answer.ai_citation}
-                </p>
-              )}
-
-              {/* Original AI answer if modified */}
-              {answer.source === 'ai_modified' && answer.original_ai_answer && (
-                <div className="text-xs text-muted-foreground">
-                  <p className="font-medium">Original AI suggestion:</p>
-                  <p className="italic">{answer.original_ai_answer}</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">No answer provided</p>
+          <p className="font-medium">{question.question_text}</p>
+          {question.help_text && (
+            <p className="text-sm text-muted-foreground">{question.help_text}</p>
           )}
         </div>
-      </CardContent>
-    </Card>
+        {answer && (
+          <AnswerSourceBadge source={answer.source} confidence={answer.ai_confidence} />
+        )}
+      </div>
+
+      {/* Answer Display */}
+      <div className="pt-2 border-t">
+        {hasAnswer ? (
+          <div className="space-y-2">
+            {/* Text/Textarea answers */}
+            {(question.question_type === 'text' || question.question_type === 'textarea') && (
+              <p className="text-sm whitespace-pre-wrap">{answer.answer_text}</p>
+            )}
+
+            {/* Boolean answers */}
+            {question.question_type === 'boolean' && (
+              <div className="flex items-center gap-2">
+                {answer.answer_text === 'true' ? (
+                  <Badge className="bg-emerald-100 text-emerald-700">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Yes
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    No
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Select/Multiselect answers */}
+            {(question.question_type === 'select' || question.question_type === 'multiselect') && (
+              <div className="flex flex-wrap gap-1">
+                {answer.answer_json && Array.isArray(answer.answer_json) ? (
+                  (answer.answer_json as string[]).map((val) => {
+                    const option = question.options?.find((o) => o.value === val);
+                    return (
+                      <Badge key={val} variant="secondary">
+                        {option?.label || val}
+                      </Badge>
+                    );
+                  })
+                ) : (
+                  <Badge variant="secondary">
+                    {question.options?.find((o) => o.value === answer.answer_text)?.label || answer.answer_text}
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Number answers */}
+            {question.question_type === 'number' && (
+              <p className="text-sm font-mono">{answer.answer_text}</p>
+            )}
+
+            {/* Date answers */}
+            {question.question_type === 'date' && answer.answer_text && (
+              <p className="text-sm">{format(new Date(answer.answer_text), 'PPP')}</p>
+            )}
+
+            {/* AI Citation */}
+            {answer.ai_citation && (
+              <div className="mt-2 p-2 rounded bg-muted/50 text-xs text-muted-foreground">
+                <span className="font-medium">Source: </span>
+                {answer.ai_citation}
+              </div>
+            )}
+
+            {/* Flag reason */}
+            {answer.is_flagged && answer.flag_reason && (
+              <div className="mt-2 p-2 rounded bg-amber-100 text-xs text-amber-800">
+                <span className="font-medium">Flag reason: </span>
+                {answer.flag_reason}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground italic">No answer provided</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DocumentCard({
+  document,
+}: {
+  document: {
+    id: string;
+    file_name: string;
+    file_size: number;
+    file_type: string;
+    document_type: string;
+    ai_processed: boolean;
+    uploaded_at: string;
+  };
+}) {
+  const sizeInKB = Math.round(document.file_size / 1024);
+  const sizeDisplay = sizeInKB > 1024 ? `${(sizeInKB / 1024).toFixed(1)} MB` : `${sizeInKB} KB`;
+
+  return (
+    <div className="flex items-center justify-between p-3 rounded-lg border bg-card">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <FileText className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="font-medium text-sm">{document.file_name}</p>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{sizeDisplay}</span>
+            <span>&middot;</span>
+            <Badge variant="outline" className="text-[10px]">
+              {document.document_type.toUpperCase()}
+            </Badge>
+            {document.ai_processed && (
+              <>
+                <span>&middot;</span>
+                <Badge variant="secondary" className="text-[10px] gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  AI Processed
+                </Badge>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Download className="h-4 w-4" />
+      </Button>
+    </div>
   );
 }
 
@@ -203,262 +296,224 @@ async function QuestionnaireContent({ questionnaireId }: { questionnaireId: stri
   }
 
   const { questionnaire, template, questions, answers, documents } = data;
-  const statusInfo = statusConfig[questionnaire.status];
-  const StatusIcon = statusInfo.icon;
+  const status = statusConfig[questionnaire.status];
+  const StatusIcon = status.icon;
 
   // Group questions by category
   const questionsByCategory = questions.reduce(
-    (acc, q) => {
-      const category = q.category;
-      if (!acc[category]) {
-        acc[category] = [];
+    (acc, question) => {
+      const cat = question.category;
+      if (!acc[cat]) {
+        acc[cat] = [];
       }
-      acc[category].push(q);
+      acc[cat].push(question);
       return acc;
     },
-    {} as Record<string, TemplateQuestion[]>
+    {} as Record<NIS2Category, TemplateQuestion[]>
   );
 
-  // Create answer map
-  const answerMap = new Map(answers.map((a) => [a.question_id, a]));
+  // Create answer lookup
+  const answerMap = answers.reduce(
+    (acc, answer) => {
+      acc[answer.question_id] = answer;
+      return acc;
+    },
+    {} as Record<string, QuestionnaireAnswer>
+  );
 
-  // Calculate stats
-  const totalQuestions = questions.length;
-  const answeredQuestions = answers.filter((a) => a.answer_text || a.answer_json).length;
-  const aiAssistedCount = answers.filter((a) =>
-    ['ai_extracted', 'ai_confirmed', 'ai_modified'].includes(a.source)
-  ).length;
-  const flaggedCount = answers.filter((a) => a.is_flagged).length;
+  const aiAnswersCount = answers.filter((a) => a.source !== 'manual').length;
+  const aiPercentage = answers.length > 0 ? Math.round((aiAnswersCount / answers.length) * 100) : 0;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild className="-ml-2">
-              <Link href="/questionnaires">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back
-              </Link>
-            </Button>
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {questionnaire.vendor_name || 'Vendor'} Questionnaire
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Mail className="h-4 w-4" />
-              {questionnaire.vendor_email}
-            </span>
-            <span className="flex items-center gap-1">
-              <FileText className="h-4 w-4" />
-              {template.name}
-            </span>
-            {questionnaire.due_date && (
-              <span className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                Due {new Date(questionnaire.due_date).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className={`flex items-center gap-2 ${statusInfo.className}`}>
-            <StatusIcon className="h-5 w-5" />
-            <span className="font-medium">{statusInfo.label}</span>
-          </div>
-          {questionnaire.status === 'submitted' && (
-            <QuestionnaireReviewActions questionnaireId={questionnaire.id} />
-          )}
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground">Progress</div>
-            <div className="text-2xl font-bold">{questionnaire.progress_percentage}%</div>
-            <Progress value={questionnaire.progress_percentage} className="h-1.5 mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {answeredQuestions}/{totalQuestions} questions
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground">AI Assisted</div>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              {aiAssistedCount}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {totalQuestions > 0 ? Math.round((aiAssistedCount / totalQuestions) * 100) : 0}% of
-              answers
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground">Documents</div>
-            <div className="text-2xl font-bold">{documents.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {documents.filter((d) => d.ai_processed).length} processed by AI
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground">Flagged</div>
-            <div className={`text-2xl font-bold ${flaggedCount > 0 ? 'text-destructive' : ''}`}>
-              {flaggedCount}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Answers needing review</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs */}
-      <Tabs defaultValue="responses" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="responses">Responses</TabsTrigger>
-          <TabsTrigger value="documents">
-            Documents
-            {documents.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {documents.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="responses" className="space-y-6">
-          {Object.entries(questionsByCategory).map(([category, categoryQuestions]) => (
-            <div key={category} className="space-y-4">
-              <h3 className="text-lg font-medium flex items-center gap-2">
-                {getCategoryLabel(category as any)}
-                <Badge variant="outline">
-                  {categoryQuestions.filter((q) => answerMap.get(q.id)?.answer_text).length}/
-                  {categoryQuestions.length}
+      {/* Header Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-xl">
+                  {questionnaire.vendor_name || 'Questionnaire Review'}
+                </CardTitle>
+                <Badge variant="outline" className={cn('gap-1', status.color)}>
+                  <StatusIcon className="h-3 w-3" />
+                  {status.label}
                 </Badge>
-              </h3>
-              <div className="space-y-3">
-                {categoryQuestions.map((question) => (
-                  <QuestionAnswerCard
-                    key={question.id}
-                    question={question}
-                    answer={answerMap.get(question.id)}
-                  />
-                ))}
+              </div>
+              <CardDescription>
+                {template.name} &middot; Version {template.version}
+              </CardDescription>
+            </div>
+
+            {/* Review Actions - only show for submitted questionnaires */}
+            {questionnaire.status === 'submitted' && (
+              <QuestionnaireReviewActions questionnaireId={questionnaire.id} />
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Vendor & Questionnaire Info */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Building2 className="h-3 w-3" />
+                Vendor
+              </p>
+              <p className="text-sm font-medium">{questionnaire.vendor_name || 'Not specified'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Mail className="h-3 w-3" />
+                Contact
+              </p>
+              <p className="text-sm font-medium">{questionnaire.vendor_email}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                Due Date
+              </p>
+              <p className="text-sm font-medium">
+                {questionnaire.due_date
+                  ? format(new Date(questionnaire.due_date), 'PPP')
+                  : 'No deadline'}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                Submitted
+              </p>
+              <p className="text-sm font-medium">
+                {questionnaire.submitted_at
+                  ? formatDistanceToNow(new Date(questionnaire.submitted_at), { addSuffix: true })
+                  : 'Not yet'}
+              </p>
+            </div>
+          </div>
+
+          {/* Progress Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-lg bg-muted/50">
+            <div className="text-center">
+              <p className="text-2xl font-semibold">{questionnaire.progress_percentage}%</p>
+              <p className="text-xs text-muted-foreground">Complete</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-semibold">
+                {questionnaire.questions_answered}/{questionnaire.questions_total}
+              </p>
+              <p className="text-xs text-muted-foreground">Answered</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-semibold">{aiPercentage}%</p>
+              <p className="text-xs text-muted-foreground">AI Assisted</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-semibold">{documents.length}</p>
+              <p className="text-xs text-muted-foreground">Documents</p>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mt-4">
+            <Progress value={questionnaire.progress_percentage} className="h-2" />
+          </div>
+
+          {/* Review Notes */}
+          {questionnaire.review_notes && (
+            <div className="mt-4 p-4 rounded-lg bg-muted/50 border">
+              <div className="flex items-start gap-2">
+                <MessageSquare className="h-4 w-4 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Review Notes</p>
+                  <p className="text-sm text-muted-foreground mt-1">{questionnaire.review_notes}</p>
+                </div>
               </div>
             </div>
-          ))}
-        </TabsContent>
+          )}
+        </CardContent>
+      </Card>
 
-        <TabsContent value="documents">
-          {documents.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-8 text-center">
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No documents uploaded by vendor</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+      {/* Documents Section */}
+      {documents.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Uploaded Documents
+            </CardTitle>
+            <CardDescription>
+              Documents provided by the vendor for AI extraction
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
               {documents.map((doc) => (
-                <Card key={doc.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <p className="font-medium">{doc.file_name}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Badge variant="outline">{doc.document_type}</Badge>
-                          <span>{(doc.file_size / 1024 / 1024).toFixed(1)} MB</span>
-                        </div>
-                      </div>
-                      {doc.ai_processed && (
-                        <Badge variant="secondary" className="gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          AI Processed
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                <DocumentCard key={doc.id} document={doc} />
               ))}
             </div>
-          )}
-        </TabsContent>
+          </CardContent>
+        </Card>
+      )}
 
-        <TabsContent value="timeline">
-          <Card>
-            <CardContent className="p-4">
-              <div className="space-y-4">
-                {questionnaire.created_at && (
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Created</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(questionnaire.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {questionnaire.sent_at && (
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-blue-500" />
-                    <div>
-                      <p className="font-medium">Sent to vendor</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(questionnaire.sent_at).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {questionnaire.started_at && (
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-amber-500" />
-                    <div>
-                      <p className="font-medium">Vendor started</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(questionnaire.started_at).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {questionnaire.submitted_at && (
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <div>
-                      <p className="font-medium">Submitted by vendor</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(questionnaire.submitted_at).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {questionnaire.reviewed_at && (
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-primary" />
-                    <div>
-                      <p className="font-medium">
-                        {questionnaire.status === 'approved' ? 'Approved' : 'Reviewed'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(questionnaire.reviewed_at).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Questions & Answers */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Responses by Category</CardTitle>
+          <CardDescription>
+            Review vendor answers organized by NIS2 Article 21 categories
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Accordion
+            type="multiple"
+            defaultValue={Object.keys(questionsByCategory)}
+            className="space-y-3"
+          >
+            {(Object.entries(questionsByCategory) as [NIS2Category, TemplateQuestion[]][]).map(
+              ([category, categoryQuestions]) => {
+                const categoryInfo = NIS2_CATEGORIES[category];
+                const answeredCount = categoryQuestions.filter(
+                  (q) => answerMap[q.id]?.answer_text || answerMap[q.id]?.answer_json
+                ).length;
+
+                return (
+                  <AccordionItem key={category} value={category} className="border rounded-lg px-4">
+                    <AccordionTrigger className="hover:no-underline py-4">
+                      <div className="flex items-center gap-3 text-left">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">{categoryInfo.label}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {categoryInfo.article} &middot; {answeredCount}/{categoryQuestions.length} answered
+                          </div>
+                        </div>
+                        <Progress
+                          value={(answeredCount / categoryQuestions.length) * 100}
+                          className="w-20 h-1.5"
+                        />
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-4">
+                      <div className="space-y-3">
+                        {categoryQuestions.map((question) => (
+                          <AnswerCard
+                            key={question.id}
+                            question={question}
+                            answer={answerMap[question.id]}
+                          />
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              }
+            )}
+          </Accordion>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -466,31 +521,66 @@ async function QuestionnaireContent({ questionnaireId }: { questionnaireId: stri
 function QuestionnaireContentSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-4 w-96" />
-      </div>
-      <div className="grid gap-4 md:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-4">
-              <Skeleton className="h-4 w-20 mb-2" />
-              <Skeleton className="h-8 w-16" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <Skeleton className="h-64 w-full" />
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-64" />
+          <Skeleton className="h-4 w-48" />
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="space-y-1">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-5 w-24" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-lg bg-muted/50">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="text-center space-y-1">
+                <Skeleton className="h-8 w-12 mx-auto" />
+                <Skeleton className="h-3 w-16 mx-auto" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-24 w-full" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-export default async function QuestionnaireDetailPage({ params }: PageProps) {
+export default async function QuestionnaireReviewPage({ params }: PageProps) {
   const { questionnaireId } = await params;
 
   return (
-    <Suspense fallback={<QuestionnaireContentSkeleton />}>
-      <QuestionnaireContent questionnaireId={questionnaireId} />
-    </Suspense>
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Button variant="ghost" size="sm" className="gap-2 -ml-3" asChild>
+          <Link href="/questionnaires">
+            <ArrowLeft className="h-4 w-4" />
+            Questionnaires
+          </Link>
+        </Button>
+      </div>
+
+      {/* Content */}
+      <Suspense fallback={<QuestionnaireContentSkeleton />}>
+        <QuestionnaireContent questionnaireId={questionnaireId} />
+      </Suspense>
+    </div>
   );
 }
