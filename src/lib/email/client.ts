@@ -4,8 +4,6 @@
  * Centralized email sending using Resend
  */
 
-import { Resend } from 'resend';
-
 // Default sender configuration
 export const EMAIL_FROM = process.env.EMAIL_FROM || 'NIS2 Comply <noreply@nis2comply.io>';
 
@@ -17,11 +15,13 @@ export interface SendEmailOptions {
   replyTo?: string;
 }
 
-// Lazy initialize Resend client (avoid build-time errors)
-let resendClient: Resend | null = null;
+// Lazy initialize Resend client using dynamic import (avoid build-time errors)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let resendClient: any = null;
 
-function getResendClient(): Resend | null {
+async function getResendClient() {
   if (!resendClient && process.env.RESEND_API_KEY) {
+    const { Resend } = await import('resend');
     resendClient = new Resend(process.env.RESEND_API_KEY);
   }
   return resendClient;
@@ -31,7 +31,7 @@ function getResendClient(): Resend | null {
  * Send an email using Resend
  */
 export async function sendEmail(options: SendEmailOptions) {
-  const client = getResendClient();
+  const client = await getResendClient();
 
   // Skip email if no API key configured
   if (!client) {
