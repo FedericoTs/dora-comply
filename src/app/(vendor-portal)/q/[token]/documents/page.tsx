@@ -6,13 +6,14 @@
 
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Upload, FileText, Sparkles, CheckCircle2, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, CheckCircle2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getVendorPortalData } from '@/lib/nis2-questionnaire/queries';
 import { DocumentUploadZone } from '@/components/questionnaires/vendor-portal/document-upload-zone';
 import { VendorPortalSteps } from '@/components/questionnaires/vendor-portal/vendor-portal-steps';
+import { ProcessAndContinueButton } from '@/components/questionnaires/vendor-portal/process-and-continue-button';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -189,12 +190,11 @@ export default async function DocumentsPage({ params }: PageProps) {
             Back
           </Link>
         </Button>
-        <Button asChild>
-          <Link href={`/q/${token}/questions`}>
-            {documents.length > 0 ? 'Process & Continue' : 'Skip to Questions'}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+        <ProcessAndContinueButton
+          token={token}
+          hasDocuments={documents.length > 0}
+          hasUnprocessedDocuments={documents.some((d) => !d.ai_processed)}
+        />
       </div>
     </div>
   );
