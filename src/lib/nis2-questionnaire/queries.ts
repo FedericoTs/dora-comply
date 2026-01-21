@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import type {
   QuestionnaireTemplate,
   TemplateQuestion,
@@ -435,7 +436,8 @@ export async function getLatestExtraction(
 export async function validateQuestionnaireToken(
   token: string
 ): Promise<TokenValidationResult> {
-  const supabase = await createClient();
+  // Use service role client for public vendor portal pages (no auth session)
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase.rpc('validate_questionnaire_token', {
     token,
@@ -470,7 +472,8 @@ export async function validateQuestionnaireToken(
  * Returns all data needed for the vendor portal
  */
 export async function getVendorPortalData(token: string): Promise<VendorPortalData | null> {
-  const supabase = await createClient();
+  // Use service role client for public vendor portal pages (no auth session)
+  const supabase = createServiceRoleClient();
 
   // First validate the token
   const validation = await validateQuestionnaireToken(token);
