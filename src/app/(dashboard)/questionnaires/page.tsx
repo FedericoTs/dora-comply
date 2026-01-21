@@ -32,6 +32,9 @@ export const metadata = {
   description: 'NIS2 vendor security questionnaire management',
 };
 
+// Force dynamic rendering to ensure fresh data
+export const dynamic = 'force-dynamic';
+
 // Stats Cards Component
 async function QuestionnaireStatsCards() {
   const stats = await getQuestionnaireStats();
