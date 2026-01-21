@@ -276,17 +276,10 @@ export async function getVendorWithRelations(
   }
 
   // Fetch related data in parallel
-  const [contactsResult, entitiesResult, contractsResult, countsResult] = await Promise.all([
+  const [contactsResult, contractsResult, countsResult] = await Promise.all([
     // Contacts
     supabase
       .from('vendor_contacts')
-      .select('*')
-      .eq('vendor_id', vendorId)
-      .order('created_at', { ascending: true }),
-
-    // Entities
-    supabase
-      .from('vendor_entities')
       .select('*')
       .eq('vendor_id', vendorId)
       .order('created_at', { ascending: true }),
@@ -326,16 +319,6 @@ export async function getVendorWithRelations(
   return {
     ...baseVendor,
     contacts: contactsResult.data || [],
-    entities: entitiesResult.data?.map(e => ({
-      id: e.id,
-      vendor_id: e.vendor_id,
-      entity_name: e.entity_name,
-      entity_lei: e.entity_lei,
-      country_code: e.country_code,
-      entity_type: e.entity_type,
-      address: e.address || {},
-      created_at: e.created_at,
-    })) || [],
     contracts: contractsResult.data?.map(c => ({
       id: c.id,
       organization_id: c.organization_id,
@@ -588,7 +571,6 @@ export async function getVendorsForExport(): Promise<VendorWithRelations[]> {
     .select(`
       *,
       vendor_contacts (*),
-      vendor_entities (*),
       contracts (id, contract_ref, effective_date, expiry_date, status),
       ict_services (id, service_name, service_type, criticality_level)
     `)
@@ -605,7 +587,6 @@ export async function getVendorsForExport(): Promise<VendorWithRelations[]> {
   return vendors.map(v => ({
     ...mapVendorFromDatabase(v),
     contacts: v.vendor_contacts || [],
-    entities: v.vendor_entities || [],
     contracts_count: v.contracts?.length || 0,
     services_count: v.ict_services?.length || 0,
   }));

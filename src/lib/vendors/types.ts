@@ -210,24 +210,12 @@ export interface VendorContactRecord {
   created_at: string;
 }
 
-export interface VendorEntity {
-  id: string;
-  vendor_id: string;
-  entity_name: string;
-  entity_lei?: string | null;
-  country_code: string;
-  entity_type?: 'headquarters' | 'subsidiary' | 'branch' | 'data_center' | null;
-  address: Record<string, unknown>;
-  created_at: string;
-}
-
 // ============================================
 // AGGREGATED TYPES
 // ============================================
 
 export interface VendorWithRelations extends Vendor {
   contacts?: VendorContactRecord[];
-  entities?: VendorEntity[];
   contracts?: Contract[];
   documents_count?: number;
   contracts_count?: number;
