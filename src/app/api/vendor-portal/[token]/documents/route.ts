@@ -37,7 +37,7 @@ async function validateToken(token: string) {
     return { valid: false, error: 'Access link has expired' };
   }
 
-  if (!['sent', 'in_progress', 'rejected'].includes(questionnaire.status)) {
+  if (!['draft', 'sent', 'in_progress', 'rejected'].includes(questionnaire.status)) {
     return { valid: false, error: 'Questionnaire cannot be edited' };
   }
 
