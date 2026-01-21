@@ -81,6 +81,7 @@ export default async function QuestionsPage({ params }: PageProps) {
         sections={Object.values(groupedQuestions)}
         answerMap={answerMap}
         questionnaireId={questionnaire.id}
+        documents={documents}
       />
     </div>
   );

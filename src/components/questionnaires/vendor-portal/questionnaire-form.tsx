@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Save,
   Loader2,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,14 +42,22 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
   TemplateQuestion,
   QuestionnaireAnswer,
+  QuestionnaireDocument,
   AnswerSource,
 } from '@/lib/nis2-questionnaire/types';
 import { saveAnswer } from '@/lib/nis2-questionnaire/actions';
+import { PDFViewer } from '@/components/documents/pdf-viewer/pdf-viewer';
 
 interface QuestionSection {
   title: string;
@@ -61,6 +70,38 @@ interface QuestionnaireFormProps {
   sections: QuestionSection[];
   answerMap: Map<string, QuestionnaireAnswer>;
   questionnaireId: string;
+  documents?: QuestionnaireDocument[];
+}
+
+// Helper to parse multiselect values from JSON string or array
+function parseMultiselectValue(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(v => String(v));
+  }
+  if (typeof value === 'string') {
+    // Try to parse JSON array string like '["option1","option2"]'
+    if (value.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) {
+          return parsed.map(v => String(v));
+        }
+      } catch {
+        // Not valid JSON, fall through
+      }
+    }
+    // Single value string
+    if (value) {
+      return [value];
+    }
+  }
+  return [];
+}
+
+// Helper to extract page number from citation like "Page 45, Section 5.2"
+function extractPageFromCitation(citation: string): number {
+  const match = citation.match(/page\s*(\d+)/i);
+  return match ? parseInt(match[1], 10) : 1;
 }
 
 interface LocalAnswer {
@@ -76,8 +117,20 @@ export function QuestionnaireForm({
   sections,
   answerMap,
   questionnaireId,
+  documents = [],
 }: QuestionnaireFormProps) {
   const router = useRouter();
+  const [pdfViewerState, setPdfViewerState] = useState<{
+    isOpen: boolean;
+    documentUrl: string | null;
+    documentName: string | null;
+    initialPage: number;
+  }>({
+    isOpen: false,
+    documentUrl: null,
+    documentName: null,
+    initialPage: 1,
+  });
   const [localAnswers, setLocalAnswers] = useState<Map<string, LocalAnswer>>(
     new Map(
       Array.from(answerMap.entries()).map(([qId, answer]) => [
@@ -204,6 +257,27 @@ export function QuestionnaireForm({
     router.refresh();
   }, [localAnswers, saveQuestionAnswer, router]);
 
+  // Open PDF viewer at citation
+  const openPdfAtCitation = useCallback((extractionId: string | null, citation: string) => {
+    // Find the document associated with this extraction
+    const document = documents.find(d => d.ai_extraction_id === extractionId);
+    if (!document) {
+      toast.error('Source document not found');
+      return;
+    }
+
+    // Get signed URL for the document (via API route)
+    const documentUrl = `/api/vendor-portal/${token}/documents/${document.id}/download`;
+    const pageNumber = extractPageFromCitation(citation);
+
+    setPdfViewerState({
+      isOpen: true,
+      documentUrl,
+      documentName: document.file_name,
+      initialPage: pageNumber,
+    });
+  }, [documents, token]);
+
   const hasDirtyAnswers = Array.from(localAnswers.values()).some((a) => a.isDirty);
   const isSaving = Array.from(localAnswers.values()).some((a) => a.isSaving);
 
@@ -252,6 +326,7 @@ export function QuestionnaireForm({
                       onUpdate={(value) => updateAnswer(question.id, value)}
                       onConfirmAI={() => confirmAISuggestion(question.id)}
                       onBlur={() => saveQuestionAnswer(question.id)}
+                      onViewCitation={documents.length > 0 ? openPdfAtCitation : undefined}
                     />
                   ))}
                 </div>
@@ -294,6 +369,32 @@ export function QuestionnaireForm({
           </Button>
         </div>
       </div>
+
+      {/* PDF Viewer Dialog */}
+      <Dialog
+        open={pdfViewerState.isOpen}
+        onOpenChange={(open) => setPdfViewerState((prev) => ({ ...prev, isOpen: open }))}
+      >
+        <DialogContent className="max-w-5xl h-[85vh] p-0 gap-0">
+          <DialogHeader className="px-4 py-3 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {pdfViewerState.documentName || 'Document'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {pdfViewerState.documentUrl && (
+              <PDFViewer
+                url={pdfViewerState.documentUrl}
+                initialPage={pdfViewerState.initialPage}
+                showThumbnails={true}
+                showControls={true}
+                className="h-full"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -306,6 +407,7 @@ interface QuestionFieldProps {
   onUpdate: (value: string | boolean | string[] | undefined) => void;
   onConfirmAI: () => void;
   onBlur: () => void;
+  onViewCitation?: (extractionId: string | null, citation: string) => void;
 }
 
 function QuestionField({
@@ -315,6 +417,7 @@ function QuestionField({
   onUpdate,
   onConfirmAI,
   onBlur,
+  onViewCitation,
 }: QuestionFieldProps) {
   const isAISuggestion = savedAnswer?.source === 'ai_extracted' && !localAnswer?.isDirty;
   const currentValue = localAnswer?.answer_text ?? localAnswer?.answer_json ?? savedAnswer?.answer_text ?? savedAnswer?.answer_json ?? '';
@@ -397,7 +500,8 @@ function QuestionField({
       {question.question_type === 'multiselect' && (
         <div className="space-y-2">
           {question.options?.map((option) => {
-            const selectedValues = Array.isArray(currentValue) ? currentValue : [];
+            // Parse JSON string to array if needed (AI extractions store as JSON string)
+            const selectedValues = parseMultiselectValue(currentValue);
             const isChecked = selectedValues.includes(option.value);
 
             return (
@@ -428,12 +532,24 @@ function QuestionField({
         </div>
       )}
 
-      {/* AI Citation */}
+      {/* AI Citation with View Source button */}
       {isAISuggestion && savedAnswer?.ai_citation && (
-        <p className="text-xs text-gray-500 flex items-center gap-1">
-          <AlertCircle className="h-3 w-3" />
-          Source: {savedAnswer.ai_citation}
-        </p>
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <AlertCircle className="h-3 w-3 shrink-0" />
+          <span className="truncate">Source: {savedAnswer.ai_citation}</span>
+          {onViewCitation && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+              onClick={() => onViewCitation(savedAnswer.ai_extraction_id, savedAnswer.ai_citation!)}
+            >
+              <FileText className="h-3 w-3 mr-1" />
+              View
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Confirm AI Suggestion Button */}
