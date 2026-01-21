@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Sparkles,
   FileText,
+  FileEdit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -228,6 +229,50 @@ async function PendingReviewSection() {
   );
 }
 
+// Drafts Section
+async function DraftsSection() {
+  const { data: drafts } = await getQuestionnaires(
+    { status: ['draft'] },
+    { field: 'created_at', direction: 'desc' },
+    5
+  );
+
+  if (!drafts || drafts.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <FileEdit className="h-4 w-4 text-muted-foreground" />
+          Drafts
+        </CardTitle>
+        <CardDescription>Questionnaires not yet sent</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {drafts.map((q) => (
+            <Link
+              key={q.id}
+              href={`/questionnaires/${q.id}`}
+              className="flex items-center justify-between p-2 -mx-2 rounded-md hover:bg-muted/50 transition-colors"
+            >
+              <div className="min-w-0">
+                <p className="font-medium text-sm truncate">
+                  {q.vendor_company_name || q.vendor_name}
+                </p>
+                <p className="text-xs text-muted-foreground">{q.template_name}</p>
+              </div>
+              <Badge variant="secondary">Draft</Badge>
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // AI Stats Card
 async function AIStatsCard() {
   const stats = await getQuestionnaireStats();
@@ -332,6 +377,10 @@ export default async function QuestionnairesPage() {
         <div className="space-y-4">
           <Suspense fallback={<Skeleton className="h-48" />}>
             <PendingReviewSection />
+          </Suspense>
+
+          <Suspense fallback={<Skeleton className="h-32" />}>
+            <DraftsSection />
           </Suspense>
 
           <Suspense fallback={<Skeleton className="h-32" />}>
