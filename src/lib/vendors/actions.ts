@@ -634,48 +634,14 @@ export async function fetchVendorsAction(
     pagination = { page: 1, limit: 20 },
   } = options;
 
-  // Framework filter - get vendor IDs that have gap analysis for the selected framework
-  let frameworkVendorIds: string[] | null = null;
-  if (filters.framework) {
-    // First, get the framework ID
-    const { data: framework, error: frameworkError } = await supabase
-      .from('frameworks')
-      .select('id')
-      .eq('code', filters.framework)
-      .single();
-
-    if (frameworkError) {
-      console.error(`Failed to fetch framework "${filters.framework}":`, frameworkError);
-    }
-
-    if (framework) {
-      // Get vendor IDs with gap analysis for this framework
-      const { data: gapAnalysis, error: gapError } = await supabase
-        .from('vendor_gap_analysis')
-        .select('vendor_id')
-        .eq('organization_id', organizationId)
-        .eq('target_framework_id', framework.id);
-
-      if (gapError) {
-        console.error(`Failed to fetch vendor gap analysis for framework "${filters.framework}":`, gapError);
-      }
-
-      frameworkVendorIds = gapAnalysis?.map(g => g.vendor_id) || [];
-    }
-  }
-
   // Build query
+  // Note: Framework filtering via vendor_gap_analysis removed - table was never populated
+  // Future: Use vendor_framework_compliance for framework-based filtering
   let query = supabase
     .from('vendors')
     .select('*', { count: 'exact' })
     .eq('organization_id', organizationId)
     .is('deleted_at', null);
-
-  // Apply framework filter only if there are vendors with gap analysis for this framework
-  // If no gap analysis exists yet, show all vendors (don't filter to empty)
-  if (frameworkVendorIds !== null && frameworkVendorIds.length > 0) {
-    query = query.in('id', frameworkVendorIds);
-  }
 
   // Apply filters
   if (filters.search) {
@@ -873,15 +839,7 @@ export async function calculateAndSaveRiskScore(
   }
 
   // Fetch additional data for risk calculation
-  const [doraComplianceResult, documentsResult, concentrationResult] = await Promise.all([
-    // DORA compliance data
-    supabase
-      .from('vendor_dora_compliance')
-      .select('overall_maturity_level, overall_percentage')
-      .eq('vendor_id', vendorId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+  const [documentsResult, concentrationResult] = await Promise.all([
     // Documents (SOC2 reports)
     supabase
       .from('documents')
@@ -908,8 +866,8 @@ export async function calculateAndSaveRiskScore(
 
   const input: RiskScoreInput = {
     vendor: mapVendorFromDatabase(vendor),
-    doraMaturityLevel: doraComplianceResult.data?.overall_maturity_level ?? null,
-    doraCompliancePercentage: doraComplianceResult.data?.overall_percentage ?? null,
+    doraMaturityLevel: null, // DORA compliance data not yet populated
+    doraCompliancePercentage: null,
     hasSOC2Report: hasSOC2,
     soc2Opinion: soc2Metadata?.opinion as RiskScoreInput['soc2Opinion'],
     soc2ExceptionCount: soc2Metadata?.exception_count,
@@ -1011,31 +969,24 @@ export async function calculateAllVendorRiskScores(): Promise<ActionResult<{
   // Fetch additional data in batch
   const vendorIds = vendors.map(v => v.id);
 
-  const [doraResults, docsResults] = await Promise.all([
-    supabase
-      .from('vendor_dora_compliance')
-      .select('vendor_id, overall_maturity_level, overall_percentage')
-      .in('vendor_id', vendorIds),
-    supabase
-      .from('documents')
-      .select('vendor_id, type, metadata')
-      .in('vendor_id', vendorIds)
-      .eq('organization_id', organizationId)
-      .is('deleted_at', null),
-  ]);
+  const { data: docsResults } = await supabase
+    .from('documents')
+    .select('vendor_id, type, metadata')
+    .in('vendor_id', vendorIds)
+    .eq('organization_id', organizationId)
+    .is('deleted_at', null);
 
   // Build additional data map
   const additionalData = new Map<string, Partial<Omit<RiskScoreInput, 'vendor'>>>();
 
   for (const vendor of vendors) {
-    const doraData = doraResults.data?.find(d => d.vendor_id === vendor.id);
-    const vendorDocs = docsResults.data?.filter(d => d.vendor_id === vendor.id) || [];
+    const vendorDocs = docsResults?.filter(d => d.vendor_id === vendor.id) || [];
     const soc2Doc = vendorDocs.find(d => d.type === 'soc2');
     const soc2Metadata = soc2Doc?.metadata as { opinion?: string; exception_count?: number } | null;
 
     additionalData.set(vendor.id, {
-      doraMaturityLevel: doraData?.overall_maturity_level ?? null,
-      doraCompliancePercentage: doraData?.overall_percentage ?? null,
+      doraMaturityLevel: null, // DORA compliance data not yet populated
+      doraCompliancePercentage: null,
       hasSOC2Report: vendorDocs.some(d => d.type === 'soc2'),
       soc2Opinion: soc2Metadata?.opinion as RiskScoreInput['soc2Opinion'],
       soc2ExceptionCount: soc2Metadata?.exception_count,

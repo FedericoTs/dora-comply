@@ -109,37 +109,9 @@ export async function getVendors(
     includeDeleted = false,
   } = options;
 
-  // Framework filter - get vendor IDs that have gap analysis for the selected framework
-  let frameworkVendorIds: string[] | null = null;
-  if (filters.framework) {
-    // First, get the framework ID
-    const { data: framework, error: frameworkError } = await supabase
-      .from('frameworks')
-      .select('id')
-      .eq('code', filters.framework)
-      .single();
-
-    if (frameworkError) {
-      console.error(`Failed to fetch framework "${filters.framework}":`, frameworkError);
-    }
-
-    if (framework) {
-      // Get vendor IDs with gap analysis for this framework
-      const { data: gapAnalysis, error: gapError } = await supabase
-        .from('vendor_gap_analysis')
-        .select('vendor_id')
-        .eq('organization_id', organizationId)
-        .eq('target_framework_id', framework.id);
-
-      if (gapError) {
-        console.error(`Failed to fetch vendor gap analysis for framework "${filters.framework}":`, gapError);
-      }
-
-      frameworkVendorIds = gapAnalysis?.map(g => g.vendor_id) || [];
-    }
-  }
-
   // Build query
+  // Note: Framework filtering via vendor_gap_analysis removed - table was never populated
+  // Future: Use vendor_framework_compliance for framework-based filtering
   let query = supabase
     .from('vendors')
     .select('*', { count: 'exact' })
@@ -148,12 +120,6 @@ export async function getVendors(
   // Exclude soft-deleted unless requested
   if (!includeDeleted) {
     query = query.is('deleted_at', null);
-  }
-
-  // Apply framework filter only if there are vendors with gap analysis for this framework
-  // If no gap analysis exists yet, show all vendors (don't filter to empty)
-  if (frameworkVendorIds !== null && frameworkVendorIds.length > 0) {
-    query = query.in('id', frameworkVendorIds);
   }
 
   // Apply filters

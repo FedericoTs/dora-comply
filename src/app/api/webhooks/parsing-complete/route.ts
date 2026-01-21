@@ -125,75 +125,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    // Get current compliance data for the org/vendor
-    const complianceQuery = supabase
-      .from('vendor_dora_compliance')
-      .select('*');
-
-    if (finalVendorId) {
-      complianceQuery.eq('vendor_id', finalVendorId);
-    } else {
-      complianceQuery.eq('organization_id', doc.organization_id);
-    }
-
-    const { data: complianceData } = await complianceQuery;
-
-    // Calculate aggregate maturity if we have compliance data
-    let maturityLevel = 0;
-    let maturityPercent = 0;
-    let pillarLevels = { ict: 0, incident: 0, resilience: 0, thirdParty: 0, infoShare: 0 };
-    let pillarPercents = { ict: 0, incident: 0, resilience: 0, thirdParty: 0, infoShare: 0 };
-
-    if (complianceData && complianceData.length > 0) {
-      // Map labels to levels
-      const labelToLevel = (label: string | null | undefined): number => {
-        if (!label) return 0;
-        if (label.includes('L4')) return 4;
-        if (label.includes('L3')) return 3;
-        if (label.includes('L2')) return 2;
-        if (label.includes('L1')) return 1;
-        return 0;
-      };
-
-      // Average across all compliance records
-      const count = complianceData.length;
-      let sumLevel = 0;
-      let sumPercent = 0;
-      let sumIct = 0, sumIncident = 0, sumResilience = 0, sumThirdParty = 0, sumInfoShare = 0;
-      let sumIctP = 0, sumIncidentP = 0, sumResilienceP = 0, sumThirdPartyP = 0, sumInfoShareP = 0;
-
-      for (const c of complianceData) {
-        sumLevel += labelToLevel(c.overall_maturity_level);
-        sumPercent += c.overall_readiness_percent || 0;
-        sumIct += labelToLevel(c.pillar_ict_risk_mgmt);
-        sumIncident += labelToLevel(c.pillar_incident_reporting);
-        sumResilience += labelToLevel(c.pillar_resilience_testing);
-        sumThirdParty += labelToLevel(c.pillar_third_party_risk);
-        sumInfoShare += labelToLevel(c.pillar_info_sharing);
-        sumIctP += c.pillar_ict_risk_mgmt_percent || 0;
-        sumIncidentP += c.pillar_incident_reporting_percent || 0;
-        sumResilienceP += c.pillar_resilience_testing_percent || 0;
-        sumThirdPartyP += c.pillar_third_party_risk_percent || 0;
-        sumInfoShareP += c.pillar_info_sharing_percent || 0;
-      }
-
-      maturityLevel = Math.round(sumLevel / count);
-      maturityPercent = sumPercent / count;
-      pillarLevels = {
-        ict: Math.round(sumIct / count),
-        incident: Math.round(sumIncident / count),
-        resilience: Math.round(sumResilience / count),
-        thirdParty: Math.round(sumThirdParty / count),
-        infoShare: Math.round(sumInfoShare / count),
-      };
-      pillarPercents = {
-        ict: sumIctP / count,
-        incident: sumIncidentP / count,
-        resilience: sumResilienceP / count,
-        thirdParty: sumThirdPartyP / count,
-        infoShare: sumInfoShareP / count,
-      };
-    }
+    // Note: vendor_dora_compliance table removed - compliance data not yet populated
+    // Initialize with default values (L0 - Not Performed)
+    // Future: Use vendor_framework_compliance for maturity data
+    const maturityLevel = 0;
+    const maturityPercent = 0;
+    const pillarLevels = { ict: 0, incident: 0, resilience: 0, thirdParty: 0, infoShare: 0 };
+    const pillarPercents = { ict: 0, incident: 0, resilience: 0, thirdParty: 0, infoShare: 0 };
 
     const maturityLabels = [
       'L0 - Not Performed',

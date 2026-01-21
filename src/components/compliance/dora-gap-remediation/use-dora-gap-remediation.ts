@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { DORA_REQUIREMENTS } from '@/lib/compliance/dora-requirements-data';
 import type { DORAPillar } from '@/lib/compliance/dora-types';
 import type { DORAEvidence, RequirementWithEvidence, ComplianceStats } from './types';
@@ -15,29 +14,18 @@ export function useDORAGapRemediation({
   vendorId,
   soc2CoverageByRequirement,
 }: UseDORAGapRemediationProps) {
+  // Note: dora_evidence table removed - manual evidence feature not yet implemented
+  // Evidence will always be empty until a new evidence system is built
   const [evidence, setEvidence] = useState<DORAEvidence[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedPillars, setExpandedPillars] = useState<Set<DORAPillar>>(new Set());
 
-  // Fetch existing evidence
+  // Initialize with empty evidence (table removed)
   useEffect(() => {
-    async function fetchEvidence() {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('dora_evidence')
-        .select('*')
-        .eq('vendor_id', vendorId)
-        .neq('status', 'rejected');
-
-      if (error) {
-        console.error('Error fetching evidence:', error);
-      } else {
-        setEvidence(data || []);
-      }
-      setLoading(false);
-    }
-
-    fetchEvidence();
+    // dora_evidence table was removed - feature not implemented
+    // Set loading to false immediately with empty evidence
+    setEvidence([]);
+    setLoading(false);
   }, [vendorId]);
 
   // Group requirements by pillar and add evidence
