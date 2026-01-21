@@ -6,7 +6,7 @@
  * Main form for answering questionnaire questions
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -42,12 +42,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
@@ -57,7 +51,7 @@ import {
   AnswerSource,
 } from '@/lib/nis2-questionnaire/types';
 import { saveAnswer } from '@/lib/nis2-questionnaire/actions';
-import { PDFViewer } from '@/components/documents/pdf-viewer/pdf-viewer';
+import { DocumentSourceViewer } from './document-source-viewer';
 
 interface QuestionSection {
   title: string;
@@ -112,6 +106,14 @@ interface LocalAnswer {
   isSaving: boolean;
 }
 
+// Source context for document viewer
+interface SourceContext {
+  question: TemplateQuestion;
+  answer: QuestionnaireAnswer;
+  document: QuestionnaireDocument;
+  pageNumber: number;
+}
+
 export function QuestionnaireForm({
   token,
   sections,
@@ -120,16 +122,12 @@ export function QuestionnaireForm({
   documents = [],
 }: QuestionnaireFormProps) {
   const router = useRouter();
-  const [pdfViewerState, setPdfViewerState] = useState<{
+  const [sourceViewerState, setSourceViewerState] = useState<{
     isOpen: boolean;
-    documentUrl: string | null;
-    documentName: string | null;
-    initialPage: number;
+    context: SourceContext | null;
   }>({
     isOpen: false,
-    documentUrl: null,
-    documentName: null,
-    initialPage: 1,
+    context: null,
   });
   const [localAnswers, setLocalAnswers] = useState<Map<string, LocalAnswer>>(
     new Map(
@@ -257,26 +255,47 @@ export function QuestionnaireForm({
     router.refresh();
   }, [localAnswers, saveQuestionAnswer, router]);
 
-  // Open PDF viewer at citation
-  const openPdfAtCitation = useCallback((extractionId: string | null, citation: string) => {
+  // Collect all AI sources for navigation
+  const allAISources = useMemo(() => {
+    const sources: SourceContext[] = [];
+    for (const section of sections) {
+      for (const question of section.questions) {
+        const answer = answerMap.get(question.id);
+        if (answer?.source === 'ai_extracted' && answer.ai_extraction_id && answer.ai_citation) {
+          const document = documents.find(d => d.ai_extraction_id === answer.ai_extraction_id);
+          if (document) {
+            sources.push({
+              question,
+              answer,
+              document,
+              pageNumber: extractPageFromCitation(answer.ai_citation),
+            });
+          }
+        }
+      }
+    }
+    return sources;
+  }, [sections, answerMap, documents]);
+
+  // Open source viewer at citation
+  const openSourceViewer = useCallback((
+    question: TemplateQuestion,
+    answer: QuestionnaireAnswer
+  ) => {
     // Find the document associated with this extraction
-    const document = documents.find(d => d.ai_extraction_id === extractionId);
+    const document = documents.find(d => d.ai_extraction_id === answer.ai_extraction_id);
     if (!document) {
       toast.error('Source document not found');
       return;
     }
 
-    // Get signed URL for the document (via API route)
-    const documentUrl = `/api/vendor-portal/${token}/documents/${document.id}/download`;
-    const pageNumber = extractPageFromCitation(citation);
+    const pageNumber = extractPageFromCitation(answer.ai_citation || '');
 
-    setPdfViewerState({
+    setSourceViewerState({
       isOpen: true,
-      documentUrl,
-      documentName: document.file_name,
-      initialPage: pageNumber,
+      context: { question, answer, document, pageNumber },
     });
-  }, [documents, token]);
+  }, [documents]);
 
   const hasDirtyAnswers = Array.from(localAnswers.values()).some((a) => a.isDirty);
   const isSaving = Array.from(localAnswers.values()).some((a) => a.isSaving);
@@ -317,18 +336,25 @@ export function QuestionnaireForm({
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
                 <div className="space-y-6">
-                  {section.questions.map((question) => (
-                    <QuestionField
-                      key={question.id}
-                      question={question}
-                      savedAnswer={answerMap.get(question.id)}
-                      localAnswer={localAnswers.get(question.id)}
-                      onUpdate={(value) => updateAnswer(question.id, value)}
-                      onConfirmAI={() => confirmAISuggestion(question.id)}
-                      onBlur={() => saveQuestionAnswer(question.id)}
-                      onViewCitation={documents.length > 0 ? openPdfAtCitation : undefined}
-                    />
-                  ))}
+                  {section.questions.map((question) => {
+                    const savedAnswer = answerMap.get(question.id);
+                    return (
+                      <QuestionField
+                        key={question.id}
+                        question={question}
+                        savedAnswer={savedAnswer}
+                        localAnswer={localAnswers.get(question.id)}
+                        onUpdate={(value) => updateAnswer(question.id, value)}
+                        onConfirmAI={() => confirmAISuggestion(question.id)}
+                        onBlur={() => saveQuestionAnswer(question.id)}
+                        onViewSource={
+                          documents.length > 0 && savedAnswer
+                            ? () => openSourceViewer(question, savedAnswer)
+                            : undefined
+                        }
+                      />
+                    );
+                  })}
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -370,31 +396,16 @@ export function QuestionnaireForm({
         </div>
       </div>
 
-      {/* PDF Viewer Dialog */}
-      <Dialog
-        open={pdfViewerState.isOpen}
-        onOpenChange={(open) => setPdfViewerState((prev) => ({ ...prev, isOpen: open }))}
-      >
-        <DialogContent className="max-w-5xl h-[85vh] p-0 gap-0">
-          <DialogHeader className="px-4 py-3 border-b">
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              {pdfViewerState.documentName || 'Document'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-hidden">
-            {pdfViewerState.documentUrl && (
-              <PDFViewer
-                url={pdfViewerState.documentUrl}
-                initialPage={pdfViewerState.initialPage}
-                showThumbnails={true}
-                showControls={true}
-                className="h-full"
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Document Source Viewer Sheet */}
+      <DocumentSourceViewer
+        isOpen={sourceViewerState.isOpen}
+        onClose={() => setSourceViewerState({ isOpen: false, context: null })}
+        token={token}
+        sourceContext={sourceViewerState.context}
+        documents={documents}
+        allSources={allAISources}
+        onNavigate={(context) => setSourceViewerState({ isOpen: true, context })}
+      />
     </div>
   );
 }
@@ -407,7 +418,7 @@ interface QuestionFieldProps {
   onUpdate: (value: string | boolean | string[] | undefined) => void;
   onConfirmAI: () => void;
   onBlur: () => void;
-  onViewCitation?: (extractionId: string | null, citation: string) => void;
+  onViewSource?: () => void;
 }
 
 function QuestionField({
@@ -417,7 +428,7 @@ function QuestionField({
   onUpdate,
   onConfirmAI,
   onBlur,
-  onViewCitation,
+  onViewSource,
 }: QuestionFieldProps) {
   const isAISuggestion = savedAnswer?.source === 'ai_extracted' && !localAnswer?.isDirty;
   const currentValue = localAnswer?.answer_text ?? localAnswer?.answer_json ?? savedAnswer?.answer_text ?? savedAnswer?.answer_json ?? '';
@@ -537,16 +548,16 @@ function QuestionField({
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <AlertCircle className="h-3 w-3 shrink-0" />
           <span className="truncate">Source: {savedAnswer.ai_citation}</span>
-          {onViewCitation && (
+          {onViewSource && (
             <Button
               type="button"
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-              onClick={() => onViewCitation(savedAnswer.ai_extraction_id, savedAnswer.ai_citation!)}
+              onClick={onViewSource}
             >
               <FileText className="h-3 w-3 mr-1" />
-              View
+              View Source
             </Button>
           )}
         </div>

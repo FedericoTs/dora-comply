@@ -296,7 +296,7 @@ export async function applyExtractedAnswers(
       // Check if answer already exists
       const { data: existing } = await supabase
         .from('nis2_questionnaire_answers')
-        .select('id, source')
+        .select('id, source, ai_confidence')
         .eq('questionnaire_id', questionnaireId)
         .eq('question_id', extraction.question_id)
         .single();
@@ -307,7 +307,20 @@ export async function applyExtractedAnswers(
         continue;
       }
 
-      // Upsert answer
+      // If existing AI answer has higher confidence, skip this one
+      if (
+        existing?.source === 'ai_extracted' &&
+        existing.ai_confidence !== null &&
+        existing.ai_confidence >= extraction.confidence
+      ) {
+        console.log(
+          `[Parser] Keeping existing answer with higher confidence (${existing.ai_confidence} >= ${extraction.confidence}) for question ${extraction.question_id}`
+        );
+        skipped++;
+        continue;
+      }
+
+      // Upsert answer (only if new confidence is higher)
       const { error } = await supabase.from('nis2_questionnaire_answers').upsert(
         {
           questionnaire_id: questionnaireId,
