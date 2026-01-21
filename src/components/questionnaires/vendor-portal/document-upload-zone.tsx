@@ -211,7 +211,6 @@ export function DocumentUploadZone({
           if (i !== index) return f;
           if (f.status === 'complete' || f.status === 'error') return f;
           const maxProgress = STATUS_CONFIG[f.status]?.progress || 90;
-          const minProgress = maxProgress - 15;
           if (f.progress < maxProgress - 2) {
             return { ...f, progress: Math.min(f.progress + 1, maxProgress - 2) };
           }
@@ -221,28 +220,55 @@ export function DocumentUploadZone({
     }, 500);
 
     try {
-      // Call the process API
-      const response = await fetch(`/api/vendor-portal/${token}/process`, {
+      // Step 1: Trigger processing (fire-and-forget to Modal)
+      const triggerResponse = await fetch(`/api/vendor-portal/${token}/process`, {
         method: 'POST',
       });
+
+      if (!triggerResponse.ok) {
+        const errorData = await triggerResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to start processing');
+      }
+
+      // Step 2: Poll for completion - Modal processes async
+      const maxPolls = 60; // Max 2 minutes (60 * 2 seconds)
+      let pollCount = 0;
+      let extractedCount = 0;
+
+      while (pollCount < maxPolls) {
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds
+        pollCount++;
+
+        const statusResponse = await fetch(`/api/vendor-portal/${token}/process`, {
+          method: 'GET',
+        });
+
+        if (!statusResponse.ok) {
+          continue; // Retry on error
+        }
+
+        const statusData = await statusResponse.json();
+        const summary = statusData.data?.summary;
+
+        if (summary) {
+          // Check if all documents are processed
+          if (summary.pending_documents === 0) {
+            extractedCount = summary.total_extracted || 0;
+            break;
+          }
+        }
+      }
 
       clearInterval(stageInterval);
       clearInterval(progressInterval);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Processing failed');
-      }
-
-      const data = await response.json();
-
       // Show completion with extracted count
       updateFileStatus(index, 'complete', {
-        extractedCount: data.extracted || 0,
+        extractedCount,
       });
 
-      if (data.extracted > 0) {
-        toast.success(`${data.extracted} answers extracted and saved from ${filename}`);
+      if (extractedCount > 0) {
+        toast.success(`${extractedCount} answers extracted and saved from ${filename}`);
       } else {
         toast.info(`Document processed. No answers could be extracted.`);
       }
