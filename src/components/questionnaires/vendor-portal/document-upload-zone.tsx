@@ -174,7 +174,8 @@ export function DocumentUploadZone({
       clearInterval(uploadInterval);
 
       if (!uploadResponse.ok) {
-        throw new Error('Upload failed');
+        const errorData = await uploadResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Upload failed (${uploadResponse.status})`);
       }
 
       updateFileStatus(index, 'uploaded');
