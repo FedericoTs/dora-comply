@@ -310,14 +310,23 @@ class SupabaseClient:
         progress: int,
         message: Optional[str] = None,
     ) -> None:
-        """Update questionnaire AI extraction job progress."""
+        """Update questionnaire AI extraction job progress.
+
+        Note: Progress and message are stored in extraction_summary JSONB
+        since nis2_ai_extractions doesn't have dedicated columns for these.
+        """
         update_data: dict[str, Any] = {
             "status": status,
             "updated_at": datetime.utcnow().isoformat(),
         }
 
-        if message:
-            update_data["current_message"] = message
+        # Store progress info in extraction_summary JSONB field
+        if message or progress > 0:
+            update_data["extraction_summary"] = {
+                "progress_percentage": progress,
+                "current_message": message or "",
+                "last_update": datetime.utcnow().isoformat(),
+            }
 
         self.client.table("nis2_ai_extractions").update(update_data).eq("id", extraction_id).execute()
 
