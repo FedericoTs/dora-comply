@@ -4,11 +4,12 @@ import { useState, useTransition, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { Plus, Loader2, Upload } from 'lucide-react';
+import { Plus, Loader2, Upload, Building2 } from 'lucide-react';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useFramework } from '@/lib/context/framework-context';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { EmptyState, SearchEmptyState, FilterEmptyState } from '@/components/ui/empty-state';
 import { FrameworkContextBanner } from '@/components/ui/framework-context-banner';
 import {
   AlertDialog,
@@ -27,7 +28,6 @@ import {
   VendorFiltersDropdown,
   VendorFilterTags,
   VendorViewToggle,
-  VendorEmptyState,
   VendorPagination,
   VendorImportWizard,
   QuickFilters,
@@ -490,7 +490,15 @@ export function VendorListClient({
 
   // If no vendors at all (first time)
   if (!hasVendors) {
-    return <VendorEmptyState type="no-vendors" />;
+    return (
+      <EmptyState
+        icon={Building2}
+        illustration="vendors"
+        title="No vendors yet"
+        description="Get started by adding your first ICT third-party provider to begin managing your vendor relationships."
+        action={{ label: 'Add First Vendor', href: '/vendors/new' }}
+      />
+    );
   }
 
   const hasActiveFilters =
@@ -571,11 +579,14 @@ export function VendorListClient({
 
       {/* Content */}
       {!isPending && vendors.length === 0 && (
-        <VendorEmptyState
-          type={searchQuery ? 'no-results' : 'filtered'}
-          searchQuery={searchQuery}
-          onClearFilters={handleClearFilters}
-        />
+        searchQuery ? (
+          <SearchEmptyState
+            searchQuery={searchQuery}
+            onClear={handleClearFilters}
+          />
+        ) : (
+          <FilterEmptyState onClear={handleClearFilters} />
+        )
       )}
 
       {!isPending && vendors.length > 0 && (

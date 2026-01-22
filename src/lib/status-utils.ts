@@ -18,7 +18,25 @@
 // =============================================================================
 
 export type StatusLevel = 'success' | 'warning' | 'error' | 'critical' | 'info' | 'neutral' | 'pending';
+
+/**
+ * Risk level type - canonical definition
+ * Other modules should import this type rather than defining their own.
+ * Known duplicates exist in: nis2/types.ts, concentration/types.ts, constants/ui.ts,
+ * exports/board-report-types.ts, vendors/types.ts, status-badge.tsx, dora-constants.ts
+ */
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+/**
+ * Risk score thresholds for converting numeric scores to risk levels
+ * Used for risk matrix calculations (5x5 = 1-25 scale)
+ */
+export const RISK_SCORE_THRESHOLDS = {
+  low: { min: 1, max: 4 },
+  medium: { min: 5, max: 9 },
+  high: { min: 10, max: 15 },
+  critical: { min: 16, max: 25 },
+} as const;
 
 // =============================================================================
 // STATUS CONFIG TYPES
@@ -379,12 +397,24 @@ export const INCIDENT_STATUS_CONFIG: Record<IncidentStatus, StatusConfig> = {
 
 /**
  * Converts a numeric score (0-100) to a risk level
+ * Higher scores = lower risk (inverted for compliance scores)
  */
 export function scoreToRiskLevel(score: number): RiskLevel {
   if (score >= 80) return 'low';
   if (score >= 60) return 'medium';
   if (score >= 40) return 'high';
   return 'critical';
+}
+
+/**
+ * Converts a risk matrix score (1-25) to a risk level
+ * Used for 5x5 risk matrices where score = likelihood × impact
+ */
+export function riskMatrixScoreToLevel(score: number): RiskLevel {
+  if (score >= RISK_SCORE_THRESHOLDS.critical.min) return 'critical';
+  if (score >= RISK_SCORE_THRESHOLDS.high.min) return 'high';
+  if (score >= RISK_SCORE_THRESHOLDS.medium.min) return 'medium';
+  return 'low';
 }
 
 /**
