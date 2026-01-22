@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { randomBytes, createHash } from 'crypto';
+import { logSecurityEvent, logActivity } from '@/lib/activity/queries';
 
 // ============================================================================
 // Types
@@ -165,6 +166,14 @@ export async function createApiKey(
     return { success: false, error: error.message };
   }
 
+  // Log security event for API key creation
+  await logSecurityEvent('api_key_created', {
+    keyId: data.id,
+    keyName: data.name,
+    scopes: data.scopes,
+    expiresAt: data.expires_at,
+  });
+
   return {
     success: true,
     data: {
@@ -211,6 +220,12 @@ export async function revokeApiKey(
     return { success: false, error: error.message };
   }
 
+  // Log security event for API key revocation
+  await logSecurityEvent('api_key_revoked', {
+    keyId,
+    action: 'revoked',
+  });
+
   return { success: true };
 }
 
@@ -240,6 +255,9 @@ export async function deleteApiKey(
     console.error('Error deleting API key:', error);
     return { success: false, error: error.message };
   }
+
+  // Log activity for API key deletion
+  await logActivity('api_key_deleted', 'auth', keyId, 'API Key');
 
   return { success: true };
 }
@@ -284,6 +302,11 @@ export async function updateApiKey(
     console.error('Error updating API key:', error);
     return { success: false, error: error.message };
   }
+
+  // Log activity for API key update
+  await logActivity('api_key_updated', 'auth', keyId, updates.name || 'API Key', {
+    updatedFields: Object.keys(updateData),
+  });
 
   return { success: true };
 }

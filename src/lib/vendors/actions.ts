@@ -36,6 +36,7 @@ import {
   type VendorErrorCode,
 } from '@/lib/errors';
 import { getCurrentUserOrganization } from '@/lib/auth/organization';
+import { createNotification } from '@/lib/notifications/actions';
 
 // ============================================================================
 // Types
@@ -244,6 +245,20 @@ export async function createVendor(
     entity_name: vendor.name,
     details: { tier: vendor.tier, lei: vendor.lei },
   });
+
+  // Notify when critical vendor or tier-1 vendor is created
+  if (vendor.tier === 'critical' || vendor.tier === 'tier-1' || vendor.supports_critical_function) {
+    try {
+      await createNotification({
+        type: 'vendor',
+        title: 'Critical Vendor Added',
+        message: `${vendor.name} has been added as a ${vendor.tier} vendor${vendor.supports_critical_function ? ' supporting critical functions' : ''}`,
+        href: `/vendors/${vendor.id}`,
+      });
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+    }
+  }
 
   revalidatePath('/vendors');
   revalidatePath('/dashboard');
@@ -914,6 +929,24 @@ export async function calculateAndSaveRiskScore(
       risk_level: result.riskLevel,
     },
   });
+
+  // Notify if risk score is high/critical OR if score increased significantly
+  const previousScore = vendor.risk_score || 0;
+  const scoreIncreased = result.totalScore > previousScore + 10;
+  const isHighRisk = result.riskLevel === 'high' || result.riskLevel === 'critical';
+
+  if ((isHighRisk && scoreIncreased) || result.totalScore >= 75) {
+    try {
+      await createNotification({
+        type: 'vendor',
+        title: 'Vendor Risk Alert',
+        message: `${vendor.name} risk score is now ${result.totalScore} (${result.riskLevel})`,
+        href: `/vendors/${vendorId}`,
+      });
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+    }
+  }
 
   revalidatePath('/vendors');
   revalidatePath(`/vendors/${vendorId}`);

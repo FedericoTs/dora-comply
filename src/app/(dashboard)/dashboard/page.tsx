@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import { Building2, Shield, AlertTriangle, Calendar } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -210,18 +211,18 @@ export default async function DashboardPage() {
 
       {/* Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <a href="/vendors" className="p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
+        <Link href="/vendors" className="p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
           <h3 className="font-medium">Manage Vendors</h3>
           <p className="text-sm text-muted-foreground mt-1">View and manage your third-party providers</p>
-        </a>
-        <a href="/roi" className="p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
+        </Link>
+        <Link href="/roi" className="p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
           <h3 className="font-medium">Register of Information</h3>
           <p className="text-sm text-muted-foreground mt-1">Complete your RoI for regulatory submission</p>
-        </a>
-        <a href="/incidents" className="p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
+        </Link>
+        <Link href="/incidents" className="p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
           <h3 className="font-medium">Incident Reporting</h3>
           <p className="text-sm text-muted-foreground mt-1">Track and report ICT-related incidents</p>
-        </a>
+        </Link>
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import {
   addIncidentEvent,
 } from './queries';
 import { createNotification } from '@/lib/notifications/actions';
+import { logComplianceEvent, logActivity } from '@/lib/activity/queries';
 import {
   createIncidentSchema,
   updateIncidentSchema,
@@ -72,6 +73,14 @@ export async function createIncidentAction(
       });
     }
 
+    // Log activity
+    await logComplianceEvent(
+      'incident_created',
+      incident.id,
+      incident.title,
+      { classification: incident.classification, incidentType: incident.incident_type }
+    );
+
     revalidatePath('/incidents');
     return { success: true, incident };
   } catch (error) {
@@ -102,6 +111,15 @@ export async function updateIncidentAction(
       return { success: false, error: error || 'Failed to update incident' };
     }
 
+    // Log activity with changed fields
+    await logActivity(
+      'updated',
+      'incident',
+      incident.id,
+      incident.title,
+      { changedFields: Object.keys(validationResult.data) }
+    );
+
     revalidatePath('/incidents');
     revalidatePath(`/incidents/${id}`);
     return { success: true, incident };
@@ -122,6 +140,9 @@ export async function deleteIncidentAction(
     if (!success) {
       return { success: false, error: error || 'Failed to delete incident' };
     }
+
+    // Log activity
+    await logActivity('deleted', 'incident', id);
 
     revalidatePath('/incidents');
     return { success: true };
@@ -153,6 +174,15 @@ export async function createReportAction(
       return { success: false, error: error || 'Failed to create report' };
     }
 
+    // Log activity
+    await logActivity(
+      'report_created',
+      'incident',
+      incidentId,
+      `Report: ${report.report_type}`,
+      { reportId: report.id, reportType: report.report_type }
+    );
+
     revalidatePath(`/incidents/${incidentId}`);
     return { success: true, report };
   } catch (error) {
@@ -172,6 +202,14 @@ export async function submitReportAction(
     if (error || !report) {
       return { success: false, error: error || 'Failed to submit report' };
     }
+
+    // Log compliance event for report submission
+    await logComplianceEvent(
+      'incident_reported',
+      report.incident_id,
+      `Report submitted: ${report.report_type}`,
+      { reportId: report.id, reportType: report.report_type, submittedAt: report.submitted_at }
+    );
 
     revalidatePath('/incidents');
     return { success: true, report };
@@ -202,6 +240,15 @@ export async function addEventAction(
     if (error || !event) {
       return { success: false, error: error || 'Failed to add event' };
     }
+
+    // Log activity
+    await logActivity(
+      'event_added',
+      'incident',
+      incidentId,
+      event.description || event.event_type,
+      { eventId: event.id, eventType: event.event_type }
+    );
 
     revalidatePath(`/incidents/${incidentId}`);
     return { success: true, event };

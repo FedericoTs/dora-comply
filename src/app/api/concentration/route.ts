@@ -16,6 +16,9 @@ import {
   generateConcentrationAlerts,
   calculateConcentrationMetrics,
   generateFourthPartyAlerts,
+  calculateSpendHHI,
+  generateSpendConcentrationAlerts,
+  type VendorSpendData,
 } from '@/lib/concentration/calculations';
 import { buildFullSupplyChainGraph, type AggregateChainMetrics } from '@/lib/concentration/chain-utils';
 import type {
@@ -131,6 +134,45 @@ export async function GET(_request: NextRequest) {
 
     const vendors = (vendorData || []).map(mapVendorFromDatabase);
 
+    // Fetch contract spend data aggregated by vendor
+    const { data: contractSpendData } = await supabase
+      .from('vendor_contracts')
+      .select('vendor_id, annual_value, currency')
+      .eq('organization_id', organizationId)
+      .in('status', ['active', 'expiring'])
+      .not('annual_value', 'is', null);
+
+    // Aggregate spend by vendor
+    const vendorSpendMap = new Map<string, { spend: number; currency: string }>();
+    for (const contract of contractSpendData || []) {
+      if (contract.annual_value) {
+        const existing = vendorSpendMap.get(contract.vendor_id);
+        if (existing) {
+          existing.spend += contract.annual_value;
+        } else {
+          vendorSpendMap.set(contract.vendor_id, {
+            spend: contract.annual_value,
+            currency: contract.currency || 'EUR',
+          });
+        }
+      }
+    }
+
+    // Build vendor spend data array
+    const vendorSpendData: VendorSpendData[] = [];
+    for (const vendor of vendors) {
+      const spendInfo = vendorSpendMap.get(vendor.id);
+      if (spendInfo && spendInfo.spend > 0) {
+        vendorSpendData.push({
+          vendor_id: vendor.id,
+          vendor_name: vendor.name,
+          tier: vendor.tier,
+          annual_spend: spendInfo.spend,
+          currency: spendInfo.currency,
+        });
+      }
+    }
+
     // Build supply chain graph and get chain metrics
     let supplyChainData: { graph: DependencyGraph; metrics: AggregateChainMetrics };
     try {
@@ -156,15 +198,19 @@ export async function GET(_request: NextRequest) {
 
     // Calculate all concentration metrics
     const serviceHHI = calculateServiceHHI(vendors);
+    const spendHHI = calculateSpendHHI(vendorSpendData);
     const spofs = detectSinglePointsOfFailure(vendors);
     const geoData = calculateGeographicSpread(vendors);
     const heatMapData = generateHeatMapData(vendors);
     const riskLevels = generateRiskLevelSummaries(vendors, spofs, geoData.alerts);
     const alerts = generateConcentrationAlerts(vendors, spofs, serviceHHI, geoData);
 
+    // Generate spend concentration alerts
+    const spendAlerts = generateSpendConcentrationAlerts(spendHHI, vendors);
+
     // Add fourth-party alerts if we have chain data
     const fourthPartyAlerts = generateFourthPartyAlerts(supplyChainData.metrics);
-    const allAlerts = [...alerts, ...fourthPartyAlerts].sort((a, b) => {
+    const allAlerts = [...alerts, ...spendAlerts, ...fourthPartyAlerts].sort((a, b) => {
       const severityOrder: Record<string, number> = {
         critical: 0,
         high: 1,
@@ -174,8 +220,8 @@ export async function GET(_request: NextRequest) {
       return (severityOrder[a.severity] ?? 4) - (severityOrder[b.severity] ?? 4);
     });
 
-    // Calculate metrics with chain data
-    const metrics = calculateConcentrationMetrics(vendors, supplyChainData.metrics);
+    // Calculate metrics with chain data and spend data
+    const metrics = calculateConcentrationMetrics(vendors, supplyChainData.metrics, vendorSpendData);
 
     const response: ConcentrationResponse = {
       overview: {

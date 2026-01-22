@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logSecurityEvent, logActivity } from '@/lib/activity/queries';
 
 // Valid roles aligned with DORA compliance responsibilities
 const VALID_ROLES = ['admin', 'analyst', 'viewer'] as const;
@@ -111,6 +112,13 @@ export async function PATCH(
       );
     }
 
+    // Log security event for role change
+    await logSecurityEvent('role_changed', {
+      targetUserId: memberId,
+      previousRole: targetUser.role,
+      newRole: role,
+    });
+
     return NextResponse.json({
       data: { memberId, role },
       message: 'Role updated successfully',
@@ -206,6 +214,13 @@ export async function DELETE(
       );
     }
 
+    // Get target user's email for logging before deletion
+    const { data: targetUserFull } = await supabase
+      .from('users')
+      .select('email')
+      .eq('id', memberId)
+      .single();
+
     // Delete member from users table (this removes them from the organization)
     // Note: In production, you might want to soft delete or move to a different organization
     const { error: deleteError } = await supabase
@@ -221,6 +236,15 @@ export async function DELETE(
         { status: 500 }
       );
     }
+
+    // Log activity for member removal
+    await logActivity(
+      'member_removed',
+      'user',
+      memberId,
+      targetUserFull?.email || 'Unknown user',
+      { removedRole: targetUser.role }
+    );
 
     return NextResponse.json({
       data: { memberId },

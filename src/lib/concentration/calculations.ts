@@ -22,6 +22,17 @@ import {
 import type { AggregateChainMetrics } from './chain-utils';
 
 /**
+ * Vendor spend data for HHI calculation
+ */
+export interface VendorSpendData {
+  vendor_id: string;
+  vendor_name: string;
+  tier: string;
+  annual_spend: number;
+  currency: string;
+}
+
+/**
  * Calculate Herfindahl-Hirschman Index (HHI) for service concentration
  *
  * HHI = Sum of (market share)^2 for each service type
@@ -76,6 +87,166 @@ export function calculateServiceHHI(vendors: Vendor[]): {
     level: getHHILevel(hhi),
     breakdown,
   };
+}
+
+/**
+ * Calculate Herfindahl-Hirschman Index (HHI) for spend concentration
+ *
+ * HHI = Sum of (market share)^2 for each vendor's spend
+ * - < 0.15: Low concentration (diversified)
+ * - 0.15-0.25: Moderate concentration
+ * - > 0.25: High concentration (risky dependency on few vendors)
+ *
+ * DORA Article 28 requires monitoring of ICT third-party concentration risk
+ * including financial dependency on individual providers.
+ */
+export function calculateSpendHHI(vendorSpendData: VendorSpendData[]): {
+  hhi: number;
+  level: 'low' | 'moderate' | 'high';
+  totalSpend: number;
+  currency: string;
+  breakdown: Array<{
+    vendor_id: string;
+    vendor_name: string;
+    tier: string;
+    spend: number;
+    share: number;
+    contribution: number;
+  }>;
+} {
+  if (vendorSpendData.length === 0) {
+    return {
+      hhi: 0,
+      level: 'low',
+      totalSpend: 0,
+      currency: 'EUR',
+      breakdown: [],
+    };
+  }
+
+  // Calculate total spend
+  const totalSpend = vendorSpendData.reduce((sum, v) => sum + v.annual_spend, 0);
+
+  if (totalSpend === 0) {
+    return {
+      hhi: 0,
+      level: 'low',
+      totalSpend: 0,
+      currency: vendorSpendData[0]?.currency || 'EUR',
+      breakdown: [],
+    };
+  }
+
+  // Calculate HHI
+  let hhi = 0;
+  const breakdown: Array<{
+    vendor_id: string;
+    vendor_name: string;
+    tier: string;
+    spend: number;
+    share: number;
+    contribution: number;
+  }> = [];
+
+  for (const vendor of vendorSpendData) {
+    const share = vendor.annual_spend / totalSpend;
+    const contribution = share * share;
+    hhi += contribution;
+    breakdown.push({
+      vendor_id: vendor.vendor_id,
+      vendor_name: vendor.vendor_name,
+      tier: vendor.tier,
+      spend: vendor.annual_spend,
+      share: Math.round(share * 100),
+      contribution: Math.round(contribution * 10000) / 10000,
+    });
+  }
+
+  // Sort by contribution descending (highest spend first)
+  breakdown.sort((a, b) => b.contribution - a.contribution);
+
+  return {
+    hhi: Math.round(hhi * 100) / 100,
+    level: getHHILevel(hhi),
+    totalSpend,
+    currency: vendorSpendData[0]?.currency || 'EUR',
+    breakdown,
+  };
+}
+
+/**
+ * Generate spend concentration alerts
+ */
+export function generateSpendConcentrationAlerts(
+  spendHHI: ReturnType<typeof calculateSpendHHI>,
+  vendors: Vendor[]
+): ConcentrationAlert[] {
+  const alerts: ConcentrationAlert[] = [];
+
+  // Check for single vendor exceeding spend threshold
+  for (const item of spendHHI.breakdown) {
+    if (item.share > CONCENTRATION_THRESHOLDS.single_vendor_spend) {
+      alerts.push({
+        id: `spend-${item.vendor_id}`,
+        type: 'threshold_breach',
+        severity: item.share > 50 ? 'critical' : 'high',
+        title: 'Single Vendor Spend Concentration',
+        description: `${item.vendor_name} accounts for ${item.share}% of total ICT spend (${formatCurrency(item.spend, spendHHI.currency)}). This exceeds the ${CONCENTRATION_THRESHOLDS.single_vendor_spend}% threshold and creates significant financial dependency risk.`,
+        affected_vendors: [item.vendor_id],
+        created_at: new Date().toISOString(),
+        action_required: true,
+      });
+    }
+  }
+
+  // High overall concentration alert
+  if (spendHHI.level === 'high') {
+    alerts.push({
+      id: 'spend-hhi-high',
+      type: 'threshold_breach',
+      severity: 'high',
+      title: 'High Spend Concentration',
+      description: `Overall spend HHI is ${spendHHI.hhi.toFixed(2)}, indicating high concentration. DORA Article 28 requires financial entities to avoid excessive dependency on individual ICT third-party providers.`,
+      affected_vendors: spendHHI.breakdown.slice(0, 3).map(v => v.vendor_id),
+      created_at: new Date().toISOString(),
+      action_required: true,
+    });
+  }
+
+  // Check critical vendors with high spend
+  const criticalHighSpend = spendHHI.breakdown.filter(
+    v => v.tier === 'critical' && v.share > 20
+  );
+  if (criticalHighSpend.length > 0) {
+    for (const vendor of criticalHighSpend) {
+      const matchingVendor = vendors.find(v => v.id === vendor.vendor_id);
+      if (matchingVendor?.substitutability_assessment === 'not_substitutable') {
+        alerts.push({
+          id: `critical-spend-${vendor.vendor_id}`,
+          type: 'spof_detected',
+          severity: 'critical',
+          title: 'Non-Substitutable Vendor with High Spend',
+          description: `${vendor.vendor_name} is marked as not substitutable and accounts for ${vendor.share}% of ICT spend. This creates both operational and financial concentration risk.`,
+          affected_vendors: [vendor.vendor_id],
+          created_at: new Date().toISOString(),
+          action_required: true,
+        });
+      }
+    }
+  }
+
+  return alerts;
+}
+
+/**
+ * Format currency for display
+ */
+function formatCurrency(amount: number, currency: string): string {
+  return new Intl.NumberFormat('en-EU', {
+    style: 'currency',
+    currency: currency || 'EUR',
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
 /**
@@ -478,10 +649,12 @@ export function generateConcentrationAlerts(
  */
 export function calculateConcentrationMetrics(
   vendors: Vendor[],
-  chainMetrics?: AggregateChainMetrics
+  chainMetrics?: AggregateChainMetrics,
+  vendorSpendData?: VendorSpendData[]
 ): ConcentrationMetrics {
   const serviceHHI = calculateServiceHHI(vendors);
   const geoData = calculateGeographicSpread(vendors);
+  const spendHHI = calculateSpendHHI(vendorSpendData || []);
 
   const criticalVendors = vendors.filter(v => v.tier === 'critical');
   const importantVendors = vendors.filter(v => v.tier === 'important');
@@ -494,6 +667,9 @@ export function calculateConcentrationMetrics(
 
   // Get top service
   const topService = serviceHHI.breakdown[0];
+
+  // Get top spend vendor
+  const topSpendVendor = spendHHI.breakdown[0];
 
   // Count critical functions from all vendors
   const allCriticalFunctions = new Set<string>();
@@ -515,6 +691,15 @@ export function calculateConcentrationMetrics(
     service_concentration_level: serviceHHI.level,
     top_service: topService?.service || 'N/A',
     top_service_percentage: topService?.share || 0,
+
+    // Spend-based concentration metrics
+    spend_hhi: spendHHI.hhi,
+    spend_concentration_level: spendHHI.level,
+    total_annual_spend: spendHHI.totalSpend,
+    spend_currency: spendHHI.currency,
+    top_vendor_spend: topSpendVendor?.vendor_name || 'N/A',
+    top_vendor_spend_percentage: topSpendVendor?.share || 0,
+    vendors_with_spend_data: spendHHI.breakdown.length,
 
     geographic_spread: geoData.spread,
     eu_percentage: geoData.euPercentage,

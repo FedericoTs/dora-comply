@@ -5,8 +5,6 @@
  * No authentication required - uses magic link token
  */
 
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import { Shield, HelpCircle } from 'lucide-react';
 import { validateQuestionnaireToken } from '@/lib/nis2-questionnaire/queries';
 import { Button } from '@/components/ui/button';

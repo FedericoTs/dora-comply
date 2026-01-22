@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { logActivity } from '@/lib/activity/queries';
+import { sendEmail, generateTeamInviteEmail } from '@/lib/email';
 
 // Validation schema
 const roleValues = ['admin', 'analyst', 'viewer'] as const;
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
         role,
         invited_by: user.id,
       })
-      .select('id, email, role, created_at, expires_at')
+      .select('id, email, role, token, created_at, expires_at')
       .single();
 
     if (insertError) {
@@ -137,13 +139,56 @@ export async function POST(request: NextRequest) {
       .eq('id', currentUser.organization_id)
       .single();
 
-    // TODO: Send invitation email via Resend/SendGrid
-    // For now, just return success - email integration pending
+    // Get inviter's name
+    const { data: inviterProfile } = await supabase
+      .from('users')
+      .select('full_name, email')
+      .eq('id', user.id)
+      .single();
+
+    const inviterName = inviterProfile?.full_name || inviterProfile?.email || 'Team Admin';
+
+    // Log activity for invitation
+    await logActivity(
+      'invitation_sent',
+      'user',
+      invitation.id,
+      normalizedEmail,
+      { role, organizationName: organization?.name }
+    );
+
+    // Send invitation email
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.nis2comply.io';
+    const { subject, html } = generateTeamInviteEmail({
+      email: normalizedEmail,
+      organizationName: organization?.name || 'Your Organization',
+      role,
+      inviterName,
+      token: invitation.token,
+      baseUrl,
+      expiresAt: invitation.expires_at,
+    });
+
+    const emailResult = await sendEmail({
+      to: normalizedEmail,
+      subject,
+      html,
+    });
+
+    if (!emailResult.success && !emailResult.skipped) {
+      console.error('Failed to send invitation email:', emailResult.error);
+      // Don't fail the request - invitation was created, just email failed
+    }
 
     return NextResponse.json({
       data: {
-        ...invitation,
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        created_at: invitation.created_at,
+        expires_at: invitation.expires_at,
         organization: organization?.name,
+        emailSent: emailResult.success || emailResult.skipped,
       },
       message: 'Invitation created successfully',
     });

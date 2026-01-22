@@ -6,7 +6,7 @@
 
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, AlertCircle, Sparkles, Send } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import { getVendorPortalData } from '@/lib/nis2-questionnaire/queries';
 import { VendorPortalSteps } from '@/components/questionnaires/vendor-portal/vendor-portal-steps';
 import { SubmitQuestionnaireButton } from '@/components/questionnaires/vendor-portal/submit-questionnaire-button';
 import { getCategoryLabel } from '@/lib/nis2-questionnaire/questions-library';
+import type { NIS2Category } from '@/lib/nis2-questionnaire/types';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -29,7 +30,7 @@ export default async function ReviewPage({ params }: PageProps) {
     redirect('/');
   }
 
-  const { questionnaire, template, questions, answers, documents, organization_name } = data;
+  const { questionnaire, questions, answers, documents, organization_name } = data;
 
   // If already completed
   if (['approved', 'submitted'].includes(questionnaire.status)) {
@@ -147,7 +148,7 @@ export default async function ReviewPage({ params }: PageProps) {
           {Object.entries(questionsByCategory).map(([category, categoryQuestions]) => (
             <div key={category}>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-medium text-gray-900">{getCategoryLabel(category as any)}</h3>
+                <h3 className="font-medium text-gray-900">{getCategoryLabel(category as NIS2Category)}</h3>
                 <Button variant="ghost" size="sm" asChild>
                   <Link href={`/q/${token}/questions`}>Edit</Link>
                 </Button>

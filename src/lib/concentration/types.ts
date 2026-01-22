@@ -111,6 +111,15 @@ export interface ConcentrationMetrics {
   top_service: string;
   top_service_percentage: number;
 
+  // Spend-based concentration (HHI based on annual contract values)
+  spend_hhi: number;
+  spend_concentration_level: 'low' | 'moderate' | 'high';
+  total_annual_spend: number;
+  spend_currency: string;
+  top_vendor_spend: string; // Vendor name
+  top_vendor_spend_percentage: number;
+  vendors_with_spend_data: number;
+
   // Geographic spread
   geographic_spread: GeographicSpread[];
   eu_percentage: number;

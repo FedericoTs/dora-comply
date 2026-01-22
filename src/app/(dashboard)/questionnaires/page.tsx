@@ -23,8 +23,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
-import { getQuestionnaires, getQuestionnaireStats, getTemplates } from '@/lib/nis2-questionnaire/queries';
-import { QuestionnaireSummary, QuestionnaireStats as Stats } from '@/lib/nis2-questionnaire/types';
+import { getQuestionnaires, getQuestionnaireStats } from '@/lib/nis2-questionnaire/queries';
 import { QuestionnaireList } from '@/components/questionnaires/company/questionnaire-list';
 import { SendQuestionnaireDialog } from '@/components/questionnaires/company/send-questionnaire-dialog';
 

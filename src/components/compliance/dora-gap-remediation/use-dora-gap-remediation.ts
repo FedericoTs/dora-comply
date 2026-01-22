@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { DORA_REQUIREMENTS } from '@/lib/compliance/dora-requirements-data';
 import type { DORAPillar } from '@/lib/compliance/dora-types';
 import type { DORAEvidence, RequirementWithEvidence, ComplianceStats } from './types';
@@ -11,22 +11,14 @@ interface UseDORAGapRemediationProps {
 }
 
 export function useDORAGapRemediation({
-  vendorId,
+  vendorId: _vendorId,
   soc2CoverageByRequirement,
 }: UseDORAGapRemediationProps) {
   // Note: dora_evidence table removed - manual evidence feature not yet implemented
   // Evidence will always be empty until a new evidence system is built
-  const [evidence, setEvidence] = useState<DORAEvidence[]>([]);
-  const [loading, setLoading] = useState(true);
+  const evidence: DORAEvidence[] = [];
+  const loading = false;
   const [expandedPillars, setExpandedPillars] = useState<Set<DORAPillar>>(new Set());
-
-  // Initialize with empty evidence (table removed)
-  useEffect(() => {
-    // dora_evidence table was removed - feature not implemented
-    // Set loading to false immediately with empty evidence
-    setEvidence([]);
-    setLoading(false);
-  }, [vendorId]);
 
   // Group requirements by pillar and add evidence
   const requirementsByPillar = useMemo(() => {
@@ -89,8 +81,9 @@ export function useDORAGapRemediation({
     });
   }, []);
 
-  const addEvidence = useCallback((newEvidence: DORAEvidence) => {
-    setEvidence((prev) => [...prev, newEvidence]);
+  // No-op until evidence feature is implemented
+  const addEvidence = useCallback((_newEvidence: DORAEvidence) => {
+    console.warn('Evidence feature not yet implemented');
   }, []);
 
   return {

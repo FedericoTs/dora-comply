@@ -7,6 +7,7 @@ import {
   Link2,
   AlertTriangle,
   TrendingUp,
+  DollarSign,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,17 @@ import { HelpTooltip, KPI_HELP } from '@/components/ui/help-tooltip';
 interface MetricsGridProps {
   metrics: ConcentrationMetrics;
   className?: string;
+}
+
+/**
+ * Format currency for display
+ */
+function formatCurrency(amount: number, currency: string): string {
+  return new Intl.NumberFormat('en-EU', {
+    style: 'currency',
+    currency: currency || 'EUR',
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
 interface MetricCardProps {
@@ -166,6 +178,67 @@ export function MetricsGrid({ metrics, className }: MetricsGridProps) {
               <span className="text-sm font-medium">{metrics.top_service_percentage}%</span>
             </div>
           </div>
+        </div>
+      </MetricCard>
+
+      {/* Spend Concentration */}
+      <MetricCard
+        title="Spend Concentration"
+        icon={DollarSign}
+        iconColor={metrics.spend_concentration_level === 'high' ? 'text-red-500' : 'text-green-500'}
+        tooltip="Herfindahl-Hirschman Index based on annual contract values. High concentration (>0.25) indicates over-reliance on few vendors."
+      >
+        <div className="space-y-3">
+          {metrics.vendors_with_spend_data > 0 ? (
+            <>
+              <div className="flex items-baseline justify-between">
+                <span className="text-3xl font-bold font-mono">
+                  {metrics.spend_hhi.toFixed(2)}
+                </span>
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    'uppercase text-[10px]',
+                    metrics.spend_concentration_level === 'low' &&
+                      'bg-green-100 text-green-700',
+                    metrics.spend_concentration_level === 'moderate' &&
+                      'bg-yellow-100 text-yellow-700',
+                    metrics.spend_concentration_level === 'high' &&
+                      'bg-red-100 text-red-700'
+                  )}
+                >
+                  {metrics.spend_concentration_level}
+                </Badge>
+              </div>
+
+              <div className="text-sm text-muted-foreground">
+                {formatCurrency(metrics.total_annual_spend, metrics.spend_currency)} total annual spend
+              </div>
+
+              <div className="pt-2 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Top Vendor</span>
+                  <span className="text-sm font-medium truncate max-w-[120px]">
+                    {metrics.top_vendor_spend}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-sm text-muted-foreground">Share</span>
+                  <span className={cn(
+                    'text-sm font-medium',
+                    metrics.top_vendor_spend_percentage > 30 && 'text-red-500'
+                  )}>
+                    {metrics.top_vendor_spend_percentage}%
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground">
+              <p className="text-sm">No spend data available</p>
+              <p className="text-xs mt-1">Add contract values to enable spend analysis</p>
+            </div>
+          )}
         </div>
       </MetricCard>
 

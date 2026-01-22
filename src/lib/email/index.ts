@@ -8,3 +8,4 @@ export * from './client';
 export * from './templates/questionnaire-invite';
 export * from './templates/questionnaire-reminder';
 export * from './templates/questionnaire-submitted';
+export * from './templates/team-invite';

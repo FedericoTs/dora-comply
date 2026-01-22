@@ -7,6 +7,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logActivity } from '@/lib/activity/queries';
+import { sendEmail, generateTeamInviteEmail } from '@/lib/email';
 
 interface RouteContext {
   params: Promise<{ inviteId: string }>;
@@ -75,12 +77,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
+    // Generate new token
+    const newToken = crypto.randomUUID();
+    const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
     // Update the invitation with new token and expiry
     const { data: updated, error: updateError } = await supabase
       .from('organization_invitations')
       .update({
-        token: crypto.randomUUID(),
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        token: newToken,
+        expires_at: newExpiresAt,
         updated_at: new Date().toISOString(),
       })
       .eq('id', inviteId)
@@ -95,10 +101,58 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // TODO: Send invitation email via Resend/SendGrid
+    // Get organization name
+    const { data: organization } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', currentUser.organization_id)
+      .single();
+
+    // Get inviter's name
+    const { data: inviterProfile } = await supabase
+      .from('users')
+      .select('full_name, email')
+      .eq('id', user.id)
+      .single();
+
+    const inviterName = inviterProfile?.full_name || inviterProfile?.email || 'Team Admin';
+
+    // Log activity for invitation resend
+    await logActivity(
+      'invitation_resent',
+      'user',
+      inviteId,
+      invitation.email,
+      { role: invitation.role }
+    );
+
+    // Send invitation email
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.nis2comply.io';
+    const { subject, html } = generateTeamInviteEmail({
+      email: updated.email,
+      organizationName: organization?.name || 'Your Organization',
+      role: updated.role,
+      inviterName,
+      token: newToken,
+      baseUrl,
+      expiresAt: newExpiresAt,
+    });
+
+    const emailResult = await sendEmail({
+      to: updated.email,
+      subject,
+      html,
+    });
+
+    if (!emailResult.success && !emailResult.skipped) {
+      console.error('Failed to send invitation email:', emailResult.error);
+    }
 
     return NextResponse.json({
-      data: updated,
+      data: {
+        ...updated,
+        emailSent: emailResult.success || emailResult.skipped,
+      },
       message: 'Invitation resent successfully',
     });
   } catch (error) {
@@ -173,6 +227,13 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       );
     }
 
+    // Get invitation email before revoking for logging
+    const { data: invitationDetails } = await supabase
+      .from('organization_invitations')
+      .select('email, role')
+      .eq('id', inviteId)
+      .single();
+
     // Update status to revoked
     const { error: updateError } = await supabase
       .from('organization_invitations')
@@ -189,6 +250,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
         { status: 500 }
       );
     }
+
+    // Log activity for invitation revocation
+    await logActivity(
+      'invitation_revoked',
+      'user',
+      inviteId,
+      invitationDetails?.email || 'Unknown',
+      { role: invitationDetails?.role }
+    );
 
     return NextResponse.json({
       data: { id: inviteId },

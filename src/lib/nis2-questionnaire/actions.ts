@@ -37,6 +37,8 @@ import {
   generateQuestionnaireReminderEmail,
   generateQuestionnaireSubmittedEmail,
 } from '@/lib/email';
+import { createNotification } from '@/lib/notifications/actions';
+import { logActivity } from '@/lib/activity/queries';
 
 // ============================================================================
 // RESULT TYPES
@@ -112,6 +114,9 @@ export async function createTemplate(
       console.error('Error creating template:', error);
       return { success: false, error: 'Failed to create template' };
     }
+
+    // Log activity
+    await logActivity('template_created', 'questionnaire', data.id, data.name);
 
     revalidatePath('/questionnaires/templates');
     return { success: true, data };
@@ -193,6 +198,9 @@ export async function updateTemplate(
       return { success: false, error: 'Failed to update template' };
     }
 
+    // Log activity
+    await logActivity('template_updated', 'questionnaire', data.id, data.name, { changedFields: Object.keys(parsed) });
+
     revalidatePath('/questionnaires/templates');
     revalidatePath(`/questionnaires/templates/${templateId}`);
     return { success: true, data };
@@ -222,6 +230,9 @@ export async function deleteTemplate(templateId: string): Promise<ActionResult> 
       console.error('Error deleting template:', error);
       return { success: false, error: 'Failed to delete template' };
     }
+
+    // Log activity
+    await logActivity('template_deleted', 'questionnaire', templateId);
 
     revalidatePath('/questionnaires/templates');
     return { success: true };
@@ -458,6 +469,15 @@ export async function sendQuestionnaire(
       }
     }
 
+    // Log activity
+    await logActivity(
+      'questionnaire_sent',
+      'questionnaire',
+      data.id,
+      `Questionnaire to ${parsed.vendor_name}`,
+      { vendorId: parsed.vendor_id, vendorEmail: parsed.vendor_email }
+    );
+
     revalidatePath('/questionnaires');
     return { success: true, data };
   } catch (error) {
@@ -584,6 +604,38 @@ export async function reviewQuestionnaire(
       return { success: false, error: 'Failed to review questionnaire' };
     }
 
+    // Get questionnaire details for notification
+    const { data: questionnaire } = await supabase
+      .from('nis2_vendor_questionnaires')
+      .select('vendor_name, template:nis2_questionnaire_templates(name)')
+      .eq('id', questionnaireId)
+      .single();
+
+    // Create notification about the review
+    try {
+      const statusLabel = parsed.status === 'approved' ? 'Approved' : 'Rejected';
+      // Template relation needs cast through unknown due to Supabase typing
+      const template = questionnaire?.template as unknown as { name: string } | null;
+      const templateName = template?.name || 'questionnaire';
+      await createNotification({
+        type: 'compliance',
+        title: `Questionnaire ${statusLabel}`,
+        message: `${questionnaire?.vendor_name || 'Vendor'}'s ${templateName} has been ${parsed.status}`,
+        href: `/questionnaires/${questionnaireId}`,
+      });
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+    }
+
+    // Log activity
+    await logActivity(
+      `questionnaire_${parsed.status}`,
+      'questionnaire',
+      questionnaireId,
+      questionnaire?.vendor_name || 'Questionnaire',
+      { status: parsed.status, hasNotes: !!parsed.review_notes }
+    );
+
     revalidatePath('/questionnaires');
     revalidatePath(`/questionnaires/${questionnaireId}`);
     return { success: true };
@@ -624,6 +676,9 @@ export async function deleteQuestionnaire(questionnaireId: string): Promise<Acti
       console.error('Error deleting questionnaire:', error);
       return { success: false, error: 'Failed to delete questionnaire' };
     }
+
+    // Log activity
+    await logActivity('questionnaire_deleted', 'questionnaire', questionnaireId);
 
     revalidatePath('/questionnaires');
     return { success: true };
@@ -852,6 +907,18 @@ export async function submitQuestionnaire(
     } catch (emailError) {
       console.error('Failed to send submission notification:', emailError);
       // Don't fail the whole operation if email fails
+    }
+
+    // Create in-app notification for the organization
+    try {
+      await createNotification({
+        type: 'vendor',
+        title: 'Questionnaire Submitted',
+        message: `${questionnaire.vendor_name || 'A vendor'} has submitted their ${questionnaire.template?.name || 'security questionnaire'}`,
+        href: `/questionnaires/${questionnaire.id}`,
+      });
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
     }
 
     return { success: true };

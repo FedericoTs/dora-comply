@@ -5,7 +5,7 @@
  */
 
 import { redirect } from 'next/navigation';
-import { CheckCircle2, Clock, Mail, Calendar, Sparkles } from 'lucide-react';
+import { CheckCircle2, Clock, Mail, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getVendorPortalData } from '@/lib/nis2-questionnaire/queries';
@@ -22,7 +22,7 @@ export default async function CompletePage({ params }: PageProps) {
     redirect('/');
   }
 
-  const { questionnaire, template, answers, organization_name } = data;
+  const { questionnaire, answers, organization_name } = data;
 
   // Calculate stats
   const aiAssistedCount = answers.filter((a) =>

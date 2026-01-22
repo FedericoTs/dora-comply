@@ -7,7 +7,7 @@
 
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, FileText, Sparkles, CheckCircle2, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileText, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

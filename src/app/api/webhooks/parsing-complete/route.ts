@@ -196,6 +196,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     console.log(`[webhook] Created snapshot: ${snapshot.id}`);
 
+    // Create notification for org users about parsing completion
+    try {
+      await supabase.from('notifications').insert({
+        organization_id: doc.organization_id,
+        user_id: null, // Org-wide notification
+        type: 'compliance',
+        title: 'Document Analysis Complete',
+        message: 'SOC 2 report has been parsed and a compliance snapshot was created',
+        href: '/documents',
+      });
+    } catch (notifError) {
+      console.error('[webhook] Failed to create notification:', notifError);
+      // Don't fail the webhook if notification fails
+    }
+
     return NextResponse.json({
       success: true,
       snapshotTriggered: true,
