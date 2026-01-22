@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/tooltip';
 import { TierBadge } from '@/components/ui/tier-badge';
 import { GradeBadge, scoreToGrade } from '@/components/ui/grade-badge';
-import { TrendArrow } from '@/components/ui/trend-arrow';
+import { TrendArrow } from '@/components/ui/trend-indicator';
 import { ProgressMini } from '@/components/ui/progress-mini';
 import { cn } from '@/lib/utils';
 import type { Vendor, VendorSortOptions } from '@/lib/vendors/types';

@@ -148,3 +148,87 @@ export function TrendBadge({
     </span>
   );
 }
+
+/**
+ * TrendArrow - Simplified trend indicator with arrow icon
+ * Backwards-compatible alias for components that used trend-arrow.tsx
+ */
+export interface TrendArrowProps {
+  /** Numeric change value (positive = up, negative = down, 0 = stable) */
+  value: number;
+  /** Show the numeric value */
+  showValue?: boolean;
+  /** Format the value as percentage */
+  isPercentage?: boolean;
+  /** Invert colors (green for down is good, e.g., for costs/risks) */
+  invertColors?: boolean;
+  /** Size variant */
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}
+
+export function TrendArrow({
+  value,
+  showValue = true,
+  isPercentage = false,
+  invertColors = false,
+  size = 'md',
+  className,
+}: TrendArrowProps) {
+  // Map size to TrendIndicator sizes
+  const sizeMap = { sm: 'sm', md: 'md', lg: 'lg' } as const;
+
+  return (
+    <TrendIndicator
+      value={value}
+      format={isPercentage ? 'percent' : 'number'}
+      size={sizeMap[size]}
+      showValue={showValue}
+      showIcon={true}
+      invertColors={invertColors}
+      className={className}
+    />
+  );
+}
+
+/**
+ * TrendDirectionIndicator - Icon-only trend indicator
+ * For compact displays where only direction matters
+ */
+export interface TrendDirectionIndicatorProps {
+  direction: 'up' | 'down' | 'stable';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
+  /** Invert colors (green for down) */
+  invertColors?: boolean;
+  className?: string;
+}
+
+export function TrendDirectionIndicator({
+  direction,
+  size = 'sm',
+  invertColors = false,
+  className,
+}: TrendDirectionIndicatorProps) {
+  const sizeConfig = {
+    xs: 'h-3 w-3',
+    sm: 'h-3.5 w-3.5',
+    md: 'h-4 w-4',
+    lg: 'h-5 w-5',
+  };
+
+  const getColor = () => {
+    if (direction === 'stable') return 'text-muted-foreground';
+    if (invertColors) {
+      return direction === 'up'
+        ? 'text-red-500'
+        : 'text-emerald-500';
+    }
+    return direction === 'up'
+      ? 'text-emerald-500'
+      : 'text-red-500';
+  };
+
+  const Icon = direction === 'up' ? TrendingUp : direction === 'down' ? TrendingDown : Minus;
+
+  return <Icon className={cn(sizeConfig[size], getColor(), className)} />;
+}

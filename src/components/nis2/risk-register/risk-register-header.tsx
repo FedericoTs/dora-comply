@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Plus, Download, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { StatusDot } from '@/components/ui/status-dot';
+import { RiskStatusDot } from '@/components/ui/status-badge';
 import { cn } from '@/lib/utils';
 import type { RiskSummary } from '@/lib/nis2/types';
 
@@ -114,7 +114,7 @@ function RiskLevelCard({ level, count, total }: RiskLevelCardProps) {
   return (
     <div className={cn('rounded-lg border p-4', bgColors[level])}>
       <div className="flex items-center gap-2 mb-1">
-        <StatusDot status={level} />
+        <RiskStatusDot status={level} />
         <span className="text-sm font-medium">{labels[level]}</span>
       </div>
       <p className="text-2xl font-bold">{count}</p>

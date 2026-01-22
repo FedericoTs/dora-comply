@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { TrendArrow } from '@/components/ui/trend-arrow';
+import { TrendArrow } from '@/components/ui/trend-indicator';
 import { ProgressMini, ProgressBlocks } from '@/components/ui/progress-mini';
 import { type LucideIcon } from 'lucide-react';
 

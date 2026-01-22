@@ -20,8 +20,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { ChevronUp, ChevronDown, MoreHorizontal, type LucideIcon } from 'lucide-react';
-import { StatusDot, type StatusLevel } from './status-dot';
-import { TrendArrow } from './trend-arrow';
+import { StatusDot, type GeneralStatus as StatusLevel } from './status-badge';
+import { TrendArrow } from './trend-indicator';
 import { ProgressMini } from './progress-mini';
 import { GradeIndicator, type Grade } from './grade-badge';
 import { TierIndicator, type VendorTier } from './tier-badge';
