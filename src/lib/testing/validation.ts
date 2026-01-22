@@ -18,6 +18,10 @@ import {
   TLPT_STATUSES,
   TESTING_DOCUMENT_TYPES,
 } from './types';
+import {
+  flexibleDateSchema,
+  flexibleDatetimeSchema,
+} from '@/lib/validation/schemas';
 
 // ============================================================================
 // Base Schemas
@@ -33,17 +37,6 @@ export const findingStatusSchema = z.enum(FINDING_STATUSES);
 export const tlptFrameworkSchema = z.enum(TLPT_FRAMEWORKS);
 export const tlptStatusSchema = z.enum(TLPT_STATUSES);
 export const testingDocumentTypeSchema = z.enum(TESTING_DOCUMENT_TYPES);
-
-// Flexible date validation
-const flexibleDateSchema = z.string().refine(
-  (val) => !Number.isNaN(Date.parse(val)),
-  { message: 'Invalid date' }
-).optional();
-
-const flexibleDatetimeSchema = z.string().refine(
-  (val) => !Number.isNaN(Date.parse(val)),
-  { message: 'Invalid datetime' }
-).transform((val) => new Date(val).toISOString());
 
 // ============================================================================
 // Testing Programme Schemas

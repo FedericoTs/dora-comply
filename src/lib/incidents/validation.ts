@@ -21,6 +21,7 @@ import type {
   ThresholdStatus,
   IncidentClassification,
 } from './types';
+import { flexibleDatetimeSchema } from '@/lib/validation/schemas';
 
 // ============================================================================
 // Base Schemas
@@ -33,13 +34,6 @@ export const reportTypeSchema = z.enum(REPORT_TYPES);
 export const reportStatusSchema = z.enum(REPORT_STATUSES);
 export const impactLevelSchema = z.enum(IMPACT_LEVELS);
 export const eventTypeSchema = z.enum(EVENT_TYPES);
-
-// Flexible datetime validation that accepts various ISO formats from Supabase
-// Converts to proper ISO string for consistency
-const flexibleDatetimeSchema = z.string().refine(
-  (val) => !Number.isNaN(Date.parse(val)),
-  { message: 'Invalid ISO datetime' }
-).transform((val) => new Date(val).toISOString());
 
 // ============================================================================
 // Incident Schemas
