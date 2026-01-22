@@ -77,7 +77,7 @@ export function CreateTemplateDialog({ children }: CreateTemplateDialogProps) {
       } else {
         toast.error(result.error || 'Failed to create template');
       }
-    } catch (error) {
+    } catch {
       toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);

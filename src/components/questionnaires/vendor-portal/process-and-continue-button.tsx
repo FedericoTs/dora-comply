@@ -14,7 +14,6 @@ import {
   Sparkles,
   FileText,
   CheckCircle2,
-  Loader2,
   Brain,
   Zap,
 } from 'lucide-react';

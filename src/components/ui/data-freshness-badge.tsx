@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Clock, AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -237,20 +237,15 @@ export function DataFreshnessText({
   criticalThresholdDays = 90,
   className,
 }: Pick<DataFreshnessBadgeProps, 'lastUpdated' | 'warningThresholdDays' | 'criticalThresholdDays' | 'className'>) {
-  // Use state to avoid hydration mismatch
-  const [freshnessData, setFreshnessData] = useState<{
-    status: 'fresh' | 'warning' | 'stale' | 'unknown';
-    displayText: string;
-  }>({ status: 'unknown', displayText: '...' });
-
-  useEffect(() => {
+  // Calculate freshness data directly
+  const freshnessData = useMemo(() => {
     const data = calculateFreshness(
       lastUpdated,
       warningThresholdDays,
       criticalThresholdDays,
       true
     );
-    setFreshnessData({ status: data.status, displayText: data.displayText });
+    return { status: data.status, displayText: data.displayText };
   }, [lastUpdated, warningThresholdDays, criticalThresholdDays]);
 
   const colorMap = {

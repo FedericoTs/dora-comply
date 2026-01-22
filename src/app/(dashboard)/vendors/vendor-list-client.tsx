@@ -385,7 +385,7 @@ export function VendorListClient({
   // Bulk action handler for VendorBulkActions
   const handleBulkAction = async (
     action: BulkActionType,
-    params?: Record<string, unknown>
+    _params?: Record<string, unknown> // Reserved for future use
   ): Promise<BulkActionResult> => {
     const selectedVendorsList = vendors.filter(v => selectedIds.includes(v.id));
 

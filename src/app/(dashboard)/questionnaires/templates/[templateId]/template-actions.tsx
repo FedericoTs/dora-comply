@@ -50,7 +50,7 @@ export function TemplateActions({ template }: TemplateActionsProps) {
       } else {
         toast.error(result.error || 'Failed to delete template');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete template');
     } finally {
       setIsDeleting(false);

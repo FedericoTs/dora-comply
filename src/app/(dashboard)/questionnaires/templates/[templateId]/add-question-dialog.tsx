@@ -39,7 +39,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -72,7 +71,6 @@ import {
 import { toast } from 'sonner';
 import { addQuestion } from '@/lib/nis2-questionnaire/actions';
 import { NIS2_CATEGORIES, type NIS2Category, type QuestionType } from '@/lib/nis2-questionnaire/types';
-import { cn } from '@/lib/utils';
 
 // Question type configuration with descriptions
 const questionTypes: { value: QuestionType; label: string; description: string; hasOptions: boolean }[] = [
@@ -222,7 +220,7 @@ export function AddQuestionDialog({ templateId, category, trigger }: AddQuestion
       } else {
         toast.error(result.error || 'Failed to add question');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to add question');
     } finally {
       setIsSubmitting(false);

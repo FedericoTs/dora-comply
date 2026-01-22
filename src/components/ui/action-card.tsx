@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { X, ArrowRight, Clock, AlertTriangle, AlertCircle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -115,12 +115,12 @@ export function ActionCard({
       })
     : null;
 
-  // Check if overdue - use state to avoid hydration mismatch
-  const [isOverdue, setIsOverdue] = useState(false);
-  useEffect(() => {
+  // Check if overdue (computed directly, no hydration mismatch for server component)
+  const isOverdue = useMemo(() => {
     if (dueDate && !isCompleted) {
-      setIsOverdue(new Date(dueDate) < new Date());
+      return new Date(dueDate) < new Date();
     }
+    return false;
   }, [dueDate, isCompleted]);
 
   // Size configurations

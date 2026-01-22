@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   Settings,
   Plus,
-  Clock,
   FileText,
   ChevronRight,
   GripVertical,
@@ -26,7 +25,6 @@ import {
   Hash,
   Calendar,
   List,
-  CircleDot,
   FileUp,
   Sparkles,
 } from 'lucide-react';
@@ -67,8 +65,6 @@ import {
   type TemplateQuestion,
   type QuestionType,
 } from '@/lib/nis2-questionnaire/types';
-import { getCategoryLabel, getCategoryArticle } from '@/lib/nis2-questionnaire/questions-library';
-import { cn } from '@/lib/utils';
 import { TemplateActions } from './template-actions';
 import { AddQuestionButton } from './add-question-button';
 import { AddQuestionDialog } from './add-question-dialog';

@@ -140,7 +140,7 @@ export function SendQuestionnaireDialog({
       } else {
         toast.error(result.error || 'Failed to send questionnaire');
       }
-    } catch (error) {
+    } catch {
       toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);

@@ -125,7 +125,7 @@ export function AddQuestionButton({ templateId, category }: AddQuestionButtonPro
       } else {
         toast.error(result.error || 'Failed to add question');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to add question');
     } finally {
       setIsSubmitting(false);

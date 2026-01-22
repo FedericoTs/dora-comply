@@ -87,7 +87,7 @@ const STATUS_CONFIG: Record<
 
 export function DocumentUploadZone({
   token,
-  existingDocuments,
+  existingDocuments: _existingDocuments, // Available for duplicate detection
   onUploadComplete,
 }: DocumentUploadZoneProps) {
   const router = useRouter();

@@ -20,14 +20,13 @@ import {
   FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -118,7 +117,7 @@ export function QuestionnaireForm({
   token,
   sections,
   answerMap,
-  questionnaireId,
+  questionnaireId: _questionnaireId, // Reserved for future use
   documents = [],
 }: QuestionnaireFormProps) {
   const router = useRouter();
@@ -230,7 +229,7 @@ export function QuestionnaireForm({
             return newMap;
           });
         }
-      } catch (error) {
+      } catch {
         toast.error('Failed to save answer');
         setLocalAnswers((prev) => {
           const newMap = new Map(prev);
@@ -245,7 +244,7 @@ export function QuestionnaireForm({
 
   // Save all dirty answers
   const saveAllAnswers = useCallback(async () => {
-    const dirtyQuestions = Array.from(localAnswers.entries()).filter(([_, a]) => a.isDirty);
+    const dirtyQuestions = Array.from(localAnswers.entries()).filter(([, a]) => a.isDirty);
 
     for (const [questionId] of dirtyQuestions) {
       await saveQuestionAnswer(questionId);

@@ -10,13 +10,16 @@ interface UseDORAGapRemediationProps {
   soc2CoverageByRequirement: Record<string, 'full' | 'partial' | 'none'>;
 }
 
+// Empty evidence array constant (evidence feature not yet implemented)
+const EMPTY_EVIDENCE: DORAEvidence[] = [];
+
 export function useDORAGapRemediation({
   vendorId: _vendorId,
   soc2CoverageByRequirement,
 }: UseDORAGapRemediationProps) {
   // Note: dora_evidence table removed - manual evidence feature not yet implemented
   // Evidence will always be empty until a new evidence system is built
-  const evidence: DORAEvidence[] = [];
+  const evidence = EMPTY_EVIDENCE;
   const loading = false;
   const [expandedPillars, setExpandedPillars] = useState<Set<DORAPillar>>(new Set());
 

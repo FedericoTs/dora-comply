@@ -49,7 +49,7 @@ export function QuestionnaireReviewActions({ questionnaireId }: QuestionnaireRev
       } else {
         toast.error(result.error || 'Failed to approve');
       }
-    } catch (error) {
+    } catch {
       toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -76,7 +76,7 @@ export function QuestionnaireReviewActions({ questionnaireId }: QuestionnaireRev
       } else {
         toast.error(result.error || 'Failed to reject');
       }
-    } catch (error) {
+    } catch {
       toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);

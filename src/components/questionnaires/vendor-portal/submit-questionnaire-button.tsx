@@ -51,7 +51,7 @@ export function SubmitQuestionnaireButton({ token, disabled }: SubmitQuestionnai
       } else {
         toast.error(result.error || 'Failed to submit questionnaire');
       }
-    } catch (error) {
+    } catch {
       toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);

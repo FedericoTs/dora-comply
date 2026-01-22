@@ -26,7 +26,6 @@ export default async function QuestionsPage({ params }: PageProps) {
 
   // Calculate unprocessed documents
   const unprocessedDocuments = documents.filter((d) => !d.ai_processed);
-  const hasAIAnswers = answers.some((a) => a.source === 'ai_extracted');
 
   // If already completed
   if (['approved', 'submitted'].includes(questionnaire.status)) {

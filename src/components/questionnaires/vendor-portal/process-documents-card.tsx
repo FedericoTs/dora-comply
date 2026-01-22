@@ -24,7 +24,7 @@ interface ProcessDocumentsCardProps {
 export function ProcessDocumentsCard({
   token,
   unprocessedCount,
-  totalDocuments,
+  totalDocuments: _totalDocuments, // Available for UI display
 }: ProcessDocumentsCardProps) {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -72,7 +72,7 @@ export function ProcessDocumentsCard({
           router.refresh();
         }, 1500);
       }
-    } catch (error) {
+    } catch {
       setResult({
         success: false,
         errors: ['Network error. Please try again.'],

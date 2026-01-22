@@ -76,6 +76,7 @@ export function GlobalSearch({ placeholder = 'Search anything...' }: GlobalSearc
 
   // Prevent hydration mismatch by only rendering dialog after mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- necessary for hydration safety
     setMounted(true);
   }, []);
 

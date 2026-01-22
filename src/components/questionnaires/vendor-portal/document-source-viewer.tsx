@@ -7,7 +7,7 @@
  * Shows the question, AI answer, and the source document side by side.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   FileText,
   Sparkles,
@@ -80,21 +79,21 @@ export function DocumentSourceViewer({
   onClose,
   token,
   sourceContext,
-  documents,
+  documents: _documents, // Available for future use
   allSources = [],
   onNavigate,
 }: DocumentSourceViewerProps) {
   const [isFullWidth, setIsFullWidth] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Find current index when context changes
-  useEffect(() => {
+  // Compute current index based on sourceContext (memoized, no setState in effect)
+  const currentIndex = useMemo(() => {
     if (sourceContext && allSources.length > 0) {
       const idx = allSources.findIndex(
         (s) => s.question.id === sourceContext.question.id
       );
-      if (idx >= 0) setCurrentIndex(idx);
+      return idx >= 0 ? idx : 0;
     }
+    return 0;
   }, [sourceContext, allSources]);
 
   if (!sourceContext) return null;
