@@ -32,7 +32,6 @@ import {
   Globe,
   Building2,
   Scale,
-  Loader2,
 } from 'lucide-react';
 import { Sparkline } from '@/components/ui/sparkline';
 import type { Vendor, VendorWithRelations } from '@/lib/vendors/types';

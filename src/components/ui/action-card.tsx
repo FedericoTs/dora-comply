@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { X, ArrowRight, Clock, AlertTriangle, AlertCircle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';

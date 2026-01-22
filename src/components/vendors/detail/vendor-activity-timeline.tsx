@@ -22,12 +22,10 @@ import {
   UserPlus,
   RefreshCw,
   TrendingUp,
-  TrendingDown,
   Calendar,
   ChevronDown,
   ChevronUp,
   Clock,
-  Loader2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fetchVendorActivities } from '@/lib/vendors/actions';

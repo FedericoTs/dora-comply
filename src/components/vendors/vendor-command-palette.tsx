@@ -191,9 +191,11 @@ export function VendorCommandPalette({
   const router = useRouter();
 
   // Prevent hydration mismatch by only rendering after mount
+  /* eslint-disable react-hooks/set-state-in-effect -- Intentional: mount state for hydration safety */
   useEffect(() => {
     setMounted(true);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Keyboard shortcut handler
   useEffect(() => {

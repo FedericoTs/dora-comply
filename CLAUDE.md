@@ -18,7 +18,7 @@ The platform automates vendor assessments, manages third-party risk, handles inc
 
 | Layer | Technology | Version |
 |-------|------------|---------|
-| Framework | Next.js (App Router) | 15.x |
+| Framework | Next.js (App Router) | 16.x |
 | Language | TypeScript | 5.x (strict mode) |
 | UI Library | shadcn/ui (New York style) | latest |
 | Styling | Tailwind CSS | 4.x |
@@ -39,12 +39,13 @@ compliance-app/
 │   │   ├── (dashboard)/        # Protected routes
 │   │   ├── (marketing)/        # Public marketing pages
 │   │   └── api/                # API routes
-│   ├── components/             # React components (270+ files)
-│   │   ├── ui/                 # shadcn/ui base components (39)
+│   ├── components/             # React components (333 files)
+│   │   ├── ui/                 # shadcn/ui base components (51)
 │   │   ├── vendors/            # Vendor management (24)
 │   │   ├── documents/          # Document handling (15)
 │   │   ├── dashboard/          # Dashboard widgets (14)
 │   │   ├── incidents/          # Incident management (12)
+│   │   ├── questionnaires/     # Vendor questionnaires (12)
 │   │   ├── soc2/               # SOC 2 analysis (11)
 │   │   ├── settings/           # Settings pages (9)
 │   │   ├── roi/                # Register of Information (9)
@@ -54,7 +55,7 @@ compliance-app/
 │   ├── lib/                    # Business logic (30+ modules)
 │   └── types/                  # TypeScript types
 ├── supabase/
-│   └── migrations/             # SQL migrations (10 applied)
+│   └── migrations/             # SQL migrations (29 applied)
 ├── docs/                       # Architecture & planning docs
 ├── scripts/                    # Utility & sales scripts
 └── data/esa/                   # ESA regulatory reference files
@@ -139,6 +140,11 @@ Premium utility classes from `globals.css`:
 | StatCard | `stat-card.tsx` | Metric displays |
 | StatusBadge | `status-badge.tsx` | Status indicators |
 | HelpTooltip | `help-tooltip.tsx` | Help icons |
+| ActionCard | `action-card.tsx` | Priority action cards |
+| Sparkline | `sparkline.tsx` | Trend mini-charts |
+| TrendIndicator | `trend-indicator.tsx` | Delta displays |
+| DataFreshnessBadge | `data-freshness-badge.tsx` | Staleness indicators |
+| HealthScoreGauge | `health-score-gauge.tsx` | Health visualization |
 
 ### Feature Components
 
@@ -187,6 +193,17 @@ Premium utility classes from `globals.css`:
 - `dora-evidence-chart.tsx` - Evidence tracking
 - `dora-gap-analysis.tsx` - Gap identification
 - `dora-gap-remediation/` - Remediation workflow
+
+#### Questionnaires (`/components/questionnaires/`) - 12 files
+- `company/questionnaire-dashboard.tsx` - Admin dashboard
+- `company/send-questionnaire-dialog.tsx` - Send to vendors
+- `company/create-template-dialog.tsx` - Template creation
+- `company/questionnaire-review-panel.tsx` - Response review
+- `vendor-portal/vendor-portal-layout.tsx` - Portal shell
+- `vendor-portal/document-upload-zone.tsx` - Document uploads
+- `vendor-portal/questionnaire-form.tsx` - Question form
+- `vendor-portal/ai-suggestion-badge.tsx` - AI indicators
+- `vendor-portal/submit-questionnaire-button.tsx` - Submission
 
 #### Dashboard (`/components/dashboard/`) - 14 files
 - Metric cards, charts, and widgets for the main dashboard
@@ -245,6 +262,7 @@ Premium utility classes from `globals.css`:
 | `contacts/` | Contact management |
 | `testing/` | Resilience testing |
 | `soc2/` | SOC 2 report parsing |
+| `nis2-questionnaire/` | Vendor questionnaire system |
 
 ### AI & External
 
@@ -265,29 +283,54 @@ Premium utility classes from `globals.css`:
 - **Multi-tenant:** All tables use `organization_id`
 - **RLS:** Enabled on all tables
 
-### Migrations (10 applied)
+### Migrations (29 applied)
 
-1. `001_initial_schema.sql` - Core entities (orgs, users, vendors)
-2. `002_incident_reporting.sql` - Incident management
-3. `003_enhanced_roi.sql` - Full RoI support (15 templates)
-4. `004_framework_mapping.sql` - Cross-framework controls
-5. `005_esa_field_additions.sql` - ESA regulatory fields
-6. `006_lei_enrichment.sql` - LEI/GLEIF integration
-7. `007_parsed_soc2_insert_policy.sql` - SOC 2 parsing
-8. `008_extraction_jobs.sql` - AI extraction jobs
-9. `009_dora_compliance_scoring.sql` - Compliance metrics
-10. `010_soc2_roi_mapping.sql` - SOC 2 to RoI mapping
+**Core Schema (001-010):**
+- `001_initial_schema.sql` - Core entities (orgs, users, vendors)
+- `002_incident_reporting.sql` - Incident management
+- `003_enhanced_roi.sql` - Full RoI support (15 templates)
+- `004_framework_mapping.sql` - Cross-framework controls
+- `005_esa_field_additions.sql` - ESA regulatory fields
+- `006_lei_enrichment.sql` - LEI/GLEIF integration
+- `007_parsed_soc2_insert_policy.sql` - SOC 2 parsing
+- `008_extraction_jobs.sql` - AI extraction jobs
+- `009_dora_compliance_scoring.sql` - Compliance metrics
+- `010_soc2_roi_mapping.sql` - SOC 2 to RoI mapping
 
-### Key Tables
+**Feature Extensions (011-020):**
+- `011_roi_ux_improvements.sql` - RoI user experience
+- `012_roi_population_tracking.sql` - RoI population tracking
+- `013_soft_delete_columns.sql` - Soft delete support
+- `014_resilience_testing.sql` - Testing framework
+- `015_continuous_monitoring.sql` - Vendor monitoring
+- `016_maturity_history.sql` - Maturity tracking
+- `017_framework_licensing.sql` - Framework licensing
+- `018_vendor_framework_compliance.sql` - Multi-framework compliance
+- `019_nis2_risk_management.sql` - NIS2 risk register
+- `020_nis2_vendor_questionnaire.sql` - Vendor questionnaire system
+
+**Refinements & Cleanup (021-028):**
+- `021_fix_questionnaire_progress_stats.sql` - Questionnaire progress
+- `022_fix_validate_token_exclude_draft.sql` - Token validation
+- `023_database_cleanup.sql` - Remove unused tables
+- `024_chain_traversal.sql` - Subcontractor chain analysis
+- `025_cleanup_remaining_tables.sql` - Further cleanup
+- `026_security_fixes.sql` - Security hardening
+- `027_fix_function_search_path.sql` - Function security
+- `028_remove_deprecated_tables.sql` - Final deprecated table removal
+
+### Key Tables (74 total)
 
 | Table | Purpose |
 |-------|---------|
 | `organizations` | Multi-tenant orgs |
 | `profiles` | User profiles |
+| `organization_invitations` | Team invitations |
 | `vendors` | Third-party providers |
 | `vendor_certifications` | Vendor certs (SOC 2, ISO) |
 | `vendor_contracts` | Contract details |
 | `vendor_contacts` | Vendor contacts |
+| `vendor_framework_compliance` | Multi-framework compliance |
 | `documents` | Uploaded documents |
 | `incidents` | ICT incidents |
 | `incident_reports` | Regulatory reports |
@@ -295,6 +338,12 @@ Premium utility classes from `globals.css`:
 | `tlpt_engagements` | TLPT tracking |
 | `roi_entries` | RoI data entries |
 | `dora_control_mappings` | DORA article mappings |
+| `nis2_questionnaire_templates` | Questionnaire templates |
+| `nis2_template_questions` | Template questions |
+| `nis2_vendor_questionnaires` | Questionnaire instances |
+| `nis2_questionnaire_answers` | Vendor responses |
+| `nis2_questionnaire_documents` | Uploaded documents |
+| `nis2_ai_extractions` | AI extraction jobs |
 
 ---
 
@@ -317,6 +366,9 @@ Premium utility classes from `globals.css`:
 | `/api/copilot` | AI copilot chat |
 | `/api/gleif` | LEI validation |
 | `/api/sanctions` | Sanctions screening |
+| `/api/questionnaires` | Questionnaire management |
+| `/api/vendor-portal/[token]` | Public vendor portal API |
+| `/api/invite` | Team invitation handling |
 
 ---
 
@@ -361,6 +413,20 @@ Premium utility classes from `globals.css`:
 - Cross-reference validation
 - Export to regulatory format
 - Gap analysis and suggestions
+
+### 7. Vendor Questionnaire System
+- NIS2 security questionnaire templates
+- Magic link vendor portal (`/q/[token]`)
+- AI-powered document extraction (SOC 2, ISO 27001, policies)
+- Answer pre-filling with confidence scores
+- Progress tracking and email notifications
+- Review and approval workflow
+
+### 8. Team Management
+- Organization invitation system
+- Role-based access (Admin, Member)
+- Pending invitation tracking
+- Team member management
 
 ---
 

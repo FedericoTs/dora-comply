@@ -9,23 +9,17 @@ import {
   Shield,
   AlertTriangle,
   CheckCircle2,
-  Clock,
   ArrowRight,
   Activity,
-  TrendingUp,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { HealthScoreGauge } from '@/components/ui/health-score-gauge';
-import { TrendIndicator } from '@/components/ui/trend-indicator';
 import { DataFreshnessBadge } from '@/components/ui/data-freshness-badge';
-import { ActionCard, ActionList, type ActionCardProps } from '@/components/ui/action-card';
-import {
-  getVendorHealthBreakdown,
-  type VendorHealthDimension as CentralizedHealthDimension,
-} from '@/lib/vendors/vendor-health-utils';
+import { ActionList, type ActionCardProps } from '@/components/ui/action-card';
+import { getVendorHealthBreakdown } from '@/lib/vendors/vendor-health-utils';
 import type { VendorWithRelations } from '@/lib/vendors/types';
 
 // ============================================================================

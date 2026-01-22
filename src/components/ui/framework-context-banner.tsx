@@ -10,7 +10,7 @@
 import { useFramework } from '@/lib/context/framework-context';
 import { FRAMEWORK_DISPLAY_NAMES, FRAMEWORK_COLORS } from '@/lib/licensing/types';
 import { cn } from '@/lib/utils';
-import { Shield, Building2, FileText, AlertTriangle, Info } from 'lucide-react';
+import { Shield, Building2, FileText, AlertTriangle } from 'lucide-react';
 import type { FrameworkCode } from '@/lib/licensing/types';
 
 interface FrameworkContextBannerProps {
