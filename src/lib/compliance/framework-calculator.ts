@@ -13,9 +13,16 @@ import {
   ComplianceStatus,
   RequirementPriority,
   RequirementAssessment,
-  getPriorityWeight,
   ALL_FRAMEWORK_CATEGORIES,
 } from './framework-types';
+import {
+  calculateWeightedScore,
+  scoreToComplianceStatus,
+  priorityToEffort,
+  sortByPriority,
+  getPriorityWeight,
+  SCORE_THRESHOLDS,
+} from './scoring-utils';
 
 import { NIS2_REQUIREMENTS } from './nis2-requirements';
 import { GDPR_REQUIREMENTS } from './gdpr-requirements';
@@ -114,12 +121,10 @@ export interface FrameworkComplianceInput {
 
 /**
  * Calculate compliance status from score
+ * Uses default thresholds (90/60)
  */
 export function getComplianceStatusFromScore(score: number): ComplianceStatus {
-  if (score >= 90) return 'compliant';
-  if (score >= 60) return 'partially_compliant';
-  if (score > 0) return 'non_compliant';
-  return 'not_assessed';
+  return scoreToComplianceStatus(score, SCORE_THRESHOLDS.default);
 }
 
 /**
@@ -132,20 +137,17 @@ export function calculateFrameworkScore(
   const requirements = getFrameworkRequirements(framework);
   if (requirements.length === 0 || assessments.length === 0) return 0;
 
-  let totalWeight = 0;
-  let weightedSum = 0;
-
-  for (const requirement of requirements) {
+  // Build weighted items from requirements and assessments
+  const weightedItems = requirements.map(requirement => {
     const assessment = assessments.find(a => a.requirement_id === requirement.id);
-    const weight = getPriorityWeight(requirement.priority);
-    totalWeight += weight;
+    return {
+      score: assessment?.score || 0,
+      weight: getPriorityWeight(requirement.priority),
+      status: assessment?.status || 'not_assessed',
+    };
+  });
 
-    if (assessment && assessment.status !== 'not_assessed') {
-      weightedSum += assessment.score * weight;
-    }
-  }
-
-  return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+  return calculateWeightedScore(weightedItems, { excludeNotAssessed: true });
 }
 
 /**
@@ -164,26 +166,18 @@ export function calculateCategoryScores(
       categoryRequirements.some(r => r.id === a.requirement_id)
     );
 
-    let totalWeight = 0;
-    let weightedSum = 0;
-    let met = 0;
-
-    for (const requirement of categoryRequirements) {
+    // Build weighted items for this category
+    const weightedItems = categoryRequirements.map(requirement => {
       const assessment = categoryAssessments.find(a => a.requirement_id === requirement.id);
-      const weight = getPriorityWeight(requirement.priority);
-      totalWeight += weight;
+      return {
+        score: assessment?.score || 0,
+        weight: getPriorityWeight(requirement.priority),
+        status: assessment?.status || 'not_assessed',
+      };
+    });
 
-      if (assessment) {
-        if (assessment.status !== 'not_assessed' && assessment.status !== 'not_applicable') {
-          weightedSum += assessment.score * weight;
-        }
-        if (assessment.status === 'compliant') {
-          met++;
-        }
-      }
-    }
-
-    const score = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+    const score = calculateWeightedScore(weightedItems, { excludeNotAssessed: true });
+    const met = categoryAssessments.filter(a => a.status === 'compliant').length;
 
     result[category.code] = {
       score,
@@ -222,10 +216,6 @@ export function identifyGaps(
       would_satisfy: m.mapping_type === 'equivalent' && m.coverage_percentage >= 80,
     }));
 
-    // Determine estimated effort
-    const effort = requirement.priority === 'critical' ? 'high' :
-                  requirement.priority === 'high' ? 'medium' : 'low';
-
     gaps.push({
       requirement_id: requirement.id,
       requirement_title: requirement.title,
@@ -234,15 +224,13 @@ export function identifyGaps(
       current_status: assessment?.status || 'not_assessed',
       gap_description: assessment?.gaps?.join('; ') || `${requirement.title} not implemented`,
       remediation_suggestion: requirement.implementation_guidance || 'Implement the required control',
-      estimated_effort: effort,
+      estimated_effort: priorityToEffort(requirement.priority),
       cross_framework_impact: crossFrameworkImpact,
     });
   }
 
-  // Sort by priority (critical first)
-  gaps.sort((a, b) => getPriorityWeight(b.priority) - getPriorityWeight(a.priority));
-
-  return gaps;
+  // Sort by priority (critical first) using shared utility
+  return sortByPriority(gaps);
 }
 
 /**

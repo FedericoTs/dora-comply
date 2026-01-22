@@ -25,6 +25,12 @@ import {
 } from './nis2-types';
 import { NIS2_REQUIREMENTS } from './nis2-requirements';
 import type { FrameworkRequirement } from './framework-types';
+import {
+  calculateWeightedScore,
+  getEffortEstimate,
+  calculateRemediationTime,
+  type PriorityLevel,
+} from './scoring-utils';
 
 // =============================================================================
 // Types for Assessment Input
@@ -221,23 +227,15 @@ function calculateOverallScore(
   const notAssessedCount = requirementScores.filter(r => r.status === 'not_assessed').length;
   const totalRequirements = requirementScores.length;
 
-  // Calculate weighted overall percentage using category weights
-  let totalWeight = 0;
-  let weightedSum = 0;
+  // Build weighted items from category scores using shared utility
+  const weightedItems = ALL_CATEGORIES
+    .filter(category => categoryScores[category].totalCount > 0)
+    .map(category => ({
+      score: categoryScores[category].percentage,
+      weight: CATEGORY_WEIGHTS[category],
+    }));
 
-  for (const category of ALL_CATEGORIES) {
-    const catScore = categoryScores[category];
-    const weight = CATEGORY_WEIGHTS[category];
-
-    if (catScore.totalCount > 0) {
-      totalWeight += weight;
-      weightedSum += catScore.percentage * weight;
-    }
-  }
-
-  const overallPercentage = totalWeight > 0
-    ? Math.round(weightedSum / totalWeight)
-    : 0;
+  const overallPercentage = calculateWeightedScore(weightedItems);
 
   // Determine overall status
   // If all requirements are not assessed, status is not_assessed
@@ -336,38 +334,27 @@ function mapPriorityToGapPriority(
 
 /**
  * Estimate effort for a gap based on priority
+ * Uses shared effort estimation utility
  */
 function estimateEffortForGap(
   priority: 'critical' | 'high' | 'medium' | 'low'
 ): string {
-  const effortMap = {
-    critical: '4-8 weeks',
-    high: '2-4 weeks',
-    medium: '1-2 weeks',
-    low: '< 1 week',
-  };
-  return effortMap[priority];
+  return getEffortEstimate(priority as PriorityLevel);
 }
 
 /**
  * Estimate total remediation time in weeks
+ * Uses shared remediation time calculation utility
  */
 function estimateRemediationTime(gaps: NIS2GapItem[]): number {
-  const criticalCount = gaps.filter(g => g.priority === 'critical').length;
-  const highCount = gaps.filter(g => g.priority === 'high').length;
-  const mediumCount = gaps.filter(g => g.priority === 'medium').length;
-  const lowCount = gaps.filter(g => g.priority === 'low').length;
+  const gapCounts = {
+    critical: gaps.filter(g => g.priority === 'critical').length,
+    high: gaps.filter(g => g.priority === 'high').length,
+    medium: gaps.filter(g => g.priority === 'medium').length,
+    low: gaps.filter(g => g.priority === 'low').length,
+  };
 
-  // Estimate: critical = 6 weeks, high = 3 weeks, medium = 1.5 weeks, low = 0.5 weeks
-  // Apply 50% parallelization factor
-  const totalWeeks = (
-    criticalCount * 6 +
-    highCount * 3 +
-    mediumCount * 1.5 +
-    lowCount * 0.5
-  ) * 0.5;
-
-  return Math.ceil(totalWeeks);
+  return calculateRemediationTime(gapCounts);
 }
 
 // =============================================================================

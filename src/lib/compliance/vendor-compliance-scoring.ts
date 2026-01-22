@@ -13,6 +13,13 @@
  */
 
 import { getCertificationWeight } from './dora-constants';
+import {
+  scoreToComplianceLevel,
+  sumComponentScores,
+  calculateAssessmentFreshness,
+  SCORE_THRESHOLDS,
+  type ComplianceLevel,
+} from './scoring-utils';
 
 // ============================================
 // TYPES
@@ -248,20 +255,11 @@ export function calculateDoraVendorScore(vendor: VendorComplianceInput): Complia
     nextActions.push('Include audit rights in contract renewal');
   }
 
-  // Calculate total
-  const total = components.reduce((sum, c) => sum + c.score, 0);
+  // Calculate total using shared utility
+  const total = sumComponentScores(components);
 
-  // Determine compliance level
-  let level: ComplianceScore['level'];
-  if (total >= 80) {
-    level = 'compliant';
-  } else if (total >= 50) {
-    level = 'partial';
-  } else if (total > 0) {
-    level = 'non_compliant';
-  } else {
-    level = 'not_assessed';
-  }
+  // Determine compliance level using DORA thresholds (80/50)
+  const level = scoreToComplianceLevel(total, SCORE_THRESHOLDS.dora);
 
   return { total, level, components, missingItems, nextActions };
 }
@@ -454,20 +452,11 @@ export function calculateNis2VendorScore(vendor: VendorComplianceInput): Complia
     nextActions.push('Document vendor role in supply chain per NIS2 Article 22');
   }
 
-  // Calculate total
-  const total = components.reduce((sum, c) => sum + c.score, 0);
+  // Calculate total using shared utility
+  const total = sumComponentScores(components);
 
-  // Determine compliance level
-  let level: ComplianceScore['level'];
-  if (total >= 75) {
-    level = 'compliant';
-  } else if (total >= 45) {
-    level = 'partial';
-  } else if (total > 0) {
-    level = 'non_compliant';
-  } else {
-    level = 'not_assessed';
-  }
+  // Determine compliance level using NIS2 thresholds (75/45)
+  const level = scoreToComplianceLevel(total, SCORE_THRESHOLDS.nis2);
 
   return { total, level, components, missingItems, nextActions };
 }
