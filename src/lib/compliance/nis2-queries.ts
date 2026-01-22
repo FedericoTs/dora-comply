@@ -67,16 +67,18 @@ export async function getNIS2Assessments(): Promise<{
     ? 'essential_entity'
     : 'important_entity';
 
-  // Try to fetch assessments from nis2_assessments table
-  // Note: This table may not exist yet - handle gracefully
+  // Sync assessments from vendor data (auto-populates if not already populated)
+  // This uses a database function that preserves manual assessments
+  await supabase.rpc('sync_nis2_assessments', { p_organization_id: organizationId });
+
+  // Fetch assessments from nis2_assessments table
   const { data: assessments, error } = await supabase
     .from('nis2_assessments')
     .select('*')
     .eq('organization_id', organizationId);
 
   if (error) {
-    // Table doesn't exist or other error - return empty assessments
-    console.log('NIS2 assessments table not found or error:', error.message);
+    console.error('Error fetching NIS2 assessments:', error.message);
     return {
       assessments: [],
       entityType,
