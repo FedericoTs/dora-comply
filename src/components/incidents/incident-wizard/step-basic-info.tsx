@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
+import { formatDateTimeLocal } from '@/lib/date-utils';
 import type { WizardData } from './index';
 import type { IncidentType } from '@/lib/incidents/types';
 
@@ -69,18 +70,6 @@ const INCIDENT_TYPES: Array<{
 ];
 
 export function StepBasicInfo({ data, updateData, errors }: StepBasicInfoProps) {
-  // Format datetime for input
-  const formatDateTimeLocal = (isoString: string): string => {
-    if (!isoString) return '';
-    try {
-      const date = new Date(isoString);
-      // Format as YYYY-MM-DDTHH:mm for datetime-local input
-      return date.toISOString().slice(0, 16);
-    } catch {
-      return isoString.slice(0, 16);
-    }
-  };
-
   return (
     <div className="space-y-8">
       {/* Incident Type */}

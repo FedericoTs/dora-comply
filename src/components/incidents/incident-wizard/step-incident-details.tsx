@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { formatDateTimeLocal } from '@/lib/date-utils';
 import type { WizardData } from './index';
 import type { IncidentType } from '@/lib/incidents/types';
 
@@ -78,17 +79,6 @@ const INCIDENT_TYPES: Array<{
 ];
 
 export function StepIncidentDetails({ data, updateData, errors, vendors }: StepIncidentDetailsProps) {
-  // Format datetime for input
-  const formatDateTimeLocal = (isoString: string): string => {
-    if (!isoString) return '';
-    try {
-      const date = new Date(isoString);
-      return date.toISOString().slice(0, 16);
-    } catch {
-      return isoString.slice(0, 16);
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Incident Type */}

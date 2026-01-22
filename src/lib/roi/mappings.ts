@@ -5,6 +5,7 @@
  */
 
 import type { RoiTemplateId } from './types';
+import { toDateStringOrNull } from '@/lib/date-utils';
 
 // ============================================================================
 // ESA Enumeration Values
@@ -1086,15 +1087,8 @@ export const TEMPLATE_PRIMARY_TABLES: Partial<Record<RoiTemplateId, string>> = {
 // Helper Functions
 // ============================================================================
 
-/**
- * Format date to YYYY-MM-DD
- */
-function formatDate(value: string | Date | null | undefined): string | null {
-  if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  if (isNaN(date.getTime())) return null;
-  return date.toISOString().split('T')[0];
-}
+// Use centralized date utility
+const formatDate = toDateStringOrNull;
 
 /**
  * Map internal contract type to EBA enumeration

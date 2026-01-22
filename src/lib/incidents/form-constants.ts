@@ -6,6 +6,9 @@
 
 import type { IncidentType, ImpactLevel } from './types';
 
+// Re-export centralized date utility for backwards compatibility
+export { formatDateTimeLocal } from '@/lib/date-utils';
+
 export const INCIDENT_TYPE_OPTIONS: Array<{ value: IncidentType; label: string }> = [
   { value: 'cyber_attack', label: 'Cyber Attack' },
   { value: 'system_failure', label: 'System Failure' },
@@ -20,16 +23,3 @@ export const IMPACT_LEVEL_OPTIONS: Array<{ value: ImpactLevel; label: string }> 
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
 ];
-
-/**
- * Format ISO datetime string for datetime-local input
- */
-export function formatDateTimeLocal(isoString?: string): string {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toISOString().slice(0, 16);
-  } catch {
-    return isoString.slice(0, 16);
-  }
-}
