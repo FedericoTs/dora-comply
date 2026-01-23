@@ -37,10 +37,12 @@ import { Badge } from '@/components/ui/badge';
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
+} from '@/lib/settings/notifications';
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
   type NotificationPreferences,
   type NotificationDigest,
-  DEFAULT_NOTIFICATION_PREFERENCES,
-} from '@/lib/settings/notifications';
+} from '@/lib/settings/notification-types';
 
 // Category configuration
 const NOTIFICATION_CATEGORIES = [

@@ -478,3 +478,463 @@ export function getContractStatusFromDates(
 
   return 'active';
 }
+
+// ============================================================================
+// CONTRACT LIFECYCLE TYPES
+// ============================================================================
+
+// -------------------- Contract Clauses --------------------
+
+export type ClauseType =
+  | 'termination'
+  | 'liability'
+  | 'indemnification'
+  | 'confidentiality'
+  | 'data_protection'
+  | 'audit_rights'
+  | 'subcontracting'
+  | 'exit_strategy'
+  | 'service_levels'
+  | 'business_continuity'
+  | 'security_requirements'
+  | 'incident_notification'
+  | 'intellectual_property'
+  | 'governing_law'
+  | 'dispute_resolution'
+  | 'force_majeure'
+  | 'insurance'
+  | 'other';
+
+export type ClauseRiskLevel = 'low' | 'medium' | 'high' | 'critical';
+export type ClauseReviewStatus = 'pending' | 'reviewed' | 'flagged' | 'approved';
+
+export interface ContractClause {
+  id: string;
+  organization_id: string;
+  contract_id: string;
+
+  // Clause identification
+  clause_type: ClauseType;
+  title: string;
+  summary: string | null;
+  full_text: string | null;
+  location: string | null;
+
+  // AI extraction metadata
+  ai_extracted: boolean;
+  ai_confidence: number | null;
+  extracted_at: string | null;
+
+  // Risk assessment
+  risk_level: ClauseRiskLevel | null;
+  risk_notes: string | null;
+
+  // Key dates
+  effective_date: string | null;
+  expiry_date: string | null;
+  notice_period_days: number | null;
+
+  // Financial terms
+  liability_cap: number | null;
+  liability_cap_currency: string;
+
+  // Compliance flags
+  dora_relevant: boolean;
+  nis2_relevant: boolean;
+  gdpr_relevant: boolean;
+
+  // Review status
+  review_status: ClauseReviewStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export const CLAUSE_TYPE_INFO: Record<ClauseType, { label: string; description: string; icon: string }> = {
+  termination: {
+    label: 'Termination',
+    description: 'Contract termination conditions and rights',
+    icon: 'ban',
+  },
+  liability: {
+    label: 'Liability',
+    description: 'Liability limitations and caps',
+    icon: 'scale',
+  },
+  indemnification: {
+    label: 'Indemnification',
+    description: 'Indemnification clauses and conditions',
+    icon: 'shield',
+  },
+  confidentiality: {
+    label: 'Confidentiality',
+    description: 'Confidentiality and non-disclosure obligations',
+    icon: 'lock',
+  },
+  data_protection: {
+    label: 'Data Protection',
+    description: 'GDPR and data protection provisions',
+    icon: 'database',
+  },
+  audit_rights: {
+    label: 'Audit Rights',
+    description: 'Rights to audit and inspect provider',
+    icon: 'clipboard-check',
+  },
+  subcontracting: {
+    label: 'Subcontracting',
+    description: 'Subcontracting permissions and restrictions',
+    icon: 'git-branch',
+  },
+  exit_strategy: {
+    label: 'Exit Strategy',
+    description: 'Exit and transition planning provisions',
+    icon: 'door-open',
+  },
+  service_levels: {
+    label: 'Service Levels',
+    description: 'SLA targets and performance metrics',
+    icon: 'gauge',
+  },
+  business_continuity: {
+    label: 'Business Continuity',
+    description: 'Business continuity and disaster recovery',
+    icon: 'refresh-cw',
+  },
+  security_requirements: {
+    label: 'Security Requirements',
+    description: 'ICT security and cybersecurity obligations',
+    icon: 'shield-check',
+  },
+  incident_notification: {
+    label: 'Incident Notification',
+    description: 'Incident reporting and notification procedures',
+    icon: 'bell',
+  },
+  intellectual_property: {
+    label: 'Intellectual Property',
+    description: 'IP ownership and licensing terms',
+    icon: 'lightbulb',
+  },
+  governing_law: {
+    label: 'Governing Law',
+    description: 'Applicable law and jurisdiction',
+    icon: 'gavel',
+  },
+  dispute_resolution: {
+    label: 'Dispute Resolution',
+    description: 'Dispute resolution mechanisms',
+    icon: 'messages-square',
+  },
+  force_majeure: {
+    label: 'Force Majeure',
+    description: 'Force majeure events and consequences',
+    icon: 'cloud-lightning',
+  },
+  insurance: {
+    label: 'Insurance',
+    description: 'Insurance requirements and coverage',
+    icon: 'umbrella',
+  },
+  other: {
+    label: 'Other',
+    description: 'Other contractual clauses',
+    icon: 'file-text',
+  },
+};
+
+export const CLAUSE_RISK_INFO: Record<ClauseRiskLevel, { label: string; color: string }> = {
+  low: { label: 'Low Risk', color: 'bg-success/10 text-success' },
+  medium: { label: 'Medium Risk', color: 'bg-warning/10 text-warning' },
+  high: { label: 'High Risk', color: 'bg-orange-500/10 text-orange-500' },
+  critical: { label: 'Critical Risk', color: 'bg-error/10 text-error' },
+};
+
+// -------------------- Contract Renewals --------------------
+
+export type RenewalType = 'automatic' | 'manual' | 'renegotiated' | 'extended' | 'terminated';
+export type RenewalStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'completed' | 'cancelled';
+
+export interface ContractRenewal {
+  id: string;
+  organization_id: string;
+  contract_id: string;
+
+  // Renewal details
+  renewal_number: number;
+  renewal_type: RenewalType;
+
+  // Dates
+  previous_expiry_date: string;
+  new_expiry_date: string | null;
+  decision_date: string | null;
+  notice_sent_date: string | null;
+
+  // Decision tracking
+  status: RenewalStatus;
+  decision_by: string | null;
+  decision_notes: string | null;
+
+  // Changes in terms
+  value_change: number | null;
+  value_change_percent: number | null;
+  terms_changed: boolean;
+  terms_change_summary: string | null;
+
+  // New contract reference
+  new_contract_id: string | null;
+
+  // Workflow
+  assigned_to: string | null;
+  due_date: string | null;
+  reminder_sent: boolean;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export const RENEWAL_TYPE_INFO: Record<RenewalType, { label: string; description: string }> = {
+  automatic: {
+    label: 'Automatic',
+    description: 'Contract auto-renews unless terminated',
+  },
+  manual: {
+    label: 'Manual',
+    description: 'Requires explicit renewal decision',
+  },
+  renegotiated: {
+    label: 'Renegotiated',
+    description: 'Terms renegotiated for renewal',
+  },
+  extended: {
+    label: 'Extended',
+    description: 'Contract term extended',
+  },
+  terminated: {
+    label: 'Terminated',
+    description: 'Contract not renewed / terminated',
+  },
+};
+
+export const RENEWAL_STATUS_INFO: Record<RenewalStatus, { label: string; color: string }> = {
+  pending: { label: 'Pending', color: 'bg-muted text-muted-foreground' },
+  under_review: { label: 'Under Review', color: 'bg-blue-500/10 text-blue-500' },
+  approved: { label: 'Approved', color: 'bg-success/10 text-success' },
+  rejected: { label: 'Rejected', color: 'bg-error/10 text-error' },
+  completed: { label: 'Completed', color: 'bg-success/10 text-success' },
+  cancelled: { label: 'Cancelled', color: 'bg-muted text-muted-foreground' },
+};
+
+// -------------------- Contract Alerts --------------------
+
+export type AlertType =
+  | 'expiry_90_days'
+  | 'expiry_60_days'
+  | 'expiry_30_days'
+  | 'expiry_14_days'
+  | 'expiry_7_days'
+  | 'expired'
+  | 'renewal_due'
+  | 'review_due'
+  | 'clause_expiry'
+  | 'compliance_review'
+  | 'value_threshold'
+  | 'auto_renewal_notice'
+  | 'termination_window'
+  | 'custom';
+
+export type AlertPriority = 'low' | 'medium' | 'high' | 'critical';
+export type AlertStatus = 'scheduled' | 'triggered' | 'acknowledged' | 'resolved' | 'dismissed' | 'snoozed';
+
+export interface ContractAlert {
+  id: string;
+  organization_id: string;
+  contract_id: string;
+
+  // Alert type
+  alert_type: AlertType;
+
+  // Alert details
+  title: string;
+  description: string | null;
+  priority: AlertPriority;
+
+  // Trigger info
+  trigger_date: string;
+  triggered_at: string | null;
+
+  // Status
+  status: AlertStatus;
+
+  // Assignment
+  assigned_to: string | null;
+  acknowledged_by: string | null;
+  acknowledged_at: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  resolution_notes: string | null;
+
+  // Snooze functionality
+  snoozed_until: string | null;
+  snooze_count: number;
+
+  // Notifications
+  notification_sent: boolean;
+  notification_sent_at: string | null;
+  email_sent: boolean;
+
+  // Related entities
+  renewal_id: string | null;
+  clause_id: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export const ALERT_TYPE_INFO: Record<AlertType, { label: string; description: string }> = {
+  expiry_90_days: { label: '90 Days to Expiry', description: 'Contract expires in 90 days' },
+  expiry_60_days: { label: '60 Days to Expiry', description: 'Contract expires in 60 days' },
+  expiry_30_days: { label: '30 Days to Expiry', description: 'Contract expires in 30 days' },
+  expiry_14_days: { label: '14 Days to Expiry', description: 'Contract expires in 14 days' },
+  expiry_7_days: { label: '7 Days to Expiry', description: 'Contract expires in 7 days' },
+  expired: { label: 'Expired', description: 'Contract has expired' },
+  renewal_due: { label: 'Renewal Due', description: 'Renewal decision required' },
+  review_due: { label: 'Review Due', description: 'Periodic contract review due' },
+  clause_expiry: { label: 'Clause Expiring', description: 'Specific clause expiring' },
+  compliance_review: { label: 'Compliance Review', description: 'DORA/NIS2 compliance review needed' },
+  value_threshold: { label: 'Value Threshold', description: 'Contract value threshold exceeded' },
+  auto_renewal_notice: { label: 'Auto-Renewal Notice', description: 'Notice deadline for auto-renewal' },
+  termination_window: { label: 'Termination Window', description: 'Termination window opening/closing' },
+  custom: { label: 'Custom Alert', description: 'User-defined alert' },
+};
+
+export const ALERT_PRIORITY_INFO: Record<AlertPriority, { label: string; color: string }> = {
+  low: { label: 'Low', color: 'bg-blue-500/10 text-blue-500' },
+  medium: { label: 'Medium', color: 'bg-warning/10 text-warning' },
+  high: { label: 'High', color: 'bg-orange-500/10 text-orange-500' },
+  critical: { label: 'Critical', color: 'bg-error/10 text-error' },
+};
+
+export const ALERT_STATUS_INFO: Record<AlertStatus, { label: string; color: string }> = {
+  scheduled: { label: 'Scheduled', color: 'bg-muted text-muted-foreground' },
+  triggered: { label: 'Triggered', color: 'bg-warning/10 text-warning' },
+  acknowledged: { label: 'Acknowledged', color: 'bg-blue-500/10 text-blue-500' },
+  resolved: { label: 'Resolved', color: 'bg-success/10 text-success' },
+  dismissed: { label: 'Dismissed', color: 'bg-muted text-muted-foreground' },
+  snoozed: { label: 'Snoozed', color: 'bg-purple-500/10 text-purple-500' },
+};
+
+// -------------------- Contract Versions --------------------
+
+export type VersionType = 'original' | 'amendment' | 'addendum' | 'restatement' | 'renewal';
+
+export interface ContractVersion {
+  id: string;
+  organization_id: string;
+  contract_id: string;
+
+  // Version info
+  version_number: number;
+  version_type: VersionType;
+
+  // Document reference
+  document_id: string | null;
+
+  // Dates
+  effective_date: string;
+  supersedes_version: number | null;
+
+  // Summary
+  change_summary: string | null;
+
+  // Metadata
+  created_by: string | null;
+  created_at: string;
+}
+
+export const VERSION_TYPE_INFO: Record<VersionType, { label: string; description: string }> = {
+  original: { label: 'Original', description: 'Original contract version' },
+  amendment: { label: 'Amendment', description: 'Formal amendment to contract' },
+  addendum: { label: 'Addendum', description: 'Additional terms or schedules' },
+  restatement: { label: 'Restatement', description: 'Restated and amended version' },
+  renewal: { label: 'Renewal', description: 'Renewed contract terms' },
+};
+
+// -------------------- Extended Contract Types --------------------
+
+export type ContractCriticality = 'low' | 'medium' | 'high' | 'critical';
+export type ContractCategory =
+  | 'ict_services'
+  | 'cloud_services'
+  | 'software_licenses'
+  | 'maintenance'
+  | 'consulting'
+  | 'data_processing'
+  | 'infrastructure'
+  | 'security'
+  | 'other';
+
+export interface ContractExtended extends Contract {
+  // New lifecycle fields
+  next_review_date: string | null;
+  owner_id: string | null;
+  criticality: ContractCriticality | null;
+  category: ContractCategory | null;
+  ai_analyzed_at: string | null;
+  clauses_extracted: boolean;
+}
+
+export interface ContractWithLifecycle extends ContractExtended {
+  vendor: {
+    id: string;
+    name: string;
+    lei: string | null;
+    tier: string;
+  };
+  clauses_count?: number;
+  active_alerts_count?: number;
+  pending_renewals_count?: number;
+  owner?: {
+    id: string;
+    full_name: string | null;
+    email: string;
+  } | null;
+}
+
+export const CONTRACT_CRITICALITY_INFO: Record<ContractCriticality, { label: string; color: string; description: string }> = {
+  low: {
+    label: 'Low',
+    color: 'bg-blue-500/10 text-blue-500',
+    description: 'Non-critical support services',
+  },
+  medium: {
+    label: 'Medium',
+    color: 'bg-warning/10 text-warning',
+    description: 'Important operational services',
+  },
+  high: {
+    label: 'High',
+    color: 'bg-orange-500/10 text-orange-500',
+    description: 'Critical business functions',
+  },
+  critical: {
+    label: 'Critical',
+    color: 'bg-error/10 text-error',
+    description: 'Mission-critical / regulated functions',
+  },
+};
+
+export const CONTRACT_CATEGORY_INFO: Record<ContractCategory, { label: string; description: string }> = {
+  ict_services: { label: 'ICT Services', description: 'General ICT service provision' },
+  cloud_services: { label: 'Cloud Services', description: 'Cloud infrastructure and platforms' },
+  software_licenses: { label: 'Software Licenses', description: 'Software licensing agreements' },
+  maintenance: { label: 'Maintenance', description: 'Support and maintenance services' },
+  consulting: { label: 'Consulting', description: 'Professional and consulting services' },
+  data_processing: { label: 'Data Processing', description: 'Data processing agreements' },
+  infrastructure: { label: 'Infrastructure', description: 'Infrastructure and hosting' },
+  security: { label: 'Security', description: 'Security and cybersecurity services' },
+  other: { label: 'Other', description: 'Other contract types' },
+};

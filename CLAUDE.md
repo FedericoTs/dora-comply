@@ -501,6 +501,8 @@ npm run start        # Start production server
 
 | File | Purpose |
 |------|---------|
+| `docs/planning/MASTERPLAN.md` | **🎯 ACTIVE ROADMAP - Check before starting work** |
+| `docs/planning/GAP-ANALYSIS-3RDRISK.md` | Competitive analysis vs 3rdRisk |
 | `docs/architecture/MASTER-SPEC.md` | Complete platform specification |
 | `docs/architecture/AUTH-SPECIFICATION.md` | Authentication flows |
 | `docs/architecture/tech-spec.md` | Technical architecture |
@@ -511,6 +513,26 @@ npm run start        # Start production server
 | `docs/planning/decisions/` | Architecture Decision Records |
 | `docs/requirements/regulatory-requirements.md` | DORA requirements |
 | `docs/setup/SETUP-GUIDE.md` | Development setup |
+
+---
+
+## Active Roadmap (MASTERPLAN)
+
+> **IMPORTANT:** Always check `docs/planning/MASTERPLAN.md` for current progress and next tasks.
+
+**Current Phase:** Phase 1 - Fix Broken Features
+
+| Phase | Status | Focus |
+|-------|--------|-------|
+| Phase 1 | 🔄 In Progress | Notifications, API Keys, Monitoring Alerts, Activity Log |
+| Phase 2 | ⏳ Pending | Task Management, Real-time Notifications |
+| Phase 3 | ⏳ Pending | Contract Management, Remediation, Custom Dashboards |
+| Phase 4 | ⏳ Pending | Multi-Domain Risk, GDPR, Integrations |
+
+When completing tasks:
+1. Check off items in MASTERPLAN.md
+2. Update "Progress" counts in the overview table
+3. Add entry to Changelog section
 
 ---
 

@@ -28,6 +28,7 @@ import {
   ClipboardList,
   Lock,
   FileQuestion,
+  ListTodo,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -72,6 +73,7 @@ interface SidebarNavProps {
     questionnaires?: number;
     documents?: number;
     incidents?: number;
+    tasks?: number;
   };
 }
 
@@ -92,6 +94,7 @@ const MANAGE_NAV: NavItem[] = [
   { name: 'Questionnaires', href: '/questionnaires', icon: FileQuestion },
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
+  { name: 'Tasks', href: '/tasks', icon: ListTodo },
 ];
 
 // Compliance section - Regulatory requirements
@@ -103,6 +106,7 @@ const COMPLIANCE_NAV: NavItem[] = [
 
 // Insights section - Analytics (collapsed by default)
 const INSIGHTS_NAV: NavItem[] = [
+  { name: 'Monitoring Alerts', href: '/monitoring', icon: AlertOctagon },
   { name: 'Compliance Trends', href: '/compliance/trends', icon: BarChart3 },
   { name: 'Concentration Risk', href: '/concentration', icon: Network },
   { name: 'Framework Coverage', href: '/frameworks', icon: Layers },
@@ -473,6 +477,9 @@ function UnifiedSidebarNav({
     if (item.href === '/incidents' && badges?.incidents) {
       return { ...item, badge: badges.incidents };
     }
+    if (item.href === '/tasks' && badges?.tasks) {
+      return { ...item, badge: badges.tasks };
+    }
     return item;
   });
 
@@ -568,6 +575,9 @@ function FrameworkSidebarNav({
     }
     if (item.href === '/incidents' && badges?.incidents) {
       return { ...item, badge: badges.incidents };
+    }
+    if (item.href === '/tasks' && badges?.tasks) {
+      return { ...item, badge: badges.tasks };
     }
     return item;
   });

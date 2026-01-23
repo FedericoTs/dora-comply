@@ -16,6 +16,7 @@ import {
   Key,
   Palette,
   ChevronLeft,
+  Brush,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,12 @@ const settingsNav = [
     href: '/settings/security',
     icon: Shield,
     description: 'MFA and session settings',
+  },
+  {
+    title: 'Branding',
+    href: '/settings/branding',
+    icon: Brush,
+    description: 'Vendor portal customization',
   },
   {
     title: 'API & Integrations',

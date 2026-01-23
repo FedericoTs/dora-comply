@@ -557,3 +557,192 @@ export async function getVendorsForExport(): Promise<VendorWithRelations[]> {
     services_count: v.ict_services?.length || 0,
   }));
 }
+
+// ============================================================================
+// Vendor Risk Timeline Data
+// ============================================================================
+
+export interface VendorScoreHistoryPoint {
+  id: string;
+  score: number;
+  grade: string | null;
+  provider: string | null;
+  factors: Record<string, unknown> | null;
+  recorded_at: string;
+}
+
+export interface VendorTimelineEvent {
+  id: string;
+  type: 'score_change' | 'document' | 'assessment' | 'incident' | 'contract' | 'activity';
+  title: string;
+  description: string | null;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Get vendor score history for timeline graph
+ */
+export async function getVendorScoreHistory(
+  vendorId: string,
+  options: { daysBack?: number } = {}
+): Promise<VendorScoreHistoryPoint[]> {
+  const supabase = await createClient();
+  const { daysBack = 365 } = options;
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - daysBack);
+
+  const { data, error } = await supabase
+    .from('vendor_score_history')
+    .select('id, score, grade, provider, factors, recorded_at')
+    .eq('vendor_id', vendorId)
+    .gte('recorded_at', startDate.toISOString())
+    .order('recorded_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching vendor score history:', error);
+    return [];
+  }
+
+  return (data || []).map(row => ({
+    id: row.id,
+    score: row.score,
+    grade: row.grade,
+    provider: row.provider,
+    factors: row.factors as Record<string, unknown> | null,
+    recorded_at: row.recorded_at,
+  }));
+}
+
+/**
+ * Get vendor timeline events (documents, assessments, incidents, etc.)
+ */
+export async function getVendorTimelineEvents(
+  vendorId: string,
+  options: { daysBack?: number; limit?: number } = {}
+): Promise<VendorTimelineEvent[]> {
+  const supabase = await createClient();
+  const { daysBack = 365, limit = 50 } = options;
+
+  const organizationId = await getCurrentUserOrganization();
+  if (!organizationId) {
+    return [];
+  }
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - daysBack);
+
+  const events: VendorTimelineEvent[] = [];
+
+  // Get activity log entries for this vendor
+  const { data: activities } = await supabase
+    .from('activity_log')
+    .select('id, action, entity_type, entity_name, details, created_at')
+    .eq('organization_id', organizationId)
+    .eq('entity_id', vendorId)
+    .eq('entity_type', 'vendor')
+    .gte('created_at', startDate.toISOString())
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (activities) {
+    for (const activity of activities) {
+      events.push({
+        id: `activity-${activity.id}`,
+        type: 'activity',
+        title: formatActivityTitle(activity.action, activity.entity_name),
+        description: activity.details?.description as string || null,
+        timestamp: activity.created_at,
+        metadata: activity.details as Record<string, unknown>,
+      });
+    }
+  }
+
+  // Get documents uploaded for this vendor
+  const { data: documents } = await supabase
+    .from('documents')
+    .select('id, name, document_type, created_at')
+    .eq('organization_id', organizationId)
+    .eq('vendor_id', vendorId)
+    .gte('created_at', startDate.toISOString())
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (documents) {
+    for (const doc of documents) {
+      events.push({
+        id: `document-${doc.id}`,
+        type: 'document',
+        title: `Document uploaded: ${doc.name}`,
+        description: doc.document_type || null,
+        timestamp: doc.created_at,
+        metadata: { documentId: doc.id, documentType: doc.document_type },
+      });
+    }
+  }
+
+  // Get incidents related to this vendor
+  const { data: incidents } = await supabase
+    .from('incidents')
+    .select('id, title, classification, status, created_at')
+    .eq('organization_id', organizationId)
+    .contains('affected_systems', [vendorId])
+    .gte('created_at', startDate.toISOString())
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (incidents) {
+    for (const incident of incidents) {
+      events.push({
+        id: `incident-${incident.id}`,
+        type: 'incident',
+        title: `Incident: ${incident.title}`,
+        description: `Classification: ${incident.classification}, Status: ${incident.status}`,
+        timestamp: incident.created_at,
+        metadata: { incidentId: incident.id, classification: incident.classification },
+      });
+    }
+  }
+
+  // Get contract changes
+  const { data: contracts } = await supabase
+    .from('contracts')
+    .select('id, contract_ref, status, effective_date, expiry_date, created_at, updated_at')
+    .eq('vendor_id', vendorId)
+    .gte('created_at', startDate.toISOString())
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (contracts) {
+    for (const contract of contracts) {
+      events.push({
+        id: `contract-${contract.id}`,
+        type: 'contract',
+        title: `Contract: ${contract.contract_ref || 'New contract'}`,
+        description: `Status: ${contract.status}, Expires: ${contract.expiry_date || 'N/A'}`,
+        timestamp: contract.created_at,
+        metadata: { contractId: contract.id, status: contract.status },
+      });
+    }
+  }
+
+  // Sort all events by timestamp descending
+  events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  return events.slice(0, limit);
+}
+
+function formatActivityTitle(action: string, entityName: string | null): string {
+  const actionLabels: Record<string, string> = {
+    create: 'Created',
+    update: 'Updated',
+    delete: 'Deleted',
+    assessment_completed: 'Assessment completed',
+    risk_score_updated: 'Risk score updated',
+    tier_changed: 'Tier changed',
+    status_changed: 'Status changed',
+  };
+  const label = actionLabels[action] || action;
+  return entityName ? `${label}: ${entityName}` : label;
+}

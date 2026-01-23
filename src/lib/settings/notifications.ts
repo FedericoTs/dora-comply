@@ -1,66 +1,31 @@
 'use server';
 
 /**
- * Notification Settings
- * Types and server actions for managing user notification preferences
+ * Notification Settings Server Actions
+ * Server actions for managing user notification preferences
  */
 
 import { createClient } from '@/lib/supabase/server';
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  type NotificationPreferences,
+  type EmailNotificationSettings,
+  type InAppNotificationSettings,
+} from './notification-types';
 
-// ============================================================================
-// Types
-// ============================================================================
+// Re-export types for convenience (types can be re-exported from 'use server' files)
+export type {
+  NotificationDigest,
+  NotificationCategories,
+  EmailNotificationSettings,
+  InAppNotificationSettings,
+  NotificationPreferences,
+} from './notification-types';
 
-export type NotificationDigest = 'immediate' | 'daily' | 'weekly' | 'none';
-
-export interface NotificationCategories {
-  incidents: boolean; // Incident reporting deadlines, updates
-  vendors: boolean; // Vendor assessment reminders, risk alerts
-  compliance: boolean; // RoI deadlines, compliance updates
-  security: boolean; // MFA prompts, login alerts
-  system: boolean; // Platform updates, maintenance
+// Re-export constant via a getter function
+export async function getDefaultNotificationPreferences(): Promise<NotificationPreferences> {
+  return DEFAULT_NOTIFICATION_PREFERENCES;
 }
-
-export interface EmailNotificationSettings {
-  enabled: boolean;
-  digest: NotificationDigest;
-  categories: NotificationCategories;
-}
-
-export interface InAppNotificationSettings {
-  enabled: boolean;
-  categories: NotificationCategories;
-}
-
-export interface NotificationPreferences {
-  email: EmailNotificationSettings;
-  inApp: InAppNotificationSettings;
-}
-
-// Default preferences
-export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
-  email: {
-    enabled: true,
-    digest: 'immediate',
-    categories: {
-      incidents: true,
-      vendors: true,
-      compliance: true,
-      security: true,
-      system: true,
-    },
-  },
-  inApp: {
-    enabled: true,
-    categories: {
-      incidents: true,
-      vendors: true,
-      compliance: true,
-      security: true,
-      system: true,
-    },
-  },
-};
 
 // ============================================================================
 // Get Notification Preferences

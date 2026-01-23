@@ -16,6 +16,7 @@ import {
   regenerateSecret,
   testWebhook,
   getWebhookDeliveries,
+  retryDelivery,
 } from '@/lib/webhooks/actions';
 import {
   type WebhookConfig,
@@ -63,6 +64,7 @@ export interface UseWebhooksReturn {
   handleOpenDetail: (webhook: WebhookConfig) => void;
   handleCloseCreateDialog: () => void;
   toggleSecretVisibility: (webhookId: string) => void;
+  handleRetryDelivery: (deliveryId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export function useWebhooks(): UseWebhooksReturn {
@@ -259,6 +261,21 @@ export function useWebhooks(): UseWebhooksReturn {
     }));
   }, []);
 
+  // Handle retry delivery
+  const handleRetryDelivery = useCallback(async (deliveryId: string) => {
+    const result = await retryDelivery(deliveryId);
+    if (result.success) {
+      toast.success('Delivery retried successfully');
+      // Reload deliveries if webhook is selected
+      if (selectedWebhook) {
+        loadDeliveries(selectedWebhook.id);
+      }
+    } else {
+      toast.error(result.error || 'Failed to retry delivery');
+    }
+    return result;
+  }, [selectedWebhook, loadDeliveries]);
+
   return {
     // State
     isLoading,
@@ -296,5 +313,6 @@ export function useWebhooks(): UseWebhooksReturn {
     handleOpenDetail,
     handleCloseCreateDialog,
     toggleSecretVisibility,
+    handleRetryDelivery,
   };
 }

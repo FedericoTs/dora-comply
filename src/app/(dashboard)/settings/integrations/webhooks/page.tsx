@@ -49,6 +49,7 @@ export default function WebhooksPage() {
     handleOpenDetail,
     handleCloseCreateDialog,
     toggleSecretVisibility,
+    handleRetryDelivery,
   } = useWebhooks();
 
   if (isLoading) {
@@ -119,6 +120,7 @@ export default function WebhooksPage() {
         isCopied={selectedWebhook ? copiedId === selectedWebhook.id : false}
         onToggleSecretVisibility={() => selectedWebhook && toggleSecretVisibility(selectedWebhook.id)}
         onCopySecret={() => selectedWebhook && handleCopySecret(selectedWebhook.secret, selectedWebhook.id)}
+        onRetryDelivery={handleRetryDelivery}
       />
     </div>
   );

@@ -7,7 +7,7 @@
  * Features mark as read, dismiss, and links to notification settings.
  */
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Bell,
@@ -22,6 +22,9 @@ import {
   Loader2,
   Inbox,
   RefreshCw,
+  Wifi,
+  WifiOff,
+  History,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,6 +43,7 @@ import {
   type Notification,
   type NotificationType,
 } from '@/lib/notifications/actions';
+import { useRealtimeNotifications } from '@/hooks/use-realtime-notifications';
 
 // ============================================================================
 // Configuration
@@ -112,6 +116,21 @@ export function NotificationDropdown() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
+
+  // Real-time notifications subscription
+  const { isConnected, latestNotification } = useRealtimeNotifications({
+    showToasts: true,
+    onNewNotification: useCallback((newNotification: Notification) => {
+      // Add new notification to the list if not already present
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === newNotification.id)) {
+          return prev;
+        }
+        return [newNotification, ...prev];
+      });
+      setUnreadCount((prev) => prev + 1);
+    }, []),
+  });
 
   // Load notifications
   const loadNotifications = async () => {
@@ -229,6 +248,25 @@ export function NotificationDropdown() {
                 {unreadCount}
               </span>
             )}
+            {/* Realtime connection indicator */}
+            <div
+              className={cn(
+                "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
+                isConnected
+                  ? "bg-success/10 text-success"
+                  : "bg-muted text-muted-foreground"
+              )}
+              title={isConnected ? "Real-time updates active" : "Connecting..."}
+            >
+              {isConnected ? (
+                <Wifi className="h-2.5 w-2.5" />
+              ) : (
+                <WifiOff className="h-2.5 w-2.5" />
+              )}
+              <span className="hidden sm:inline">
+                {isConnected ? "Live" : "..."}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-1">
             <Button
@@ -360,14 +398,23 @@ export function NotificationDropdown() {
         </div>
 
         {/* Footer */}
-        <div className="p-2 bg-muted/30 border-t">
-          <Link href="/settings/notifications" onClick={() => setIsOpen(false)}>
+        <div className="p-2 bg-muted/30 border-t flex gap-2">
+          <Link href="/notifications" onClick={() => setIsOpen(false)} className="flex-1">
+            <Button
+              variant="ghost"
+              className="w-full justify-center text-xs h-9 gap-2 hover:bg-primary/10 hover:text-primary"
+            >
+              <History className="h-3.5 w-3.5" />
+              View All
+            </Button>
+          </Link>
+          <Link href="/settings/notifications" onClick={() => setIsOpen(false)} className="flex-1">
             <Button
               variant="ghost"
               className="w-full justify-center text-xs h-9 gap-2 hover:bg-primary/10 hover:text-primary"
             >
               <Settings className="h-3.5 w-3.5" />
-              Notification Settings
+              Settings
             </Button>
           </Link>
         </div>

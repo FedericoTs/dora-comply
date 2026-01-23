@@ -12,6 +12,7 @@ import { useCallback, type ReactNode } from 'react';
 import {
   VendorNavigationBar,
   VendorActivityTimeline,
+  VendorRiskTimeline,
   type VendorNavSection,
 } from '@/components/vendors/detail';
 import { VendorAIAnalysis } from '@/components/vendors/ai';
@@ -137,7 +138,17 @@ export function VendorTabsEnhanced({
         return <VendorAIAnalysis vendor={vendor} />;
 
       case 'risk-trends':
-        return <VendorRiskIntelligence vendor={vendor} />;
+        return (
+          <div className="space-y-6">
+            <VendorRiskTimeline
+              vendorId={vendor.id}
+              vendorName={vendor.name}
+              currentScore={vendor.external_risk_score}
+              currentGrade={vendor.external_risk_grade}
+            />
+            <VendorRiskIntelligence vendor={vendor} />
+          </div>
+        );
 
       case 'enrichment':
         return enrichmentContent;

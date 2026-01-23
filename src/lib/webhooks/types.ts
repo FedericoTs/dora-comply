@@ -50,6 +50,9 @@ export interface WebhookDelivery {
   delivered_at?: string;
   failed_at?: string;
   retry_count: number;
+  max_retries: number;
+  next_retry_at?: string;
+  error_code?: string;
   created_at: string;
 }
 

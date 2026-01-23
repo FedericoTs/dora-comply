@@ -6,6 +6,7 @@
  * Side sheet showing webhook details and delivery history.
  */
 
+import { useState } from 'react';
 import {
   Eye,
   EyeOff,
@@ -17,6 +18,7 @@ import {
   Copy,
   Check,
   History,
+  RefreshCw,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
@@ -53,6 +55,7 @@ interface WebhookDetailSheetProps {
   isCopied: boolean;
   onToggleSecretVisibility: () => void;
   onCopySecret: () => void;
+  onRetryDelivery?: (deliveryId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 // Get delivery status icon
@@ -76,7 +79,20 @@ export function WebhookDetailSheet({
   isCopied,
   onToggleSecretVisibility,
   onCopySecret,
+  onRetryDelivery,
 }: WebhookDetailSheetProps) {
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+
+  const handleRetry = async (deliveryId: string) => {
+    if (!onRetryDelivery) return;
+    setRetryingId(deliveryId);
+    try {
+      await onRetryDelivery(deliveryId);
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
@@ -208,38 +224,63 @@ export function WebhookDetailSheet({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {deliveries.map((delivery) => (
-                      <div
-                        key={delivery.id}
-                        className="flex items-center gap-3 p-3 border rounded-lg"
-                      >
-                        {getDeliveryStatusIcon(delivery)}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {delivery.event_type}
-                            </Badge>
-                            {delivery.response_status && (
-                              <span
-                                className={`text-xs ${
-                                  delivery.response_status < 400
-                                    ? 'text-green-600'
-                                    : 'text-red-600'
-                                }`}
-                              >
-                                {delivery.response_status}
-                              </span>
-                            )}
+                    {deliveries.map((delivery) => {
+                      const isFailed = delivery.failed_at && !delivery.delivered_at;
+                      const canRetry = isFailed && delivery.retry_count < (delivery.max_retries || 3);
+                      const isRetrying = retryingId === delivery.id;
+
+                      return (
+                        <div
+                          key={delivery.id}
+                          className="flex items-center gap-3 p-3 border rounded-lg"
+                        >
+                          {getDeliveryStatusIcon(delivery)}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {delivery.event_type}
+                              </Badge>
+                              {delivery.response_status && (
+                                <span
+                                  className={`text-xs ${
+                                    delivery.response_status < 400
+                                      ? 'text-green-600'
+                                      : 'text-red-600'
+                                  }`}
+                                >
+                                  {delivery.response_status}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {formatDistanceToNow(new Date(delivery.created_at), {
+                                addSuffix: true,
+                              })}
+                              {delivery.retry_count > 0 && ` (${delivery.retry_count} retries)`}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatDistanceToNow(new Date(delivery.created_at), {
-                              addSuffix: true,
-                            })}
-                            {delivery.retry_count > 0 && ` (${delivery.retry_count} retries)`}
-                          </p>
+                          {/* Retry button for failed deliveries */}
+                          {canRetry && onRetryDelivery && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRetry(delivery.id)}
+                              disabled={isRetrying}
+                              className="shrink-0"
+                            >
+                              {isRetrying ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <RefreshCw className="h-4 w-4 mr-1" />
+                                  Retry
+                                </>
+                              )}
+                            </Button>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>

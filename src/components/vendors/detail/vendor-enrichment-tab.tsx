@@ -17,10 +17,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  checkSanctions,
-  isSanctionsError,
   formatSanctionsMatch,
   type SanctionsResult,
+  type SanctionsError,
 } from '@/lib/external/opensanctions';
 import type { Vendor } from '@/lib/vendors/types';
 import type { VendorCertification } from '@/lib/certifications/types';
@@ -41,19 +40,19 @@ export function VendorEnrichmentTab({ vendor }: VendorEnrichmentTabProps) {
   const [sanctionsResult, setSanctionsResult] = useState<SanctionsResult | null>(null);
   const [isCheckingSanctions, setIsCheckingSanctions] = useState(false);
   const [sanctionsError, setSanctionsError] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [sanctionsConfig, setSanctionsConfig] = useState<SanctionsConfig | null>(null);
   const [certifications, setCertifications] = useState<VendorCertification[]>([]);
 
-  // Fetch certifications (sanctions config check disabled - API no longer free)
+  // Fetch sanctions config and certifications
   useEffect(() => {
     async function fetchData() {
       try {
-        // Sanctions config check disabled - OpenSanctions API now requires paid subscription
-        // Keeping code for when API key is available
-        // const configResponse = await fetch('/api/sanctions/config');
-        // const config = await configResponse.json();
-        // setSanctionsConfig(config);
+        // Check sanctions configuration
+        const configResponse = await fetch('/api/sanctions/config');
+        if (configResponse.ok) {
+          const config = await configResponse.json();
+          setSanctionsConfig(config);
+        }
 
         // Fetch certifications
         const certResponse = await fetch(`/api/certifications?vendor_id=${vendor.id}`);
@@ -85,21 +84,28 @@ export function VendorEnrichmentTab({ vendor }: VendorEnrichmentTabProps) {
     setSanctionsError(null);
 
     try {
-      const result = await checkSanctions(
-        vendor.name,
-        vendor.jurisdiction || undefined
-      );
+      const response = await fetch('/api/sanctions/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: vendor.name,
+          country: vendor.jurisdiction || undefined,
+        }),
+      });
 
-      if (isSanctionsError(result)) {
+      const result: SanctionsResult | SanctionsError = await response.json();
+
+      if ('error' in result && result.error) {
         setSanctionsError(result.message);
         toast.error('Sanctions Check Failed', {
           description: result.message,
         });
       } else {
-        setSanctionsResult(result);
-        if (result.matched) {
+        const sanctionsResult = result as SanctionsResult;
+        setSanctionsResult(sanctionsResult);
+        if (sanctionsResult.matched) {
           toast.warning('Potential Matches Found', {
-            description: `${result.matchCount} potential match${result.matchCount > 1 ? 'es' : ''} found on sanctions lists.`,
+            description: `${sanctionsResult.matchCount} potential match${sanctionsResult.matchCount > 1 ? 'es' : ''} found on sanctions lists.`,
           });
         } else {
           toast.success('No Matches Found', {
@@ -117,12 +123,12 @@ export function VendorEnrichmentTab({ vendor }: VendorEnrichmentTabProps) {
     }
   };
 
-  // Feature flag for sanctions - set to true when API key is available
-  const SANCTIONS_ENABLED = false;
+  // Feature flag for sanctions - always show UI, handles missing API key gracefully
+  const SANCTIONS_ENABLED = true;
 
   return (
     <div className="space-y-6">
-      {/* Sanctions Screening - Hidden until API subscription is available */}
+      {/* Sanctions Screening */}
       {SANCTIONS_ENABLED && (
         <Card className="card-elevated">
           <CardHeader>
@@ -311,8 +317,8 @@ export function VendorEnrichmentTab({ vendor }: VendorEnrichmentTabProps) {
           </div>
           <h3 className="font-medium mb-2">More Enrichment Features</h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Future updates will include sanctions screening (OFAC, EU, UN), data breach monitoring,
-            news alerts, and automated certification tracking.
+            Future updates will include data breach monitoring, news alerts, and automated
+            certification tracking.
           </p>
         </CardContent>
       </Card>

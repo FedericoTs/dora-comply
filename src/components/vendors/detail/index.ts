@@ -27,3 +27,4 @@ export {
   type VendorSummaryDashboardProps,
 } from './vendor-summary-dashboard';
 export { VendorScoreCards, VendorScoreCompact } from './vendor-score-cards';
+export { VendorRiskTimeline } from './vendor-risk-timeline';
