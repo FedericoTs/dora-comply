@@ -7,12 +7,14 @@
  */
 
 import type { Contract } from '../contracts';
+import type { RiskLevel, VendorTier } from '@/lib/constants/ui';
+
+// Re-export shared types from canonical source for backwards compatibility
+export type { RiskLevel, VendorTier } from '@/lib/constants/ui';
 
 // ============================================
 // ENUMS
 // ============================================
-
-export type VendorTier = 'critical' | 'important' | 'standard';
 
 export type VendorStatus = 'active' | 'pending' | 'inactive' | 'offboarding';
 
@@ -406,15 +408,13 @@ export interface VendorFormStep {
   description: string;
 }
 
-// Risk level thresholds
+// Risk level thresholds (RiskLevel type imported from @/lib/constants/ui)
 export const RISK_THRESHOLDS = {
   low: { min: 0, max: 30 },
   medium: { min: 31, max: 60 },
   high: { min: 61, max: 80 },
   critical: { min: 81, max: 100 },
 } as const;
-
-export type RiskLevel = keyof typeof RISK_THRESHOLDS;
 
 export function getRiskLevel(score: number | null | undefined): RiskLevel | null {
   if (score === null || score === undefined) return null;

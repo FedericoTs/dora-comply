@@ -8,6 +8,11 @@
  * Reference: Regulation (EU) 2022/2554
  */
 
+import type { RiskLevel } from '@/lib/constants/ui';
+
+// Re-export for backwards compatibility
+export type { RiskLevel };
+
 // ============================================
 // MATURITY LEVELS
 // ============================================
@@ -117,8 +122,6 @@ export const RISK_THRESHOLDS = {
   /** Low risk: 0-30 */
   LOW: 0,
 } as const;
-
-export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
 /**
  * Convert risk score to risk level

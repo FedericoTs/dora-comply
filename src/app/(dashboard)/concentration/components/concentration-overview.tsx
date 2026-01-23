@@ -5,8 +5,9 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { RiskLevelSummary, RiskLevel } from '@/lib/concentration/types';
+import type { RiskLevelSummary } from '@/lib/concentration/types';
 import { RISK_COLORS } from '@/lib/concentration/types';
+import type { RiskLevel } from '@/lib/constants/ui';
 
 interface ConcentrationOverviewProps {
   riskLevels: RiskLevelSummary[];
@@ -57,7 +58,7 @@ const RISK_CONFIG: Record<RiskLevel, {
 
 function RiskCard({ summary }: { summary: RiskLevelSummary }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const config = RISK_CONFIG[summary.level];
+  const config = RISK_CONFIG[summary.level as RiskLevel];
   const Icon = config.icon;
 
   return (
@@ -75,7 +76,7 @@ function RiskCard({ summary }: { summary: RiskLevelSummary }) {
         <div className="flex items-center gap-2">
           <div
             className={cn('p-2 rounded-lg', config.bgClass)}
-            style={{ backgroundColor: `${RISK_COLORS[summary.level]}15` }}
+            style={{ backgroundColor: `${RISK_COLORS[summary.level as RiskLevel]}15` }}
           >
             <Icon className={cn('h-5 w-5', config.textClass)} />
           </div>
@@ -124,7 +125,7 @@ function RiskCard({ summary }: { summary: RiskLevelSummary }) {
               <li key={vendor.id} className="flex items-center gap-2 text-sm">
                 <span
                   className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: RISK_COLORS[summary.level] }}
+                  style={{ backgroundColor: RISK_COLORS[summary.level as RiskLevel] }}
                 />
                 <span className="font-medium">{vendor.name}</span>
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0">

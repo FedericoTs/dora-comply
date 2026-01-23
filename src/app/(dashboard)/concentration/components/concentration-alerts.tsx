@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import type { ConcentrationAlert, RiskLevel } from '@/lib/concentration/types';
+import type { ConcentrationAlert } from '@/lib/concentration/types';
+import type { RiskLevel } from '@/lib/constants/ui';
 import { MitigationWorkflowDialog } from './mitigation-workflow-dialog';
 
 interface ConcentrationAlertsProps {
@@ -60,7 +61,7 @@ function AlertBanner({
   onDismiss: (id: string) => void;
   onTakeAction: (alert: ConcentrationAlert) => void;
 }) {
-  const config = ALERT_CONFIG[alert.severity];
+  const config = ALERT_CONFIG[alert.severity as RiskLevel];
   const Icon = config.icon;
 
   return (
@@ -198,7 +199,7 @@ export function ConcentrationAlertBanner({
     return null;
   }
 
-  const config = ALERT_CONFIG[topAlert.severity];
+  const config = ALERT_CONFIG[topAlert.severity as RiskLevel];
   const Icon = config.icon;
 
   const handleTakeAction = () => {

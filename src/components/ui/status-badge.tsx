@@ -39,6 +39,10 @@ import {
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import { type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
+import { type RiskLevel } from '@/lib/constants/ui';
+
+// Re-export for backwards compatibility
+export type { RiskLevel } from '@/lib/constants/ui';
 
 type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
 
@@ -171,9 +175,7 @@ export const COMPLIANCE_STATUS_CONFIG: StatusMap<ComplianceStatus> = {
   },
 };
 
-/** Risk level types */
-export type RiskLevel = 'critical' | 'high' | 'medium' | 'low';
-
+/** Risk level configuration (type imported from @/lib/constants/ui) */
 export const RISK_LEVEL_CONFIG: StatusMap<RiskLevel> = {
   critical: {
     label: 'Critical',

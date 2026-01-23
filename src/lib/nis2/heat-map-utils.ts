@@ -215,7 +215,7 @@ export function calculateRiskDistribution(
     const level = view === 'inherent'
       ? risk.inherent_risk_level
       : (risk.residual_risk_level ?? risk.inherent_risk_level);
-    byLevel[level]++;
+    byLevel[level as RiskLevel]++;
   }
 
   // Count by category

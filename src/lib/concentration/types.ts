@@ -4,7 +4,10 @@
  * Types for DORA Article 28-29 concentration risk management
  */
 
-export type RiskLevel = 'critical' | 'high' | 'medium' | 'low';
+import type { RiskLevel } from '@/lib/constants/ui';
+
+// Re-export for backwards compatibility
+export type { RiskLevel };
 
 export type SubstitutabilityRating =
   | 'easily_substitutable'

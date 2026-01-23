@@ -639,7 +639,7 @@ export function generateConcentrationAlerts(
     medium: 2,
     low: 3,
   };
-  alerts.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+  alerts.sort((a, b) => severityOrder[a.severity as RiskLevel] - severityOrder[b.severity as RiskLevel]);
 
   return alerts;
 }

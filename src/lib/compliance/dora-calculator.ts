@@ -22,6 +22,11 @@ import type {
 } from './dora-types';
 import { MaturityLevel as ML } from './dora-types';
 import { DORA_REQUIREMENTS, SOC2_TO_DORA_MAPPINGS } from './dora-requirements-data';
+import {
+  getEffortEstimate,
+  EFFORT_WEEKS,
+  type PriorityLevel,
+} from './scoring-utils';
 
 // =============================================================================
 // Types for SOC 2 parsed data (from parsed_soc2 table)
@@ -652,15 +657,10 @@ function gatherAllGaps(
 
 /**
  * Estimate effort for remediating a requirement gap
+ * Uses shared effort estimates from scoring-utils
  */
 function estimateEffortForRequirement(requirement: DORARequirement): string {
-  const priorityEffort: Record<string, string> = {
-    critical: '4-8 weeks',
-    high: '2-4 weeks',
-    medium: '1-2 weeks',
-    low: '< 1 week',
-  };
-  return priorityEffort[requirement.priority] || '2-4 weeks';
+  return getEffortEstimate(requirement.priority as PriorityLevel);
 }
 
 /**

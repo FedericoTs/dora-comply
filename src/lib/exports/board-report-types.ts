@@ -5,10 +5,13 @@
  * Used by both PDF and PowerPoint generators.
  */
 
+import type { RiskLevel, VendorTier } from '@/lib/constants/ui';
+
+// Re-export for backwards compatibility
+export type { RiskLevel, VendorTier };
+
 export type DORAMaturityLevel = 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
 export type DORAComplianceStatus = 'compliant' | 'partial' | 'non-compliant';
-export type RiskLevel = 'critical' | 'high' | 'medium' | 'low';
-export type VendorTier = 'critical' | 'important' | 'standard';
 
 export interface BoardReportData {
   // Organization info

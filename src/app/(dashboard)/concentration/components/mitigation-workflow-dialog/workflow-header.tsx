@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { ConcentrationAlert } from '@/lib/concentration/types';
+import type { RiskLevel } from '@/lib/constants/ui';
 import { ALERT_CONFIG } from './constants';
 
 interface WorkflowHeaderProps {
@@ -15,7 +16,7 @@ interface WorkflowHeaderProps {
 }
 
 export function WorkflowHeader({ alert }: WorkflowHeaderProps) {
-  const config = ALERT_CONFIG[alert.severity];
+  const config = ALERT_CONFIG[alert.severity as RiskLevel];
   const Icon = config.icon;
 
   return (

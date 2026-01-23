@@ -13,19 +13,16 @@
  * - Neutral: gray
  */
 
+import type { RiskLevel } from '@/lib/constants/ui';
+
+// Re-export for backwards compatibility
+export type { RiskLevel };
+
 // =============================================================================
 // CORE STATUS TYPES
 // =============================================================================
 
 export type StatusLevel = 'success' | 'warning' | 'error' | 'critical' | 'info' | 'neutral' | 'pending';
-
-/**
- * Risk level type - canonical definition
- * Other modules should import this type rather than defining their own.
- * Known duplicates exist in: nis2/types.ts, concentration/types.ts, constants/ui.ts,
- * exports/board-report-types.ts, vendors/types.ts, status-badge.tsx, dora-constants.ts
- */
-export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
 /**
  * Risk score thresholds for converting numeric scores to risk levels

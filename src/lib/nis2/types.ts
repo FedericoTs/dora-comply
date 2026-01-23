@@ -6,12 +6,14 @@
  */
 
 import type { NIS2Category } from '../compliance/nis2-types';
+import type { RiskLevel } from '@/lib/constants/ui';
+
+// Re-export for backwards compatibility
+export type { RiskLevel };
 
 // =============================================================================
 // Enums (matching database enums)
 // =============================================================================
-
-export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
 export type RiskStatus = 'identified' | 'assessed' | 'treating' | 'monitoring' | 'closed';
 
