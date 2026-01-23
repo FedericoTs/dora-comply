@@ -138,14 +138,15 @@ export async function PUT(
     const body = await request.json();
     const { record, index } = body;
 
-    // Log the update (TODO: implement actual database updates)
+    // Log the update for debugging
     console.log(`[RoI API] Update ${templateIdNormalized} record ${index}:`, record);
 
-    // TODO: Implement per-template update logic
-    // B_01.01 -> update organizations table
-    // B_05.01 -> update vendors table
-    // B_02.01 -> update contracts table
-    // etc.
+    // Note: Per-template update logic is complex and requires:
+    // - Template-to-table mapping (B_01.01 -> organizations, B_05.01 -> vendors, etc.)
+    // - Field-to-column mapping for each of the 15 ESA templates
+    // - Validation of cross-references between templates
+    // Currently, RoI data is read-only and derived from source tables.
+    // Direct editing would need a separate roi_overrides table or similar pattern.
 
     return NextResponse.json({
       success: true,

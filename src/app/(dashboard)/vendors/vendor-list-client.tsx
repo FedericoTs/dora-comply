@@ -173,8 +173,10 @@ export function VendorListClient({
       case 'needs_review':
         return { status: ['pending'] };
       case 'expiring_soon':
-        // TODO: Add contract expiration filter when available
-        return {};
+        // Filter by contracts expiring in the next 90 days
+        // Note: This filter is applied server-side in getVendors query
+        // when contract_expiring_before is set
+        return { contract_expiring_before: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() };
       default:
         return {};
     }

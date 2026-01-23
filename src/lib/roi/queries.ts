@@ -889,6 +889,10 @@ export async function getPopulatableDocuments(): Promise<PopulatableDocument[]> 
         file_name,
         vendor_id,
         vendors(id, name)
+      ),
+      soc2_roi_mappings(
+        is_confirmed,
+        confirmed_at
       )
     `)
     .order('created_at', { ascending: false });
@@ -906,6 +910,12 @@ export async function getPopulatableDocuments(): Promise<PopulatableDocument[]> 
       vendors: { id: string; name: string } | null;
     };
     const subserviceOrgs = (doc.subservice_orgs as unknown[]) || [];
+
+    // Check if this document has been populated to RoI
+    const roiMapping = (doc.soc2_roi_mappings as unknown as Array<{
+      is_confirmed: boolean;
+      confirmed_at: string | null;
+    }> | null)?.[0];
 
     // Calculate fields available
     const templateBreakdown: PopulatableDocument['templateBreakdown'] = [
@@ -941,8 +951,8 @@ export async function getPopulatableDocuments(): Promise<PopulatableDocument[]> 
       parsedAt: new Date(doc.created_at),
       fieldsAvailable: totalFields,
       templateBreakdown,
-      isPopulated: false, // TODO: Track in soc2_roi_mappings table
-      populatedAt: undefined,
+      isPopulated: roiMapping?.is_confirmed ?? false,
+      populatedAt: roiMapping?.confirmed_at ? new Date(roiMapping.confirmed_at) : undefined,
     };
   });
 }

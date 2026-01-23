@@ -264,6 +264,8 @@ export interface VendorFilters {
   supports_critical_function?: boolean;
   /** Filter by framework - shows only vendors with gap analysis for this framework */
   framework?: 'dora' | 'nis2' | 'gdpr' | 'iso27001';
+  /** Filter vendors with contracts expiring before this date (ISO string) */
+  contract_expiring_before?: string;
 }
 
 export interface VendorSortOptions {

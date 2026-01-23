@@ -296,7 +296,11 @@ export async function dispatchWebhook(
           .eq('id', delivery.id);
       }
 
-      // TODO: Implement retry logic with exponential backoff
+      // Note: Retry logic with exponential backoff would require:
+      // 1. A background job queue (e.g., pg-boss, BullMQ)
+      // 2. Fields: retry_count, next_retry_at on webhook_deliveries
+      // 3. Cron job to process failed deliveries
+      // For now, failed webhooks are logged but not retried.
     }
   }
 }

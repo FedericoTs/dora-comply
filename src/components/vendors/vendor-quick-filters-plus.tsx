@@ -296,16 +296,24 @@ export function VendorQuickFiltersPlus({
 // Stats Helper - Calculates stats from vendor data
 // ============================================================================
 
-export function calculateSmartFilterStats(vendors: Array<{
-  tier?: string;
-  status?: string;
-  risk_score?: number | null;
-  last_assessment_date?: string | null;
-  created_at: string;
-  updated_at: string;
-  documents_count?: number;
-  contracts_count?: number;
-}>, contractsExpiringSoon: number = 0): SmartFilterStats {
+export function calculateSmartFilterStats(
+  vendors: Array<{
+    tier?: string;
+    status?: string;
+    risk_score?: number | null;
+    last_assessment_date?: string | null;
+    created_at: string;
+    updated_at: string;
+    documents_count?: number;
+    contracts_count?: number;
+  }>,
+  options: {
+    contractsExpiringSoon?: number;
+    /** Count of vendors whose score dropped in last 30 days (from vendor_score_history) */
+    scoreDropping?: number;
+  } = {}
+): SmartFilterStats {
+  const { contractsExpiringSoon = 0, scoreDropping = 0 } = options;
   const now = new Date();
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
@@ -321,7 +329,7 @@ export function calculateSmartFilterStats(vendors: Array<{
       !v.last_assessment_date ||
       v.status === 'pending'
     ).length,
-    scoreDropping: 0, // TODO: Calculate from historical data
+    scoreDropping,
     newThisWeek: vendors.filter(v => new Date(v.created_at) > oneWeekAgo).length,
     staleData: vendors.filter(v => new Date(v.updated_at) < ninetyDaysAgo).length,
   };
