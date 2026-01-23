@@ -24,7 +24,6 @@ import { MaturityLevel as ML } from './dora-types';
 import { DORA_REQUIREMENTS, SOC2_TO_DORA_MAPPINGS } from './dora-requirements-data';
 import {
   getEffortEstimate,
-  EFFORT_WEEKS,
   type PriorityLevel,
 } from './scoring-utils';
 

@@ -207,17 +207,8 @@ export async function updateRisk(
   }
 
   // Remove fields that shouldn't be updated directly
-  const {
-    id: _id,
-    organization_id: _organizationId,
-    reference_code: _referenceCode,
-    inherent_risk_score: _inherentRiskScore,
-    inherent_risk_level: _inherentRiskLevel,
-    created_at: _createdAt,
-    updated_at: _updatedAt,
-    deleted_at: _deletedAt,
-    ...updateData
-  } = input;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructuring to exclude fields
+  const { id, organization_id, reference_code, inherent_risk_score, inherent_risk_level, created_at, updated_at, deleted_at, ...updateData } = input;
 
   const { data, error } = await supabase
     .from('nis2_risks')
@@ -407,16 +398,8 @@ export async function updateControl(
   }
 
   // Remove fields that shouldn't be updated directly
-  const {
-    id: _id,
-    organization_id: _organizationId,
-    reference_code: _referenceCode,
-    overall_effectiveness: _overallEffectiveness,
-    created_at: _createdAt,
-    updated_at: _updatedAt,
-    deleted_at: _deletedAt,
-    ...updateData
-  } = input;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructuring to exclude fields
+  const { id, organization_id, reference_code, overall_effectiveness, created_at, updated_at, deleted_at, ...updateData } = input;
 
   const { data, error } = await supabase
     .from('nis2_controls')

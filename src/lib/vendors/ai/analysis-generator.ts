@@ -352,7 +352,6 @@ function generateRecommendations(
   concerns: AnalysisPoint[]
 ): Recommendation[] {
   const recommendations: Recommendation[] = [];
-  const { components } = health;
 
   // Map concerns to recommendations
   for (const concern of concerns) {

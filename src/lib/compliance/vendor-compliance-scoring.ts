@@ -12,13 +12,10 @@
  * - Framework-aligned: Based on actual regulatory requirements
  */
 
-import { getCertificationWeight } from './dora-constants';
 import {
   scoreToComplianceLevel,
   sumComponentScores,
-  calculateAssessmentFreshness,
   SCORE_THRESHOLDS,
-  type ComplianceLevel,
 } from './scoring-utils';
 
 // ============================================

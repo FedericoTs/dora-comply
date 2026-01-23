@@ -14,6 +14,7 @@ interface UseDORAGapRemediationProps {
 const EMPTY_EVIDENCE: DORAEvidence[] = [];
 
 export function useDORAGapRemediation({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- needed when evidence feature is implemented
   vendorId: _vendorId,
   soc2CoverageByRequirement,
 }: UseDORAGapRemediationProps) {
@@ -85,6 +86,7 @@ export function useDORAGapRemediation({
   }, []);
 
   // No-op until evidence feature is implemented
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- parameter needed for future implementation
   const addEvidence = useCallback((_newEvidence: DORAEvidence) => {
     console.warn('Evidence feature not yet implemented');
   }, []);

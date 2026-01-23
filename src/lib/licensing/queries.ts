@@ -93,7 +93,7 @@ export async function getCurrentOrganizationLicensing(): Promise<OrganizationLic
       .single();
 
     if (baseError || !baseOrg) {
-      console.log("Organization not found, using defaults");
+      // Expected when organization doesn't exist yet
       return DEFAULT_LICENSING;
     }
 
@@ -111,10 +111,8 @@ export async function getCurrentOrganizationLicensing(): Promise<OrganizationLic
       .eq("id", organizationId)
       .single();
 
-    // If error (likely column doesn't exist), use defaults
-    if (orgError) {
-      console.log("Licensing columns not available:", orgError.message);
-    } else if (org) {
+    // If error (likely column doesn't exist), use defaults silently
+    if (!orgError && org) {
       licenseTier = (org.license_tier as LicenseTier) || "professional";
       licensedFrameworks = (org.licensed_frameworks as FrameworkCode[]) || ["nis2", "dora"];
       trialEndsAt = org.trial_ends_at as string | null;

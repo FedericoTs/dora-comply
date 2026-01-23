@@ -120,7 +120,6 @@ export function TrendBadge({
   ...props
 }: TrendBadgeProps) {
   const isPositive = props.value > 0;
-  const isNegative = props.value < 0;
   const invertColors = props.invertColors ?? false;
 
   let bgClass: string;

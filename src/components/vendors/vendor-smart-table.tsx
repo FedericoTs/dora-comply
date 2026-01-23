@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Info,
 } from 'lucide-react';
 import {
   Table,

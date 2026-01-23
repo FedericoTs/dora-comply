@@ -117,7 +117,8 @@ export function QuestionnaireForm({
   token,
   sections,
   answerMap,
-  questionnaireId: _questionnaireId, // Reserved for future use
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future use
+  questionnaireId: _questionnaireId,
   documents = [],
 }: QuestionnaireFormProps) {
   const router = useRouter();

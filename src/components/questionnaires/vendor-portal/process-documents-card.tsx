@@ -24,7 +24,8 @@ interface ProcessDocumentsCardProps {
 export function ProcessDocumentsCard({
   token,
   unprocessedCount,
-  totalDocuments: _totalDocuments, // Available for UI display
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- available for UI display
+  totalDocuments: _totalDocuments,
 }: ProcessDocumentsCardProps) {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);

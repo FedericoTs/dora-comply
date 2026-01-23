@@ -144,8 +144,6 @@ export async function getVendorTrends(
   if (!vendors) return defaultTrends;
 
   // Calculate current stats
-  const currentTotal = vendors.length;
-  const currentCritical = vendors.filter(v => v.tier === 'critical').length;
   const vendorsWithScore = vendors.filter(v => v.risk_score !== null);
   const currentAvgRisk = vendorsWithScore.length > 0
     ? Math.round(vendorsWithScore.reduce((sum, v) => sum + (v.risk_score || 0), 0) / vendorsWithScore.length)

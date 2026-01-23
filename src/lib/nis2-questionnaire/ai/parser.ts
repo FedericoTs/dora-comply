@@ -9,7 +9,6 @@ import { google } from '@ai-sdk/google';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import type {
   TemplateQuestion,
-  AIExtraction,
   ExtractedAnswer,
   ExtractionSummary,
   DocumentType,

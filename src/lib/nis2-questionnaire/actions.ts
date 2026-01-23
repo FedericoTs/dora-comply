@@ -15,10 +15,6 @@ import {
   updateQuestionSchema,
   sendQuestionnaireSchema,
   reviewQuestionnaireSchema,
-  submitAnswerSchema,
-  bulkSubmitAnswersSchema,
-  confirmAIAnswerSchema,
-  uploadDocumentSchema,
   type CreateTemplateInput,
   type CreateQuestionInput,
   type SendQuestionnaireInput,
@@ -1060,7 +1056,7 @@ export async function flagAnswer(
 
     revalidatePath(`/questionnaires/${questionnaireId}`);
     return { success: true };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to flag answer' };
   }
 }
@@ -1091,7 +1087,7 @@ export async function unflagAnswer(
 
     revalidatePath(`/questionnaires/${questionnaireId}`);
     return { success: true };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to unflag answer' };
   }
 }

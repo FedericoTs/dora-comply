@@ -97,6 +97,7 @@ const categoryColors = {
 // Generate mock data, enhanced with real peer benchmark when available
 function generateMockData(
   vendor: Vendor | VendorWithRelations,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- will be used when peer comparison UI is implemented
   peerBenchmark?: PeerBenchmark | null
 ): {
   factors: RiskFactor[];
@@ -106,9 +107,9 @@ function generateMockData(
 } {
   const baseScore = vendor.risk_score ?? 60;
 
-  // Use real industry averages from peer benchmark if available
-  const industryAvgRisk = peerBenchmark?.industryAvgRiskScore ?? 72;
-  const doraReadiness = peerBenchmark?.doraReadiness ?? { org: 65, industryAvg: 65 };
+  // Industry averages are available in peerBenchmark but not yet used in UI
+  // const industryAvgRisk = peerBenchmark?.industryAvgRiskScore ?? 72;
+  // const doraReadiness = peerBenchmark?.doraReadiness ?? { org: 65, industryAvg: 65 };
 
   const factors: RiskFactor[] = [
     {
@@ -278,8 +279,7 @@ export function VendorRiskIntelligence({
 }: VendorRiskIntelligenceProps) {
   const [selectedFactor, setSelectedFactor] = useState<string | null>(null);
   const [peerBenchmark, setPeerBenchmark] = useState<PeerBenchmark | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [, startTransition] = useTransition();
 
   // Fetch peer benchmark data on mount
   useEffect(() => {
@@ -289,8 +289,6 @@ export function VendorRiskIntelligence({
         setPeerBenchmark(benchmark);
       } catch (error) {
         console.error('Failed to fetch peer benchmark:', error);
-      } finally {
-        setHasLoaded(true);
       }
     });
   }, []);

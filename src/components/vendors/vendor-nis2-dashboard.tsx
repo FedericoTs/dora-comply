@@ -10,27 +10,20 @@
  * - Recommendations for compliance improvement
  */
 
-import { useState } from 'react';
 import Link from 'next/link';
 import {
   Shield,
-  ShieldCheck,
   ShieldAlert,
   AlertTriangle,
   CheckCircle2,
-  Clock,
   Link2,
-  Server,
-  Users,
   FileText,
-  ArrowRight,
   Info,
   TrendingUp,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import {
   Tooltip,
   TooltipContent,
@@ -84,6 +77,7 @@ const SUPPLY_CHAIN_REQUIREMENTS = [
 ];
 
 // Simulated compliance assessment (would come from real data in production)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- vendorId will be used when fetching real data
 function assessVendorNIS2Compliance(vendorId: string) {
   // This would be calculated from actual vendor data
   const assessments: Record<string, { status: 'compliant' | 'partial' | 'gap'; evidence: string }> = {
@@ -114,8 +108,6 @@ function assessVendorNIS2Compliance(vendorId: string) {
 }
 
 export function VendorNIS2Dashboard({ vendorId, vendorName }: VendorNIS2DashboardProps) {
-  const [expanded, setExpanded] = useState(false);
-
   const { overallScore, assessments } = assessVendorNIS2Compliance(vendorId);
 
   const getStatusColor = (status: 'compliant' | 'partial' | 'gap') => {

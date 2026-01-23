@@ -87,7 +87,8 @@ const STATUS_CONFIG: Record<
 
 export function DocumentUploadZone({
   token,
-  existingDocuments: _existingDocuments, // Available for duplicate detection
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- available for duplicate detection
+  existingDocuments: _existingDocuments,
   onUploadComplete,
 }: DocumentUploadZoneProps) {
   const router = useRouter();

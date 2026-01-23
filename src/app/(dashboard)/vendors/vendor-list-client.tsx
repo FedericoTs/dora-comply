@@ -385,7 +385,8 @@ export function VendorListClient({
   // Bulk action handler for VendorBulkActions
   const handleBulkAction = async (
     action: BulkActionType,
-    _params?: Record<string, unknown> // Reserved for future use
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future use
+    _params?: Record<string, unknown>
   ): Promise<BulkActionResult> => {
     const selectedVendorsList = vendors.filter(v => selectedIds.includes(v.id));
 

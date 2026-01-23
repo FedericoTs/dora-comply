@@ -79,7 +79,8 @@ export function DocumentSourceViewer({
   onClose,
   token,
   sourceContext,
-  documents: _documents, // Available for future use
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- available for future use
+  documents: _documents,
   allSources = [],
   onNavigate,
 }: DocumentSourceViewerProps) {

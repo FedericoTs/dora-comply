@@ -42,13 +42,6 @@ interface NavItem {
   icon: React.ElementType;
 }
 
-interface NavGroup {
-  id: string;
-  label: string;
-  icon: React.ElementType;
-  items: NavItem[];
-}
-
 interface VendorNavigationBarProps {
   activeSection: VendorNavSection;
   onSectionChange: (section: VendorNavSection) => void;

@@ -116,7 +116,7 @@ export async function getOrganizationLicensing(
       .single();
 
     if (baseError || !baseOrg) {
-      console.log("Organization not found, using defaults");
+      // Expected when organization doesn't exist yet
       return DEFAULT_LICENSING;
     }
 
@@ -133,10 +133,8 @@ export async function getOrganizationLicensing(
       .eq("id", organizationId)
       .single();
 
-    // If error (likely column doesn't exist), use defaults
-    if (orgError) {
-      console.log("Licensing columns not available:", orgError.message);
-    } else if (org) {
+    // If error (likely column doesn't exist), use defaults silently
+    if (!orgError && org) {
       const orgData = org as unknown as OrganizationRow;
       licenseTier = orgData.license_tier || "professional";
       licensedFrameworks = orgData.licensed_frameworks || ["nis2", "dora"];
@@ -150,12 +148,10 @@ export async function getOrganizationLicensing(
       .select("*")
       .eq("organization_id", organizationId);
 
-    let entitlementRows: EntitlementRow[] = [];
-    if (entitlementsError) {
-      console.log("Entitlements table not available:", entitlementsError.message);
-    } else {
-      entitlementRows = (entitlements || []) as unknown as EntitlementRow[];
-    }
+    // Silently handle missing entitlements table
+    const entitlementRows: EntitlementRow[] = entitlementsError
+      ? []
+      : ((entitlements || []) as unknown as EntitlementRow[]);
 
     // Build entitlements map
     const entitlementsMap: Record<FrameworkCode, FrameworkEntitlement> = {} as Record<
