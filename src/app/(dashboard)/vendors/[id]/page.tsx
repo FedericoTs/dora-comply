@@ -32,6 +32,7 @@ import { VendorContacts } from '@/components/vendors/vendor-contacts';
 import { VendorContracts } from '@/components/vendors/vendor-contracts';
 import { VendorDORADashboard } from '@/components/vendors/vendor-dora-dashboard';
 import { VendorFrameworksTab } from '@/components/vendors/frameworks';
+import { VendorRiskAssessmentTab } from '@/components/vendors/risk-assessment';
 import { VendorTabsEnhanced } from './vendor-tabs-enhanced';
 
 interface VendorDetailPageProps {
@@ -310,6 +311,13 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
         summaryContent={summaryContent}
         doraContent={<VendorDORADashboard vendorId={vendor.id} vendorName={vendor.name} />}
         frameworksContent={<VendorFrameworksTab vendorId={vendor.id} vendorName={vendor.name} />}
+        riskAssessmentContent={
+          <VendorRiskAssessmentTab
+            vendorId={vendor.id}
+            vendorName={vendor.name}
+            organizationId={vendor.organization_id}
+          />
+        }
         contactsContent={
           <VendorContacts
             vendorId={vendor.id}

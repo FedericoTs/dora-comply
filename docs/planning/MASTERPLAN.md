@@ -13,7 +13,7 @@
 | Phase 1: Fix Broken Features | ✅ Complete | 8/8 |
 | Phase 2: High-Value Features | ✅ Complete | 4/4 |
 | Phase 3: Competitive Parity | 🔄 In Progress | 2/3 |
-| Phase 4: Competitive Advantage | ⏳ Pending | 0/6 |
+| Phase 4: Competitive Advantage | 🔄 In Progress | 1/4 |
 
 ---
 
@@ -153,12 +153,12 @@
 
 ### Weeks 13-16: Multi-Domain Risk & ESG
 
-- [ ] **4.1 Multi-Domain Risk Assessment** (10 days)
-  - [ ] Create migration for `vendor_domain_assessments`
-  - [ ] Add risk domain selector to vendor form
-  - [ ] Create domain-specific assessment forms
-  - [ ] Add multi-domain risk dashboard
-  - [ ] Create domain comparison charts
+- [x] **4.1 Multi-Domain Risk Assessment** (10 days) ✅
+  - [x] Create migration for `vendor_domain_assessments`
+  - [x] Create lib/domain-assessments module (types, queries, actions)
+  - [x] Add risk assessment tab to vendor detail page
+  - [x] Create domain-specific assessment forms
+  - [x] Add multi-domain risk scoring (Security, Privacy, Compliance, Operational, Financial)
 
 - [ ] **4.2 ESG/Sustainability Module** (6 days)
   - [ ] Create migration for `esg_metrics`
@@ -195,9 +195,9 @@
 | 037 | `tasks`, `task_comments` | 2 | ✅ Done |
 | 038 | Organization branding fields | 2 | ✅ Done |
 | 039 | `contract_clauses`, `contract_renewals`, `contract_alerts` | 3 | ✅ Done |
-| 040 | `remediation_plans`, `remediation_actions` | 3 | ⏳ Pending |
-| 041 | `custom_dashboards`, `dashboard_widgets` | 3 | ⏳ Pending |
-| 042 | `vendor_domain_assessments`, `esg_metrics` | 4 | ⏳ Pending |
+| 040 | `remediation_plans`, `remediation_actions` | 3 | ✅ Done |
+| 041 | `custom_dashboards`, `dashboard_widgets` | 3 | ✅ Done |
+| 042 | `risk_domains`, `domain_assessment_criteria`, `vendor_domain_assessments` | 4 | ✅ Done |
 | 043 | `gdpr_processing_activities`, `gdpr_dpias` | 4 | ⏳ Pending |
 | 044 | `integrations`, `integration_events` | 4 | ⏳ Pending |
 
@@ -331,7 +331,8 @@ src/
 - ✅ Contract lifecycle
 - ✅ Remediation workflow
 - 🔄 Custom dashboards (partially implemented)
-- ⬜ Multi-domain risk
+- ✅ Multi-domain risk assessment
+- ⬜ ESG/Sustainability module
 - ⬜ GDPR module
 - ⬜ Integration framework
 
@@ -348,6 +349,7 @@ src/
 | 2026-01-23 | Completed 3.1 Contract Lifecycle Management | 3 |
 | 2026-01-24 | Verified 3.2 Remediation Plans already complete | 3 |
 | 2026-01-24 | 3.3 Custom Dashboards partially implemented (deferred) | 3 |
+| 2026-01-25 | Completed 4.1 Multi-Domain Risk Assessment | 4 |
 
 ---
 

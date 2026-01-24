@@ -27,6 +27,7 @@ interface VendorTabsEnhancedProps {
   // Compliance content
   doraContent: ReactNode;
   frameworksContent: ReactNode;
+  riskAssessmentContent: ReactNode;
   // Relationships content
   contactsContent: ReactNode;
   contractsContent: ReactNode;
@@ -46,6 +47,7 @@ const tabToSection: Record<string, VendorNavSection> = {
   'dora': 'dora',
   'nis2': 'nis2',
   'frameworks': 'frameworks',
+  'risk-assessment': 'risk-assessment',
   'contacts': 'contacts',
   'contracts': 'contracts',
   'documents': 'documents',
@@ -63,6 +65,7 @@ const sectionToTab: Record<VendorNavSection, string> = {
   'dora': 'dora',
   'nis2': 'nis2',
   'frameworks': 'frameworks',
+  'risk-assessment': 'risk-assessment',
   'contacts': 'contacts',
   'contracts': 'contracts',
   'documents': 'documents',
@@ -78,6 +81,7 @@ export function VendorTabsEnhanced({
   summaryContent,
   doraContent,
   frameworksContent,
+  riskAssessmentContent,
   contactsContent,
   contractsContent,
   documentsContent,
@@ -121,6 +125,9 @@ export function VendorTabsEnhanced({
 
       case 'frameworks':
         return frameworksContent;
+
+      case 'risk-assessment':
+        return riskAssessmentContent;
 
       case 'contacts':
         return contactsContent;

@@ -27,6 +27,7 @@ export type VendorNavSection =
   | 'dora'
   | 'nis2'
   | 'frameworks'
+  | 'risk-assessment'
   | 'contacts'
   | 'contracts'
   | 'documents'
@@ -53,6 +54,7 @@ const complianceItems: NavItem[] = [
   { id: 'nis2', label: 'NIS2', icon: Shield },
   { id: 'dora', label: 'DORA', icon: Shield },
   { id: 'frameworks', label: 'Frameworks', icon: Gauge },
+  { id: 'risk-assessment', label: 'Risk Assessment', icon: Gauge },
 ];
 
 const relationshipItems: NavItem[] = [
