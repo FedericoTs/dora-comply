@@ -30,6 +30,7 @@ import {
   FileQuestion,
   ListTodo,
   Wrench,
+  LayoutDashboard,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -108,6 +109,7 @@ const COMPLIANCE_NAV: NavItem[] = [
 
 // Insights section - Analytics (collapsed by default)
 const INSIGHTS_NAV: NavItem[] = [
+  { name: 'Custom Dashboards', href: '/dashboards', icon: LayoutDashboard },
   { name: 'Monitoring Alerts', href: '/monitoring', icon: AlertOctagon },
   { name: 'Compliance Trends', href: '/compliance/trends', icon: BarChart3 },
   { name: 'Concentration Risk', href: '/concentration', icon: Network },
