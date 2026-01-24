@@ -12,7 +12,7 @@
 |-------|--------|----------|
 | Phase 1: Fix Broken Features | ✅ Complete | 8/8 |
 | Phase 2: High-Value Features | ✅ Complete | 4/4 |
-| Phase 3: Competitive Parity | 🔄 In Progress | 1/6 |
+| Phase 3: Competitive Parity | 🔄 In Progress | 2/3 |
 | Phase 4: Competitive Advantage | ⏳ Pending | 0/6 |
 
 ---
@@ -127,13 +127,13 @@
 
 ### Weeks 9-10: Remediation Workflow
 
-- [ ] **3.2 Remediation Plans & Actions** (5 days)
-  - [ ] Create migration for `remediation_plans`, `remediation_actions`
-  - [ ] Create remediation dashboard
-  - [ ] Add Kanban board view
-  - [ ] Create plan wizard
-  - [ ] Add evidence linking
-  - [ ] Create progress reporting
+- [x] **3.2 Remediation Plans & Actions** (5 days) ✅
+  - [x] Create migration for `remediation_plans`, `remediation_actions`
+  - [x] Create remediation dashboard
+  - [x] Add Kanban board view
+  - [x] Create plan wizard
+  - [x] Add evidence linking
+  - [x] Create progress reporting
 
 ### Weeks 11-12: Custom Dashboards
 
@@ -329,8 +329,8 @@ src/
 - ✅ Task management
 - ✅ Branded vendor portal
 - ✅ Contract lifecycle
-- ⬜ Remediation workflow
-- ⬜ Custom dashboards
+- ✅ Remediation workflow
+- 🔄 Custom dashboards (partially implemented)
 - ⬜ Multi-domain risk
 - ⬜ GDPR module
 - ⬜ Integration framework
@@ -346,6 +346,8 @@ src/
 | 2026-01-23 | Completed Phase 1 (8/8 features) | 1 |
 | 2026-01-23 | Completed Phase 2 (4/4 features) | 2 |
 | 2026-01-23 | Completed 3.1 Contract Lifecycle Management | 3 |
+| 2026-01-24 | Verified 3.2 Remediation Plans already complete | 3 |
+| 2026-01-24 | 3.3 Custom Dashboards partially implemented (deferred) | 3 |
 
 ---
 
