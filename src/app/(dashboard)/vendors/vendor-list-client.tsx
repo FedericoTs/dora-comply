@@ -46,7 +46,7 @@ const VendorCommandPalette = dynamic(
   { ssr: false }
 );
 import type { Vendor, VendorFilters, VendorSortOptions, ViewMode } from '@/lib/vendors/types';
-import { deleteVendor, updateVendorStatus, bulkDeleteVendors, fetchVendorsAction } from '@/lib/vendors/actions';
+import { deleteVendor, updateVendorStatus, bulkDeleteVendors, fetchVendorsAction, getVendorsWithDroppingScores } from '@/lib/vendors/actions';
 
 interface VendorListClientProps {
   initialVendors: Vendor[];
@@ -266,7 +266,7 @@ export function VendorListClient({
   };
 
   // Handler for SmartFilterId (from command palette) - extends QuickFilterId
-  const handleSmartFilterChange = (filterId: SmartFilterId) => {
+  const handleSmartFilterChange = async (filterId: SmartFilterId) => {
     // Check if it's a basic QuickFilterId
     const basicFilters: QuickFilterId[] = ['all', 'critical', 'needs_review', 'expiring_soon'];
     if (basicFilters.includes(filterId as QuickFilterId)) {
@@ -288,9 +288,42 @@ export function VendorListClient({
         // Show vendors with status pending or missing data
         newFilters = { status: ['pending'] };
         break;
-      case 'score_dropping':
-        toast.info('Score dropping filter coming soon');
-        break;
+      case 'score_dropping': {
+        // Fetch vendors with dropping scores
+        toast.loading('Checking for score changes...', { id: 'score-filter' });
+        const result = await getVendorsWithDroppingScores(5);
+        toast.dismiss('score-filter');
+
+        if (result.success && result.data && result.data.length > 0) {
+          // Filter vendors by the IDs that have dropping scores
+          const droppingIds = result.data.map(v => v.vendorId);
+          // Use search filter with the vendor names to filter the list
+          // Note: This is a workaround since we can't filter by ID array directly
+          const vendorIdsFilter = { vendor_ids: droppingIds } as VendorFilters;
+          setFilters(vendorIdsFilter);
+          setQuickFilter('all');
+          syncUrl({ filters: vendorIdsFilter, page: 1, quick: 'all' });
+
+          // Custom fetch with vendor IDs
+          startTransition(async () => {
+            const fetchResult = await fetchVendorsAction({
+              pagination: { page: 1, limit },
+              filters: { ...vendorIdsFilter, framework: activeFramework || undefined },
+              sort: sortOptions,
+            });
+            setVendors(fetchResult.data.filter(v => droppingIds.includes(v.id)));
+            setTotal(result.data!.length);
+            setTotalPages(1);
+            setSelectedIds([]);
+          });
+
+          toast.success(`Found ${result.data.length} vendor(s) with declining scores`);
+          return;
+        } else {
+          toast.info('No vendors with declining scores found');
+          return;
+        }
+      }
       case 'new_this_week':
         toast.info('Showing vendors added this week');
         break;

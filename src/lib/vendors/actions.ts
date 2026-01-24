@@ -695,6 +695,11 @@ export async function fetchVendorsAction(
     query = query.lte('risk_score', filters.risk_max);
   }
 
+  // Filter by specific vendor IDs (for smart filters)
+  if (filters.vendor_ids && filters.vendor_ids.length > 0) {
+    query = query.in('id', filters.vendor_ids);
+  }
+
   // Apply sorting
   const sortOrder = sort.direction === 'asc';
   query = query.order(sort.field, { ascending: sortOrder });
@@ -1335,4 +1340,137 @@ export async function fetchPeerBenchmark(): Promise<PeerBenchmark> {
       sampleSize: 150,
     };
   }
+}
+
+// ============================================================================
+// Score Dropping Filter
+// ============================================================================
+
+export interface ScoreDroppingVendor {
+  vendorId: string;
+  vendorName: string;
+  currentScore: number;
+  previousScore: number;
+  scoreDrop: number;
+  dropDate: string;
+}
+
+/**
+ * Get vendors whose security scores have dropped
+ * Compares current risk_score against vendor_score_history
+ * A "drop" means the score increased (higher = worse risk)
+ */
+export async function getVendorsWithDroppingScores(
+  minDrop: number = 5
+): Promise<ActionResult<ScoreDroppingVendor[]>> {
+  const supabase = await createClient();
+
+  const organizationId = await getCurrentUserOrganization();
+  if (!organizationId) {
+    return {
+      success: false,
+      error: createVendorError('UNAUTHORIZED', 'You must be logged in'),
+    };
+  }
+
+  // Query to find vendors where current risk_score > latest historical score
+  // This indicates the score has gotten worse (dropped in security)
+  const { data, error } = await supabase.rpc('get_vendors_with_score_drop', {
+    org_id: organizationId,
+    min_drop: minDrop,
+  });
+
+  if (error) {
+    // If the RPC doesn't exist, fall back to a manual query
+    console.log('RPC not available, using fallback query');
+
+    // Fallback: Query vendors and their score history
+    const { data: vendors, error: vendorError } = await supabase
+      .from('vendors')
+      .select('id, name, risk_score')
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null)
+      .not('risk_score', 'is', null);
+
+    if (vendorError || !vendors) {
+      return {
+        success: false,
+        error: mapDatabaseError(vendorError || { message: 'Failed to fetch vendors' }),
+      };
+    }
+
+    const vendorIds = vendors.map(v => v.id);
+    if (vendorIds.length === 0) {
+      return { success: true, data: [] };
+    }
+
+    // Get latest score history for each vendor
+    const { data: histories, error: historyError } = await supabase
+      .from('vendor_score_history')
+      .select('vendor_id, score, recorded_at')
+      .in('vendor_id', vendorIds)
+      .order('recorded_at', { ascending: false });
+
+    if (historyError) {
+      return {
+        success: false,
+        error: mapDatabaseError(historyError),
+      };
+    }
+
+    // Build map of latest historical score per vendor
+    const latestScores = new Map<string, { score: number; recorded_at: string }>();
+    for (const h of histories || []) {
+      if (!latestScores.has(h.vendor_id)) {
+        latestScores.set(h.vendor_id, { score: h.score, recorded_at: h.recorded_at });
+      }
+    }
+
+    // Find vendors where current score > historical score (score got worse)
+    const droppingVendors: ScoreDroppingVendor[] = [];
+    for (const vendor of vendors) {
+      const history = latestScores.get(vendor.id);
+      if (history && vendor.risk_score !== null) {
+        const drop = vendor.risk_score - history.score;
+        if (drop >= minDrop) {
+          droppingVendors.push({
+            vendorId: vendor.id,
+            vendorName: vendor.name,
+            currentScore: vendor.risk_score,
+            previousScore: history.score,
+            scoreDrop: drop,
+            dropDate: history.recorded_at,
+          });
+        }
+      }
+    }
+
+    // Sort by drop amount descending
+    droppingVendors.sort((a, b) => b.scoreDrop - a.scoreDrop);
+
+    return { success: true, data: droppingVendors };
+  }
+
+  return {
+    success: true,
+    data: (data || []).map((row: Record<string, unknown>) => ({
+      vendorId: row.vendor_id as string,
+      vendorName: row.vendor_name as string,
+      currentScore: row.current_score as number,
+      previousScore: row.previous_score as number,
+      scoreDrop: row.score_drop as number,
+      dropDate: row.drop_date as string,
+    })),
+  };
+}
+
+/**
+ * Get vendor IDs with dropping scores (for filtering)
+ */
+export async function getScoreDroppingVendorIds(): Promise<string[]> {
+  const result = await getVendorsWithDroppingScores(5);
+  if (!result.success || !result.data) {
+    return [];
+  }
+  return result.data.map(v => v.vendorId);
 }

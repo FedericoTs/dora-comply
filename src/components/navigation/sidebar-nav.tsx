@@ -29,6 +29,7 @@ import {
   Lock,
   FileQuestion,
   ListTodo,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -102,6 +103,7 @@ const COMPLIANCE_NAV: NavItem[] = [
   { name: 'Register of Information', href: '/roi', icon: Database },
   { name: 'Risk Register', href: '/risks', icon: ClipboardList },
   { name: 'Resilience Testing', href: '/testing', icon: FlaskConical },
+  { name: 'Remediation', href: '/remediation', icon: Wrench },
 ];
 
 // Insights section - Analytics (collapsed by default)

@@ -17,6 +17,7 @@ import {
   MFACard,
   ActiveSessionsCard,
   SecurityLogCard,
+  ApiKeysCard,
   DeleteFactorDialog,
   MFA_REQUIRED_ROLES,
 } from './components';
@@ -118,6 +119,9 @@ export default function SecuritySettingsPage() {
         onRevokeSession={handleRevokeSession}
         onRevokeAllOther={handleRevokeAllOther}
       />
+
+      {/* API Keys */}
+      <ApiKeysCard />
 
       {/* Security Log - Coming Soon */}
       <SecurityLogCard />

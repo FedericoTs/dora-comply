@@ -266,6 +266,8 @@ export interface VendorFilters {
   framework?: 'dora' | 'nis2' | 'gdpr' | 'iso27001';
   /** Filter vendors with contracts expiring before this date (ISO string) */
   contract_expiring_before?: string;
+  /** Filter by specific vendor IDs (for smart filters like score_dropping) */
+  vendor_ids?: string[];
 }
 
 export interface VendorSortOptions {
