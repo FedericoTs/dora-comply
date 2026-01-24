@@ -32,6 +32,7 @@ export async function getDashboards(): Promise<DashboardSummary[]> {
   } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
+  // Get dashboards without the users join (FK points to auth.users, not public.users)
   const { data, error } = await supabase
     .from('custom_dashboards')
     .select(
@@ -47,8 +48,7 @@ export async function getDashboards(): Promise<DashboardSummary[]> {
       created_at,
       updated_at,
       dashboard_widgets(count),
-      dashboard_favorites!left(id),
-      users!custom_dashboards_created_by_fkey(full_name)
+      dashboard_favorites!left(id)
     `
     )
     .order('is_default', { ascending: false })
@@ -56,29 +56,36 @@ export async function getDashboards(): Promise<DashboardSummary[]> {
 
   if (error) throw error;
 
-  return (data || []).map((d) => {
-    // Handle users join - could be array or object depending on Supabase inference
-    const usersData = d.users as { full_name: string }[] | { full_name: string } | null;
-    const createdByName = Array.isArray(usersData)
-      ? usersData[0]?.full_name || null
-      : usersData?.full_name || null;
+  // Get creator names separately
+  const creatorIds = [...new Set((data || []).map(d => d.created_by).filter(Boolean))];
+  let creatorsMap: Record<string, string> = {};
 
-    return {
-      id: d.id,
-      name: d.name,
-      description: d.description,
-      icon: d.icon,
-      is_default: d.is_default,
-      is_shared: d.is_shared,
-      is_template: d.is_template,
-      widget_count: (d.dashboard_widgets as { count: number }[])?.[0]?.count || 0,
-      is_favorited: ((d.dashboard_favorites as { id: string }[]) || []).length > 0,
-      created_by: d.created_by,
-      created_by_name: createdByName,
-      created_at: d.created_at,
-      updated_at: d.updated_at,
-    };
-  });
+  if (creatorIds.length > 0) {
+    const { data: creators } = await supabase
+      .from('users')
+      .select('id, full_name')
+      .in('id', creatorIds);
+
+    if (creators) {
+      creatorsMap = Object.fromEntries(creators.map(c => [c.id, c.full_name]));
+    }
+  }
+
+  return (data || []).map((d) => ({
+    id: d.id,
+    name: d.name,
+    description: d.description,
+    icon: d.icon,
+    is_default: d.is_default,
+    is_shared: d.is_shared,
+    is_template: d.is_template,
+    widget_count: (d.dashboard_widgets as { count: number }[])?.[0]?.count || 0,
+    is_favorited: ((d.dashboard_favorites as { id: string }[]) || []).length > 0,
+    created_by: d.created_by,
+    created_by_name: creatorsMap[d.created_by] || null,
+    created_at: d.created_at,
+    updated_at: d.updated_at,
+  }));
 }
 
 /**
@@ -98,8 +105,7 @@ export async function getDashboard(id: string): Promise<DashboardWithWidgets | n
       `
       *,
       dashboard_widgets(*),
-      dashboard_favorites!left(id),
-      users!custom_dashboards_created_by_fkey(full_name)
+      dashboard_favorites!left(id)
     `
     )
     .eq('id', id)
@@ -110,11 +116,16 @@ export async function getDashboard(id: string): Promise<DashboardWithWidgets | n
     throw error;
   }
 
-  // Handle users join - could be array or object
-  const usersData = data.users as { full_name: string }[] | { full_name: string } | null;
-  const createdByName = Array.isArray(usersData)
-    ? usersData[0]?.full_name
-    : usersData?.full_name;
+  // Get creator name separately
+  let createdByName: string | undefined;
+  if (data.created_by) {
+    const { data: creator } = await supabase
+      .from('users')
+      .select('full_name')
+      .eq('id', data.created_by)
+      .single();
+    createdByName = creator?.full_name;
+  }
 
   return {
     ...data,
@@ -177,8 +188,7 @@ export async function getFavoriteDashboards(): Promise<DashboardSummary[]> {
         created_by,
         created_at,
         updated_at,
-        dashboard_widgets(count),
-        users!custom_dashboards_created_by_fkey(full_name)
+        dashboard_widgets(count)
       )
     `
     )
@@ -186,34 +196,42 @@ export async function getFavoriteDashboards(): Promise<DashboardSummary[]> {
 
   if (error) throw error;
 
-  return (data || [])
+  const dashboards = (data || [])
     .filter((f) => f.custom_dashboards)
-    .map((f) => {
-      const d = f.custom_dashboards as unknown as Dashboard & {
-        dashboard_widgets: { count: number }[];
-        users: { full_name: string }[] | { full_name: string } | null;
-      };
-      // Handle users join - could be array or object
-      const createdByName = Array.isArray(d.users)
-        ? d.users[0]?.full_name || null
-        : d.users?.full_name || null;
-
-      return {
-        id: d.id,
-        name: d.name,
-        description: d.description,
-        icon: d.icon,
-        is_default: d.is_default,
-        is_shared: d.is_shared,
-        is_template: d.is_template,
-        widget_count: d.dashboard_widgets?.[0]?.count || 0,
-        is_favorited: true,
-        created_by: d.created_by,
-        created_by_name: createdByName,
-        created_at: d.created_at,
-        updated_at: d.updated_at,
-      };
+    .map((f) => f.custom_dashboards as unknown as Dashboard & {
+      dashboard_widgets: { count: number }[];
     });
+
+  // Get creator names separately
+  const creatorIds = [...new Set(dashboards.map(d => d.created_by).filter(Boolean))];
+  let creatorsMap: Record<string, string> = {};
+
+  if (creatorIds.length > 0) {
+    const { data: creators } = await supabase
+      .from('users')
+      .select('id, full_name')
+      .in('id', creatorIds);
+
+    if (creators) {
+      creatorsMap = Object.fromEntries(creators.map(c => [c.id, c.full_name]));
+    }
+  }
+
+  return dashboards.map((d) => ({
+    id: d.id,
+    name: d.name,
+    description: d.description,
+    icon: d.icon,
+    is_default: d.is_default,
+    is_shared: d.is_shared,
+    is_template: d.is_template,
+    widget_count: d.dashboard_widgets?.[0]?.count || 0,
+    is_favorited: true,
+    created_by: d.created_by,
+    created_by_name: creatorsMap[d.created_by] || null,
+    created_at: d.created_at,
+    updated_at: d.updated_at,
+  }));
 }
 
 /**
@@ -236,8 +254,7 @@ export async function getTemplateDashboards(): Promise<DashboardSummary[]> {
       created_by,
       created_at,
       updated_at,
-      dashboard_widgets(count),
-      users!custom_dashboards_created_by_fkey(full_name)
+      dashboard_widgets(count)
     `
     )
     .eq('is_template', true)
@@ -245,29 +262,36 @@ export async function getTemplateDashboards(): Promise<DashboardSummary[]> {
 
   if (error) throw error;
 
-  return (data || []).map((d) => {
-    // Handle users join - could be array or object
-    const usersData = d.users as { full_name: string }[] | { full_name: string } | null;
-    const createdByName = Array.isArray(usersData)
-      ? usersData[0]?.full_name || null
-      : usersData?.full_name || null;
+  // Get creator names separately
+  const creatorIds = [...new Set((data || []).map(d => d.created_by).filter(Boolean))];
+  let creatorsMap: Record<string, string> = {};
 
-    return {
-      id: d.id,
-      name: d.name,
-      description: d.description,
-      icon: d.icon,
-      is_default: d.is_default,
-      is_shared: d.is_shared,
-      is_template: d.is_template,
-      widget_count: (d.dashboard_widgets as { count: number }[])?.[0]?.count || 0,
-      is_favorited: false,
-      created_by: d.created_by,
-      created_by_name: createdByName,
-      created_at: d.created_at,
-      updated_at: d.updated_at,
-    };
-  });
+  if (creatorIds.length > 0) {
+    const { data: creators } = await supabase
+      .from('users')
+      .select('id, full_name')
+      .in('id', creatorIds);
+
+    if (creators) {
+      creatorsMap = Object.fromEntries(creators.map(c => [c.id, c.full_name]));
+    }
+  }
+
+  return (data || []).map((d) => ({
+    id: d.id,
+    name: d.name,
+    description: d.description,
+    icon: d.icon,
+    is_default: d.is_default,
+    is_shared: d.is_shared,
+    is_template: d.is_template,
+    widget_count: (d.dashboard_widgets as { count: number }[])?.[0]?.count || 0,
+    is_favorited: false,
+    created_by: d.created_by,
+    created_by_name: creatorsMap[d.created_by] || null,
+    created_at: d.created_at,
+    updated_at: d.updated_at,
+  }));
 }
 
 // ============================================
