@@ -308,3 +308,25 @@ export async function toggleFavoriteAction(dashboardId: string): Promise<ActionR
     };
   }
 }
+
+// ============================================
+// TEMPLATE SEEDING
+// ============================================
+
+/**
+ * Seed default dashboard templates if none exist
+ * This creates starter templates that users can clone
+ */
+export async function seedDefaultTemplatesAction(): Promise<ActionResult<void>> {
+  try {
+    await queries.seedDefaultTemplates();
+    revalidatePath('/dashboards');
+    return { success: true, data: undefined };
+  } catch (error) {
+    console.error('Error seeding templates:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to seed templates',
+    };
+  }
+}

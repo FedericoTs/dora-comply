@@ -653,3 +653,197 @@ export async function toggleFavorite(dashboardId: string): Promise<boolean> {
     return true;
   }
 }
+
+// ============================================
+// TEMPLATE SEEDING
+// ============================================
+
+/**
+ * Seed default dashboard templates if none exist
+ */
+export async function seedDefaultTemplates(): Promise<void> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Get user's organization
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single();
+
+  if (userError) throw userError;
+
+  // Check if templates already exist
+  const { data: existingTemplates } = await supabase
+    .from('custom_dashboards')
+    .select('id')
+    .eq('organization_id', userData.organization_id)
+    .eq('is_template', true);
+
+  if (existingTemplates && existingTemplates.length > 0) {
+    return; // Templates already exist
+  }
+
+  // Create Executive Overview Template
+  const { data: execDashboard, error: execError } = await supabase
+    .from('custom_dashboards')
+    .insert({
+      organization_id: userData.organization_id,
+      created_by: user.id,
+      name: 'Executive Overview',
+      description: 'High-level compliance status for leadership reporting',
+      icon: 'bar-chart',
+      is_template: true,
+      is_shared: true,
+      layout_type: 'grid',
+      columns: 12,
+      row_height: 80,
+    })
+    .select()
+    .single();
+
+  if (execError) throw execError;
+
+  // Add widgets to Executive Overview
+  await supabase.from('dashboard_widgets').insert([
+    {
+      dashboard_id: execDashboard.id,
+      widget_type: 'compliance_gauge',
+      title: 'NIS2 Compliance',
+      grid_x: 0,
+      grid_y: 0,
+      grid_w: 4,
+      grid_h: 4,
+      config: { framework: 'nis2' },
+    },
+    {
+      dashboard_id: execDashboard.id,
+      widget_type: 'risk_heat_map',
+      title: null,
+      grid_x: 4,
+      grid_y: 0,
+      grid_w: 4,
+      grid_h: 4,
+      config: {},
+    },
+    {
+      dashboard_id: execDashboard.id,
+      widget_type: 'framework_overview',
+      title: null,
+      grid_x: 8,
+      grid_y: 0,
+      grid_w: 4,
+      grid_h: 4,
+      config: {},
+    },
+    {
+      dashboard_id: execDashboard.id,
+      widget_type: 'list_high_risk_vendors',
+      title: 'High Risk Vendors',
+      grid_x: 0,
+      grid_y: 4,
+      grid_w: 6,
+      grid_h: 4,
+      config: { limit: 5 },
+    },
+    {
+      dashboard_id: execDashboard.id,
+      widget_type: 'chart_risk_distribution',
+      title: 'Vendor Risk Distribution',
+      grid_x: 6,
+      grid_y: 4,
+      grid_w: 6,
+      grid_h: 4,
+      config: {},
+    },
+  ]);
+
+  // Create Operations Dashboard Template
+  const { data: opsDashboard, error: opsError } = await supabase
+    .from('custom_dashboards')
+    .insert({
+      organization_id: userData.organization_id,
+      created_by: user.id,
+      name: 'Operations Dashboard',
+      description: 'Day-to-day compliance operations and incident tracking',
+      icon: 'activity',
+      is_template: true,
+      is_shared: true,
+      layout_type: 'grid',
+      columns: 12,
+      row_height: 80,
+    })
+    .select()
+    .single();
+
+  if (opsError) throw opsError;
+
+  // Add widgets to Operations Dashboard
+  await supabase.from('dashboard_widgets').insert([
+    {
+      dashboard_id: opsDashboard.id,
+      widget_type: 'stat_incidents_count',
+      title: 'Incidents',
+      grid_x: 0,
+      grid_y: 0,
+      grid_w: 3,
+      grid_h: 2,
+      config: {},
+    },
+    {
+      dashboard_id: opsDashboard.id,
+      widget_type: 'stat_tasks_count',
+      title: 'Open Tasks',
+      grid_x: 3,
+      grid_y: 0,
+      grid_w: 3,
+      grid_h: 2,
+      config: {},
+    },
+    {
+      dashboard_id: opsDashboard.id,
+      widget_type: 'chart_incident_trend',
+      title: 'Incident Trend',
+      grid_x: 6,
+      grid_y: 0,
+      grid_w: 6,
+      grid_h: 4,
+      config: { dateRange: 'quarter' },
+    },
+    {
+      dashboard_id: opsDashboard.id,
+      widget_type: 'stat_remediation_progress',
+      title: 'Remediation Progress',
+      grid_x: 0,
+      grid_y: 2,
+      grid_w: 6,
+      grid_h: 3,
+      config: {},
+    },
+    {
+      dashboard_id: opsDashboard.id,
+      widget_type: 'list_recent_activity',
+      title: 'Recent Activity',
+      grid_x: 0,
+      grid_y: 5,
+      grid_w: 6,
+      grid_h: 4,
+      config: { limit: 8 },
+    },
+    {
+      dashboard_id: opsDashboard.id,
+      widget_type: 'list_open_incidents',
+      title: 'Open Incidents',
+      grid_x: 6,
+      grid_y: 4,
+      grid_w: 6,
+      grid_h: 5,
+      config: { limit: 5 },
+    },
+  ]);
+}
