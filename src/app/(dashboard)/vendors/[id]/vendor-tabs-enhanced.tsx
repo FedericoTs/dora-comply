@@ -18,6 +18,7 @@ import {
 import { VendorAIAnalysis } from '@/components/vendors/ai';
 import { VendorRiskIntelligence } from '@/components/vendors/intelligence';
 import { VendorNIS2Dashboard } from '@/components/vendors/vendor-nis2-dashboard';
+import { VendorESGTab } from '@/components/vendors/esg';
 import type { VendorWithRelations } from '@/lib/vendors/types';
 
 interface VendorTabsEnhancedProps {
@@ -48,6 +49,7 @@ const tabToSection: Record<string, VendorNavSection> = {
   'nis2': 'nis2',
   'frameworks': 'frameworks',
   'risk-assessment': 'risk-assessment',
+  'esg': 'esg',
   'contacts': 'contacts',
   'contracts': 'contracts',
   'documents': 'documents',
@@ -66,6 +68,7 @@ const sectionToTab: Record<VendorNavSection, string> = {
   'nis2': 'nis2',
   'frameworks': 'frameworks',
   'risk-assessment': 'risk-assessment',
+  'esg': 'esg',
   'contacts': 'contacts',
   'contracts': 'contracts',
   'documents': 'documents',
@@ -128,6 +131,15 @@ export function VendorTabsEnhanced({
 
       case 'risk-assessment':
         return riskAssessmentContent;
+
+      case 'esg':
+        return (
+          <VendorESGTab
+            vendorId={vendor.id}
+            vendorName={vendor.name}
+            organizationId={vendor.organization_id}
+          />
+        );
 
       case 'contacts':
         return contactsContent;

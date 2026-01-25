@@ -1,7 +1,7 @@
 # MASTERPLAN: Competitive Gap Analysis & Implementation Roadmap
 
-> **Last Updated:** January 23, 2026
-> **Status:** Phase 2 Complete
+> **Last Updated:** January 25, 2026
+> **Status:** Phase 4 In Progress
 > **Competitor Benchmark:** [3rdRisk](https://www.3rdrisk.com/)
 
 ---
@@ -13,7 +13,7 @@
 | Phase 1: Fix Broken Features | ✅ Complete | 8/8 |
 | Phase 2: High-Value Features | ✅ Complete | 4/4 |
 | Phase 3: Competitive Parity | 🔄 In Progress | 2/3 |
-| Phase 4: Competitive Advantage | 🔄 In Progress | 1/4 |
+| Phase 4: Competitive Advantage | 🔄 In Progress | 2/4 |
 
 ---
 
@@ -160,11 +160,12 @@
   - [x] Create domain-specific assessment forms
   - [x] Add multi-domain risk scoring (Security, Privacy, Compliance, Operational, Financial)
 
-- [ ] **4.2 ESG/Sustainability Module** (6 days)
-  - [ ] Create migration for `esg_metrics`
-  - [ ] Create ESG assessment form
-  - [ ] Add ESG dashboard widgets
-  - [ ] Create ESG reporting
+- [x] **4.2 ESG/Sustainability Module** (6 days) ✅
+  - [x] Create migration for `esg_categories`, `esg_metrics`, `vendor_esg_assessments`, `vendor_esg_certifications`, `vendor_esg_commitments`, `vendor_esg_history`
+  - [x] Create lib/esg module (types, queries, actions)
+  - [x] Create ESG assessment form with multi-step wizard
+  - [x] Add ESG tab to vendor detail page with scoring dashboard
+  - [x] Create certification and commitment tracking
 
 ### Weeks 17-18: GDPR Compliance Module
 
@@ -198,7 +199,8 @@
 | 040 | `remediation_plans`, `remediation_actions` | 3 | ✅ Done |
 | 041 | `custom_dashboards`, `dashboard_widgets` | 3 | ✅ Done |
 | 042 | `risk_domains`, `domain_assessment_criteria`, `vendor_domain_assessments` | 4 | ✅ Done |
-| 043 | `gdpr_processing_activities`, `gdpr_dpias` | 4 | ⏳ Pending |
+| 043 | `esg_categories`, `esg_metrics`, `vendor_esg_assessments`, `vendor_esg_certifications`, `vendor_esg_commitments`, `vendor_esg_history` | 4 | ✅ Done |
+| 044 | `gdpr_processing_activities`, `gdpr_dpias` | 4 | ⏳ Pending |
 | 044 | `integrations`, `integration_events` | 4 | ⏳ Pending |
 
 ---
@@ -332,7 +334,7 @@ src/
 - ✅ Remediation workflow
 - 🔄 Custom dashboards (partially implemented)
 - ✅ Multi-domain risk assessment
-- ⬜ ESG/Sustainability module
+- ✅ ESG/Sustainability module
 - ⬜ GDPR module
 - ⬜ Integration framework
 
@@ -350,6 +352,7 @@ src/
 | 2026-01-24 | Verified 3.2 Remediation Plans already complete | 3 |
 | 2026-01-24 | 3.3 Custom Dashboards partially implemented (deferred) | 3 |
 | 2026-01-25 | Completed 4.1 Multi-Domain Risk Assessment | 4 |
+| 2026-01-25 | Completed 4.2 ESG/Sustainability Module | 4 |
 
 ---
 

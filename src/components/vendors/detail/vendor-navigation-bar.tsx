@@ -14,6 +14,7 @@ import {
   Sparkles,
   TrendingUp,
   Building2,
+  Leaf,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -28,6 +29,7 @@ export type VendorNavSection =
   | 'nis2'
   | 'frameworks'
   | 'risk-assessment'
+  | 'esg'
   | 'contacts'
   | 'contracts'
   | 'documents'
@@ -55,6 +57,7 @@ const complianceItems: NavItem[] = [
   { id: 'dora', label: 'DORA', icon: Shield },
   { id: 'frameworks', label: 'Frameworks', icon: Gauge },
   { id: 'risk-assessment', label: 'Risk Assessment', icon: Gauge },
+  { id: 'esg', label: 'ESG', icon: Leaf },
 ];
 
 const relationshipItems: NavItem[] = [
