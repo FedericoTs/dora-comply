@@ -90,15 +90,13 @@ const HOME_NAV: NavItem = {
   icon: Home,
 };
 
-// Simplified flat navigation - 8 core items (benchmark: 8-10)
+// Simplified flat navigation - 6 core items (MVP focus)
 const CORE_NAV: NavItem[] = [
   { name: 'Vendors', href: '/vendors', icon: Building2 },
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'Tasks', href: '/tasks', icon: ListTodo },
   { name: 'Assessments', href: '/assessments', icon: ClipboardCheck },
-  { name: 'Remediation', href: '/remediation', icon: Wrench },
-  { name: 'Dashboards', href: '/dashboards', icon: LayoutDashboard },
 ];
 
 // Framework-specific navigation (Phase 2)
