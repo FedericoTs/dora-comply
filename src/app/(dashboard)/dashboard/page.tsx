@@ -8,7 +8,6 @@ import {
   FileText,
   ClipboardCheck,
   Shield,
-  ArrowRight,
 } from 'lucide-react';
 
 // Dashboard components
@@ -506,80 +505,35 @@ export default async function DashboardPage() {
         totalVendors={totalVendors}
       />
 
-      {/* Quick Actions */}
-      <div className="p-4 bg-card rounded-lg border">
-        <h3 className="font-semibold mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Link
-            href="/vendors/new"
-            className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-          >
-            <div className="p-2 rounded-md bg-blue-100 dark:bg-blue-900/30">
-              <Plus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <span className="text-sm font-medium">Add Vendor</span>
-          </Link>
-          <Link
-            href="/incidents/new"
-            className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-          >
-            <div className="p-2 rounded-md bg-orange-100 dark:bg-orange-900/30">
-              <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-            </div>
-            <span className="text-sm font-medium">Report Incident</span>
-          </Link>
-          <Link
-            href="/documents"
-            className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-          >
-            <div className="p-2 rounded-md bg-purple-100 dark:bg-purple-900/30">
-              <FileText className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-            </div>
-            <span className="text-sm font-medium">Upload Document</span>
-          </Link>
-          <Link
-            href="/questionnaires"
-            className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-          >
-            <div className="p-2 rounded-md bg-emerald-100 dark:bg-emerald-900/30">
-              <ClipboardCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <span className="text-sm font-medium">Send Questionnaire</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Feature Shortcuts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link href="/vendors" className="group p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Building2 className="h-5 w-5 text-muted-foreground" />
-              <h3 className="font-medium">Third Parties</h3>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-          </div>
-          <p className="text-sm text-muted-foreground mt-2">Manage vendors, contracts, and risk assessments</p>
+      {/* Quick Actions - Compact row */}
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href="/vendors/new"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium"
+        >
+          <Plus className="h-4 w-4" />
+          Add Vendor
         </Link>
-        <Link href="/assessments" className="group p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
-              <h3 className="font-medium">Assessments</h3>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-          </div>
-          <p className="text-sm text-muted-foreground mt-2">Questionnaires, testing, and data protection</p>
+        <Link
+          href="/incidents/new"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors text-sm font-medium"
+        >
+          <AlertTriangle className="h-4 w-4" />
+          Report Incident
         </Link>
-        <Link href="/incidents" className="group p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-              <h3 className="font-medium">Incidents</h3>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-          </div>
-          <p className="text-sm text-muted-foreground mt-2">Track and report ICT incidents</p>
+        <Link
+          href="/documents"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors text-sm font-medium"
+        >
+          <FileText className="h-4 w-4" />
+          Upload Document
+        </Link>
+        <Link
+          href="/questionnaires"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors text-sm font-medium"
+        >
+          <ClipboardCheck className="h-4 w-4" />
+          Send Questionnaire
         </Link>
       </div>
     </div>
