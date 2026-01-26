@@ -90,31 +90,28 @@ const HOME_NAV: NavItem = {
   icon: Home,
 };
 
-// Manage section - Day-to-day operations
+// Manage section - Day-to-day operations (core entities)
 const MANAGE_NAV: NavItem[] = [
   { name: 'Third Parties', href: '/vendors', icon: Building2 },
-  { name: 'Questionnaires', href: '/questionnaires', icon: FileQuestion },
+  { name: 'Contracts', href: '/contracts', icon: FileCheck },
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'Tasks', href: '/tasks', icon: ListTodo },
 ];
 
-// Compliance section - Regulatory requirements
+// Comply section - Compliance & assessments (simplified)
 const COMPLIANCE_NAV: NavItem[] = [
-  { name: 'Register of Information', href: '/roi', icon: Database },
-  { name: 'Data Protection', href: '/data-protection', icon: Shield },
-  { name: 'Risk Register', href: '/risks', icon: ClipboardList },
+  { name: 'Questionnaires', href: '/questionnaires', icon: FileQuestion },
   { name: 'Resilience Testing', href: '/testing', icon: FlaskConical },
+  { name: 'Data Protection', href: '/data-protection', icon: Shield },
   { name: 'Remediation', href: '/remediation', icon: Wrench },
 ];
 
-// Insights section - Analytics (collapsed by default)
+// Analyze section - Reports & analytics (always visible)
 const INSIGHTS_NAV: NavItem[] = [
-  { name: 'Custom Dashboards', href: '/dashboards', icon: LayoutDashboard },
-  { name: 'Monitoring Alerts', href: '/monitoring', icon: AlertOctagon },
-  { name: 'Compliance Trends', href: '/compliance/trends', icon: BarChart3 },
-  { name: 'Concentration Risk', href: '/concentration', icon: Network },
-  { name: 'Framework Coverage', href: '/frameworks', icon: Layers },
+  { name: 'Dashboards', href: '/dashboards', icon: LayoutDashboard },
+  { name: 'Reports', href: '/frameworks', icon: BarChart3 },
+  { name: 'Activity Log', href: '/activity', icon: Clock },
 ];
 
 // Framework-specific navigation (Phase 2)
@@ -473,9 +470,6 @@ function UnifiedSidebarNav({
     if (item.href === '/vendors' && badges?.thirdParties) {
       return { ...item, badge: badges.thirdParties };
     }
-    if (item.href === '/questionnaires' && badges?.questionnaires) {
-      return { ...item, badge: badges.questionnaires };
-    }
     if (item.href === '/documents' && badges?.documents) {
       return { ...item, badge: badges.documents };
     }
@@ -484,6 +478,14 @@ function UnifiedSidebarNav({
     }
     if (item.href === '/tasks' && badges?.tasks) {
       return { ...item, badge: badges.tasks };
+    }
+    return item;
+  });
+
+  // Apply badges to comply section
+  const complyNavWithBadges = COMPLIANCE_NAV.map(item => {
+    if (item.href === '/questionnaires' && badges?.questionnaires) {
+      return { ...item, badge: badges.questionnaires };
     }
     return item;
   });
@@ -516,25 +518,23 @@ function UnifiedSidebarNav({
         currentPath={pathname}
       />
 
-      {/* Compliance Section */}
+      {/* Comply Section */}
       <CollapsibleGroup
-        title="Compliance"
-        items={COMPLIANCE_NAV}
+        title="Comply"
+        items={complyNavWithBadges}
         defaultOpen={true}
         collapsible={false}
         currentPath={pathname}
       />
 
-      {/* Insights Section - Collapsed by default for users < 10 vendors */}
-      {showAdvanced && (
-        <CollapsibleGroup
-          title="Insights"
-          items={INSIGHTS_NAV}
-          defaultOpen={!isNewUser}
-          collapsible={true}
-          currentPath={pathname}
-        />
-      )}
+      {/* Analyze Section - Always visible for discoverability */}
+      <CollapsibleGroup
+        title="Analyze"
+        items={INSIGHTS_NAV}
+        defaultOpen={true}
+        collapsible={false}
+        currentPath={pathname}
+      />
 
       {/* Settings */}
       <div className="pt-2 border-t border-sidebar-border">
@@ -572,9 +572,6 @@ function FrameworkSidebarNav({
     if (item.href === '/vendors' && badges?.thirdParties) {
       return { ...item, badge: badges.thirdParties };
     }
-    if (item.href === '/questionnaires' && badges?.questionnaires) {
-      return { ...item, badge: badges.questionnaires };
-    }
     if (item.href === '/documents' && badges?.documents) {
       return { ...item, badge: badges.documents };
     }
@@ -589,6 +586,14 @@ function FrameworkSidebarNav({
 
   // Get navigation items for the active framework only
   const activeFrameworkNav = FRAMEWORK_NAV[activeFramework] || [];
+
+  // Apply badges to framework nav
+  const frameworkNavWithBadges = activeFrameworkNav.map(item => {
+    if (item.href === '/questionnaires' && badges?.questionnaires) {
+      return { ...item, badge: badges.questionnaires };
+    }
+    return item;
+  });
 
   return (
     <nav className="flex-1 p-4 space-y-4">
@@ -619,10 +624,10 @@ function FrameworkSidebarNav({
       />
 
       {/* Active Framework Section - Only show the currently selected framework */}
-      {activeFrameworkNav.length > 0 && (
+      {frameworkNavWithBadges.length > 0 && (
         <CollapsibleGroup
           title={FRAMEWORK_DISPLAY_NAMES[activeFramework]}
-          items={activeFrameworkNav}
+          items={frameworkNavWithBadges}
           defaultOpen={true}
           collapsible={false}
           currentPath={pathname}
@@ -631,12 +636,12 @@ function FrameworkSidebarNav({
         />
       )}
 
-      {/* Insights Section */}
+      {/* Analyze Section */}
       <CollapsibleGroup
-        title="Insights"
+        title="Analyze"
         items={INSIGHTS_NAV}
-        defaultOpen={!isNewUser}
-        collapsible={true}
+        defaultOpen={true}
+        collapsible={false}
         currentPath={pathname}
       />
 

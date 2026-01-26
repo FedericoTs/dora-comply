@@ -1,6 +1,16 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Building2, Shield, AlertTriangle, Calendar } from 'lucide-react';
+import {
+  Building2,
+  Shield,
+  AlertTriangle,
+  Calendar,
+  Plus,
+  FileText,
+  ClipboardCheck,
+  BarChart3,
+  ArrowRight,
+} from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Dashboard | DORA Comply',
@@ -209,19 +219,82 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link href="/vendors" className="p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
-          <h3 className="font-medium">Manage Vendors</h3>
-          <p className="text-sm text-muted-foreground mt-1">View and manage your third-party providers</p>
+      {/* Quick Actions */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Quick Actions</h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Link
+            href="/vendors/new"
+            className="flex items-center gap-3 p-3 bg-card rounded-lg border hover:border-primary/50 hover:bg-muted/50 transition-colors"
+          >
+            <div className="p-2 rounded-md bg-blue-100 dark:bg-blue-900/30">
+              <Plus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <span className="text-sm font-medium">Add Vendor</span>
+          </Link>
+          <Link
+            href="/incidents/new"
+            className="flex items-center gap-3 p-3 bg-card rounded-lg border hover:border-primary/50 hover:bg-muted/50 transition-colors"
+          >
+            <div className="p-2 rounded-md bg-orange-100 dark:bg-orange-900/30">
+              <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            </div>
+            <span className="text-sm font-medium">Report Incident</span>
+          </Link>
+          <Link
+            href="/documents"
+            className="flex items-center gap-3 p-3 bg-card rounded-lg border hover:border-primary/50 hover:bg-muted/50 transition-colors"
+          >
+            <div className="p-2 rounded-md bg-purple-100 dark:bg-purple-900/30">
+              <FileText className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            </div>
+            <span className="text-sm font-medium">Upload Document</span>
+          </Link>
+          <Link
+            href="/questionnaires"
+            className="flex items-center gap-3 p-3 bg-card rounded-lg border hover:border-primary/50 hover:bg-muted/50 transition-colors"
+          >
+            <div className="p-2 rounded-md bg-emerald-100 dark:bg-emerald-900/30">
+              <ClipboardCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <span className="text-sm font-medium">Send Questionnaire</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Feature Shortcuts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Link href="/vendors" className="group p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Building2 className="h-5 w-5 text-muted-foreground" />
+              <h3 className="font-medium">Third Parties</h3>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">Manage vendors, contracts, and risk assessments</p>
         </Link>
-        <Link href="/roi" className="p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
-          <h3 className="font-medium">Register of Information</h3>
-          <p className="text-sm text-muted-foreground mt-1">Complete your RoI for regulatory submission</p>
+        <Link href="/data-protection" className="group p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Shield className="h-5 w-5 text-muted-foreground" />
+              <h3 className="font-medium">Data Protection</h3>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">GDPR compliance, DPIAs, and breach management</p>
         </Link>
-        <Link href="/incidents" className="p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
-          <h3 className="font-medium">Incident Reporting</h3>
-          <p className="text-sm text-muted-foreground mt-1">Track and report ICT-related incidents</p>
+        <Link href="/dashboards" className="group p-4 bg-card rounded-lg border hover:border-primary/50 transition-colors">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="h-5 w-5 text-muted-foreground" />
+              <h3 className="font-medium">Custom Dashboards</h3>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">Build personalized views and reports</p>
         </Link>
       </div>
     </div>
