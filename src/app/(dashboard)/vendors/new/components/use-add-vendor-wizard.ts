@@ -88,12 +88,11 @@ export function useAddVendorWizard() {
     setLeiSuggestions([]);
   }, []);
 
-  // Navigation with validation
+  // Navigation with validation (2-step wizard)
   const nextStep = useCallback(async () => {
     const stepFields: Record<number, (keyof CreateVendorFormInput)[]> = {
       1: ['name'],
-      2: ['tier'],
-      3: [],
+      2: ['tier'], // Only tier is required in Risk Profile step
     };
 
     const fieldsToValidate = stepFields[currentStep] || [];

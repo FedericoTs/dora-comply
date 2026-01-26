@@ -3,8 +3,9 @@
 /**
  * Add Vendor Wizard
  *
- * Multi-step form for adding new vendors with LEI lookup,
- * classification, and DORA compliance details.
+ * Simplified 2-step form for adding new vendors:
+ * 1. Basic Info - Name and LEI lookup
+ * 2. Risk Profile - Classification and DORA details
  */
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,8 +14,7 @@ import { useAddVendorWizard } from './use-add-vendor-wizard';
 import { WizardProgress } from './wizard-progress';
 import { StepIndicator } from './step-indicator';
 import { BasicInfoStep } from './basic-info-step';
-import { ClassificationStep } from './classification-step';
-import { DoraDetailsStep } from './dora-details-step';
+import { RiskProfileStep } from './risk-profile-step';
 import { WizardNavigation } from './wizard-navigation';
 
 export function AddVendorWizard() {
@@ -56,11 +56,7 @@ export function AddVendorWizard() {
               )}
 
               {currentStep === 2 && (
-                <ClassificationStep form={form} />
-              )}
-
-              {currentStep === 3 && (
-                <DoraDetailsStep form={form} />
+                <RiskProfileStep form={form} />
               )}
             </CardContent>
           </Card>
