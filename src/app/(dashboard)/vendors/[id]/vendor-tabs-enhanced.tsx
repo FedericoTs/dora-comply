@@ -1,82 +1,64 @@
 'use client';
 
 /**
- * Enhanced Vendor Tabs Component
+ * Simplified Vendor Tabs Component
  *
- * Uses the new VendorNavigationBar with grouped dropdowns
- * and integrates AI Analysis and Risk Intelligence sections.
+ * 6 core tabs for MVP: Overview, Compliance, Contacts, Contracts, Documents, Monitoring
  */
 
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
-import { useCallback, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import {
   VendorNavigationBar,
   VendorActivityTimeline,
-  VendorRiskTimeline,
   type VendorNavSection,
 } from '@/components/vendors/detail';
-import { VendorAIAnalysis } from '@/components/vendors/ai';
-import { VendorRiskIntelligence } from '@/components/vendors/intelligence';
 import { VendorNIS2Dashboard } from '@/components/vendors/vendor-nis2-dashboard';
-import { VendorESGTab } from '@/components/vendors/esg';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { VendorWithRelations } from '@/lib/vendors/types';
 
 interface VendorTabsEnhancedProps {
   vendor: VendorWithRelations;
-  // Summary/Overview content
+  // Overview content
   summaryContent: ReactNode;
-  // Compliance content
+  // Compliance content (sub-tabs)
   doraContent: ReactNode;
   frameworksContent: ReactNode;
   riskAssessmentContent: ReactNode;
-  // Relationships content
+  // Core tabs
   contactsContent: ReactNode;
   contractsContent: ReactNode;
   documentsContent: ReactNode;
-  // Intelligence content (monitoring is passed, AI & Risk are built-in)
   monitoringContent: ReactNode;
-  // Other
-  enrichmentContent: ReactNode;
+  // Legacy props (kept for compatibility, not displayed)
+  enrichmentContent?: ReactNode;
   ctppContent?: ReactNode;
   showCTTPTab?: boolean;
 }
 
 // Map URL tab values to VendorNavSection
 const tabToSection: Record<string, VendorNavSection> = {
-  'overview': 'summary',
-  'summary': 'summary',
-  'dora': 'dora',
-  'nis2': 'nis2',
-  'frameworks': 'frameworks',
-  'risk-assessment': 'risk-assessment',
-  'esg': 'esg',
+  'overview': 'overview',
+  'summary': 'overview', // Legacy support
+  'compliance': 'compliance',
+  'dora': 'compliance',
+  'nis2': 'compliance',
+  'frameworks': 'compliance',
+  'risk-assessment': 'compliance',
   'contacts': 'contacts',
   'contracts': 'contracts',
   'documents': 'documents',
   'monitoring': 'monitoring',
-  'ai-analysis': 'ai-analysis',
-  'risk-trends': 'risk-trends',
-  'enrichment': 'enrichment',
-  'ctpp-oversight': 'ctpp',
-  'ctpp': 'ctpp',
 };
 
 // Map VendorNavSection to URL tab values
 const sectionToTab: Record<VendorNavSection, string> = {
-  'summary': 'summary',
-  'dora': 'dora',
-  'nis2': 'nis2',
-  'frameworks': 'frameworks',
-  'risk-assessment': 'risk-assessment',
-  'esg': 'esg',
+  'overview': 'overview',
+  'compliance': 'compliance',
   'contacts': 'contacts',
   'contracts': 'contracts',
   'documents': 'documents',
   'monitoring': 'monitoring',
-  'ai-analysis': 'ai-analysis',
-  'risk-trends': 'risk-trends',
-  'enrichment': 'enrichment',
-  'ctpp': 'ctpp-oversight',
 };
 
 export function VendorTabsEnhanced({
@@ -89,17 +71,15 @@ export function VendorTabsEnhanced({
   contractsContent,
   documentsContent,
   monitoringContent,
-  enrichmentContent,
-  ctppContent,
-  showCTTPTab = false,
 }: VendorTabsEnhancedProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [complianceSubTab, setComplianceSubTab] = useState('overview');
 
-  // Get current section from URL, default to 'summary'
-  const urlTab = searchParams.get('tab') || 'summary';
-  const currentSection: VendorNavSection = tabToSection[urlTab] || 'summary';
+  // Get current section from URL, default to 'overview'
+  const urlTab = searchParams.get('tab') || 'overview';
+  const currentSection: VendorNavSection = tabToSection[urlTab] || 'overview';
 
   // Handle section change
   const handleSectionChange = useCallback((newSection: VendorNavSection) => {
@@ -111,34 +91,38 @@ export function VendorTabsEnhanced({
   // Render content based on current section
   const renderContent = () => {
     switch (currentSection) {
-      case 'summary':
+      case 'overview':
         return (
           <div className="space-y-6">
             {summaryContent}
-            {/* Activity Timeline in Summary */}
             <VendorActivityTimeline vendorId={vendor.id} />
           </div>
         );
 
-      case 'dora':
-        return doraContent;
-
-      case 'nis2':
-        return <VendorNIS2Dashboard vendorId={vendor.id} vendorName={vendor.name} />;
-
-      case 'frameworks':
-        return frameworksContent;
-
-      case 'risk-assessment':
-        return riskAssessmentContent;
-
-      case 'esg':
+      case 'compliance':
         return (
-          <VendorESGTab
-            vendorId={vendor.id}
-            vendorName={vendor.name}
-            organizationId={vendor.organization_id}
-          />
+          <div className="space-y-4">
+            <Tabs value={complianceSubTab} onValueChange={setComplianceSubTab}>
+              <TabsList className="grid w-full grid-cols-4 max-w-xl">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="nis2">NIS2</TabsTrigger>
+                <TabsTrigger value="dora">DORA</TabsTrigger>
+                <TabsTrigger value="risk">Risk</TabsTrigger>
+              </TabsList>
+              <TabsContent value="overview" className="mt-4">
+                {frameworksContent}
+              </TabsContent>
+              <TabsContent value="nis2" className="mt-4">
+                <VendorNIS2Dashboard vendorId={vendor.id} vendorName={vendor.name} />
+              </TabsContent>
+              <TabsContent value="dora" className="mt-4">
+                {doraContent}
+              </TabsContent>
+              <TabsContent value="risk" className="mt-4">
+                {riskAssessmentContent}
+              </TabsContent>
+            </Tabs>
+          </div>
         );
 
       case 'contacts':
@@ -153,32 +137,6 @@ export function VendorTabsEnhanced({
       case 'monitoring':
         return monitoringContent;
 
-      case 'ai-analysis':
-        return <VendorAIAnalysis vendor={vendor} />;
-
-      case 'risk-trends':
-        return (
-          <div className="space-y-6">
-            <VendorRiskTimeline
-              vendorId={vendor.id}
-              vendorName={vendor.name}
-              currentScore={vendor.external_risk_score}
-              currentGrade={vendor.external_risk_grade}
-            />
-            <VendorRiskIntelligence vendor={vendor} />
-          </div>
-        );
-
-      case 'enrichment':
-        return enrichmentContent;
-
-      case 'ctpp':
-        return ctppContent || (
-          <div className="p-8 text-center text-muted-foreground">
-            <p>CTPP Oversight content not available.</p>
-          </div>
-        );
-
       default:
         return summaryContent;
     }
@@ -189,8 +147,6 @@ export function VendorTabsEnhanced({
       <VendorNavigationBar
         activeSection={currentSection}
         onSectionChange={handleSectionChange}
-        showCTTPTab={showCTTPTab}
-        hasAIAnalysis={true}
       />
       <div className="min-h-[400px]">
         {renderContent()}
