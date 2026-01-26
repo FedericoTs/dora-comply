@@ -102,6 +102,7 @@ const MANAGE_NAV: NavItem[] = [
 // Compliance section - Regulatory requirements
 const COMPLIANCE_NAV: NavItem[] = [
   { name: 'Register of Information', href: '/roi', icon: Database },
+  { name: 'Data Protection', href: '/data-protection', icon: Shield },
   { name: 'Risk Register', href: '/risks', icon: ClipboardList },
   { name: 'Resilience Testing', href: '/testing', icon: FlaskConical },
   { name: 'Remediation', href: '/remediation', icon: Wrench },
