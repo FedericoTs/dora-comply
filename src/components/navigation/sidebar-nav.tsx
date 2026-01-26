@@ -90,28 +90,14 @@ const HOME_NAV: NavItem = {
   icon: Home,
 };
 
-// Manage section - Day-to-day operations (core entities)
-const MANAGE_NAV: NavItem[] = [
-  { name: 'Third Parties', href: '/vendors', icon: Building2 },
-  { name: 'Contracts', href: '/contracts', icon: FileCheck },
-  { name: 'Documents', href: '/documents', icon: FileText },
+// Simplified flat navigation - 7 core items (benchmark: 8-10)
+const CORE_NAV: NavItem[] = [
+  { name: 'Vendors', href: '/vendors', icon: Building2 },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'Tasks', href: '/tasks', icon: ListTodo },
-];
-
-// Comply section - Compliance & assessments (simplified)
-const COMPLIANCE_NAV: NavItem[] = [
-  { name: 'Questionnaires', href: '/questionnaires', icon: FileQuestion },
-  { name: 'Resilience Testing', href: '/testing', icon: FlaskConical },
-  { name: 'Data Protection', href: '/data-protection', icon: Shield },
+  { name: 'Assessments', href: '/assessments', icon: ClipboardCheck },
   { name: 'Remediation', href: '/remediation', icon: Wrench },
-];
-
-// Analyze section - Reports & analytics (always visible)
-const INSIGHTS_NAV: NavItem[] = [
   { name: 'Dashboards', href: '/dashboards', icon: LayoutDashboard },
-  { name: 'Reports', href: '/frameworks', icon: BarChart3 },
-  { name: 'Activity Log', href: '/activity', icon: Clock },
 ];
 
 // Framework-specific navigation (Phase 2)
@@ -465,13 +451,10 @@ function UnifiedSidebarNav({
   showAdvanced?: boolean;
   badges?: SidebarNavProps['badges'];
 }) {
-  // Apply badges to nav items
-  const manageNavWithBadges = MANAGE_NAV.map(item => {
+  // Apply badges to core nav items
+  const coreNavWithBadges = CORE_NAV.map(item => {
     if (item.href === '/vendors' && badges?.thirdParties) {
       return { ...item, badge: badges.thirdParties };
-    }
-    if (item.href === '/documents' && badges?.documents) {
-      return { ...item, badge: badges.documents };
     }
     if (item.href === '/incidents' && badges?.incidents) {
       return { ...item, badge: badges.incidents };
@@ -482,16 +465,8 @@ function UnifiedSidebarNav({
     return item;
   });
 
-  // Apply badges to comply section
-  const complyNavWithBadges = COMPLIANCE_NAV.map(item => {
-    if (item.href === '/questionnaires' && badges?.questionnaires) {
-      return { ...item, badge: badges.questionnaires };
-    }
-    return item;
-  });
-
   return (
-    <nav className="flex-1 p-4 space-y-4">
+    <nav className="flex-1 p-4 space-y-2">
       {/* Onboarding Progress (only for new users) */}
       {isNewUser && (
         <OnboardingProgress
@@ -501,43 +476,23 @@ function UnifiedSidebarNav({
         />
       )}
 
-      {/* Home - Single item, no group */}
-      <div className="space-y-1">
+      {/* Home */}
+      <NavLink
+        item={HOME_NAV}
+        isActive={pathname === '/dashboard' || pathname === '/'}
+      />
+
+      {/* Core Navigation - Flat list, no sections */}
+      {coreNavWithBadges.map((item) => (
         <NavLink
-          item={HOME_NAV}
-          isActive={pathname === '/dashboard' || pathname === '/'}
+          key={item.href}
+          item={item}
+          isActive={pathname.startsWith(item.href)}
         />
-      </div>
-
-      {/* Manage Section */}
-      <CollapsibleGroup
-        title="Manage"
-        items={manageNavWithBadges}
-        defaultOpen={true}
-        collapsible={false}
-        currentPath={pathname}
-      />
-
-      {/* Comply Section */}
-      <CollapsibleGroup
-        title="Comply"
-        items={complyNavWithBadges}
-        defaultOpen={true}
-        collapsible={false}
-        currentPath={pathname}
-      />
-
-      {/* Analyze Section - Always visible for discoverability */}
-      <CollapsibleGroup
-        title="Analyze"
-        items={INSIGHTS_NAV}
-        defaultOpen={true}
-        collapsible={false}
-        currentPath={pathname}
-      />
+      ))}
 
       {/* Settings */}
-      <div className="pt-2 border-t border-sidebar-border">
+      <div className="pt-3 mt-3 border-t border-sidebar-border">
         <NavLink
           item={SETTINGS_NAV}
           isActive={pathname.startsWith('/settings')}
@@ -567,13 +522,10 @@ function FrameworkSidebarNav({
 }) {
   const { activeFramework, hasModuleAccess } = useFramework();
 
-  // Apply badges to manage nav
-  const manageNavWithBadges = MANAGE_NAV.map(item => {
+  // Apply badges to core nav items
+  const coreNavWithBadges = CORE_NAV.map(item => {
     if (item.href === '/vendors' && badges?.thirdParties) {
       return { ...item, badge: badges.thirdParties };
-    }
-    if (item.href === '/documents' && badges?.documents) {
-      return { ...item, badge: badges.documents };
     }
     if (item.href === '/incidents' && badges?.incidents) {
       return { ...item, badge: badges.incidents };
@@ -587,16 +539,8 @@ function FrameworkSidebarNav({
   // Get navigation items for the active framework only
   const activeFrameworkNav = FRAMEWORK_NAV[activeFramework] || [];
 
-  // Apply badges to framework nav
-  const frameworkNavWithBadges = activeFrameworkNav.map(item => {
-    if (item.href === '/questionnaires' && badges?.questionnaires) {
-      return { ...item, badge: badges.questionnaires };
-    }
-    return item;
-  });
-
   return (
-    <nav className="flex-1 p-4 space-y-4">
+    <nav className="flex-1 p-4 space-y-2">
       {/* Onboarding Progress (only for new users) */}
       {isNewUser && (
         <OnboardingProgress
@@ -607,43 +551,32 @@ function FrameworkSidebarNav({
       )}
 
       {/* Home */}
-      <div className="space-y-1">
-        <NavLink
-          item={HOME_NAV}
-          isActive={pathname === '/dashboard' || pathname === '/'}
-        />
-      </div>
-
-      {/* Manage Section */}
-      <CollapsibleGroup
-        title="Manage"
-        items={manageNavWithBadges}
-        defaultOpen={true}
-        collapsible={false}
-        currentPath={pathname}
+      <NavLink
+        item={HOME_NAV}
+        isActive={pathname === '/dashboard' || pathname === '/'}
       />
 
+      {/* Core Navigation - Flat list */}
+      {coreNavWithBadges.map((item) => (
+        <NavLink
+          key={item.href}
+          item={item}
+          isActive={pathname.startsWith(item.href)}
+        />
+      ))}
+
       {/* Active Framework Section - Only show the currently selected framework */}
-      {frameworkNavWithBadges.length > 0 && (
+      {activeFrameworkNav.length > 0 && (
         <CollapsibleGroup
           title={FRAMEWORK_DISPLAY_NAMES[activeFramework]}
-          items={frameworkNavWithBadges}
+          items={activeFrameworkNav}
           defaultOpen={true}
-          collapsible={false}
+          collapsible={true}
           currentPath={pathname}
           frameworkCode={activeFramework}
           checkModuleAccess={hasModuleAccess}
         />
       )}
-
-      {/* Analyze Section */}
-      <CollapsibleGroup
-        title="Analyze"
-        items={INSIGHTS_NAV}
-        defaultOpen={true}
-        collapsible={false}
-        currentPath={pathname}
-      />
 
       {/* Settings */}
       <div className="pt-2 border-t border-sidebar-border">
