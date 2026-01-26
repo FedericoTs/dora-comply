@@ -90,9 +90,10 @@ const HOME_NAV: NavItem = {
   icon: Home,
 };
 
-// Simplified flat navigation - 7 core items (benchmark: 8-10)
+// Simplified flat navigation - 8 core items (benchmark: 8-10)
 const CORE_NAV: NavItem[] = [
   { name: 'Vendors', href: '/vendors', icon: Building2 },
+  { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'Tasks', href: '/tasks', icon: ListTodo },
   { name: 'Assessments', href: '/assessments', icon: ClipboardCheck },
@@ -456,6 +457,9 @@ function UnifiedSidebarNav({
     if (item.href === '/vendors' && badges?.thirdParties) {
       return { ...item, badge: badges.thirdParties };
     }
+    if (item.href === '/documents' && badges?.documents) {
+      return { ...item, badge: badges.documents };
+    }
     if (item.href === '/incidents' && badges?.incidents) {
       return { ...item, badge: badges.incidents };
     }
@@ -526,6 +530,9 @@ function FrameworkSidebarNav({
   const coreNavWithBadges = CORE_NAV.map(item => {
     if (item.href === '/vendors' && badges?.thirdParties) {
       return { ...item, badge: badges.thirdParties };
+    }
+    if (item.href === '/documents' && badges?.documents) {
+      return { ...item, badge: badges.documents };
     }
     if (item.href === '/incidents' && badges?.incidents) {
       return { ...item, badge: badges.incidents };
