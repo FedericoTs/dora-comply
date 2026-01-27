@@ -5,7 +5,7 @@ import {
   formatActivityTitle,
   formatRelativeTime,
   mapActivityType,
-} from '@/lib/activity/queries';
+} from '@/lib/activity/utils';
 
 interface Activity {
   id: string;
@@ -47,7 +47,7 @@ export function RecentActivityCard({ recentActivity, totalVendors }: RecentActiv
         ) : (
           <>
             <ActivityItem
-              title="Welcome to DORA Comply!"
+              title="Welcome to NIS2 Comply!"
               description="Get started by adding your first vendor"
               time="Just now"
               type="info"

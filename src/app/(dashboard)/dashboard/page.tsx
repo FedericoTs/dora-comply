@@ -1,77 +1,25 @@
 import { Metadata } from 'next';
-import Link from 'next/link';
-import {
-  Building2,
-  AlertTriangle,
-  Calendar,
-  Plus,
-  FileText,
-  ClipboardCheck,
-  Shield,
-} from 'lucide-react';
+import { getActiveFrameworkFromCookie } from '@/lib/context/framework-cookie';
+import { DashboardClient, type DashboardClientProps } from '@/components/dashboard/dashboard-client';
+import { type ActionItem } from '@/components/dashboard/action-required';
 
-// Dashboard components
-import { ComplianceGauge, type CompliancePillar } from '@/components/dashboard/compliance-gauge';
-import { VendorsByRiskCard } from '@/components/dashboard/vendors-by-risk-card';
-import { PendingDeadlinesCard } from '@/components/dashboard/pending-deadlines-card';
-import { RecentActivityCard } from '@/components/dashboard/recent-activity-card';
-import { ActionRequired, type ActionItem } from '@/components/dashboard/action-required';
+// =============================================================================
+// Dynamic Metadata
+// =============================================================================
 
-// Helper to build pillars (server-side version)
-function buildDORAPillars(scores?: {
-  ictRisk?: number;
-  incidents?: number;
-  testing?: number;
-  tprm?: number;
-  infoSharing?: number;
-}): CompliancePillar[] {
-  return [
-    {
-      id: 'ict-risk',
-      name: 'ICT Risk Management',
-      shortName: 'ICT Risk Mgmt',
-      score: scores?.ictRisk ?? 75,
-      href: '/compliance/trends?pillar=ict-risk',
-    },
-    {
-      id: 'incidents',
-      name: 'Incident Management',
-      shortName: 'Incident Mgmt',
-      score: scores?.incidents ?? 60,
-      href: '/compliance/trends?pillar=incidents',
-    },
-    {
-      id: 'testing',
-      name: 'Resilience Testing',
-      shortName: 'Resilience',
-      score: scores?.testing ?? 40,
-      href: '/compliance/trends?pillar=testing',
-    },
-    {
-      id: 'tprm',
-      name: 'Third Party Risk Management',
-      shortName: 'TPRM',
-      score: scores?.tprm ?? 80,
-      href: '/compliance/trends?pillar=tprm',
-    },
-    {
-      id: 'info-sharing',
-      name: 'Information Sharing',
-      shortName: 'Info Sharing',
-      score: scores?.infoSharing ?? 55,
-      href: '/compliance/trends?pillar=info-sharing',
-    },
-  ];
+export async function generateMetadata(): Promise<Metadata> {
+  const framework = await getActiveFrameworkFromCookie() || 'nis2';
+  const frameworkName = framework === 'nis2' ? 'NIS2' : framework === 'dora' ? 'DORA' : 'Compliance';
+
+  return {
+    title: `Dashboard | ${frameworkName} Comply`,
+    description: `Your ${frameworkName} compliance command center`,
+  };
 }
 
-export const metadata: Metadata = {
-  title: 'Dashboard | DORA Comply',
-  description: 'Your DORA compliance command center',
-};
-
-// ============================================================================
+// =============================================================================
 // Safe Data Fetching
-// ============================================================================
+// =============================================================================
 
 async function safeGetCurrentUser() {
   try {
@@ -91,7 +39,7 @@ async function safeGetVendorStats() {
     console.error('Failed to get vendor stats:', error);
     return {
       total: 0,
-      by_status: { active: 0, inactive: 0, pending_review: 0, offboarding: 0 },
+      by_status: { active: 0, pending: 0, inactive: 0, offboarding: 0 },
       by_tier: { critical: 0, important: 0, standard: 0 },
       by_risk: { critical: 0, high: 0, medium: 0, low: 0 },
       pending_reviews: 0,
@@ -159,9 +107,35 @@ async function safeGetTaskStats() {
   }
 }
 
-// ============================================================================
+async function safeGetNIS2Compliance() {
+  try {
+    const { getNIS2Assessments } = await import('@/lib/compliance/nis2-queries');
+    const { calculateNIS2Compliance } = await import('@/lib/compliance/nis2-calculator');
+
+    const result = await getNIS2Assessments();
+    if (!result || result.assessments.length === 0) {
+      return null;
+    }
+
+    const complianceResult = calculateNIS2Compliance({
+      organizationId: result.organizationId,
+      entityType: result.entityType,
+      assessments: result.assessments,
+    });
+
+    return {
+      overallPercentage: complianceResult.score.overallPercentage,
+      categories: complianceResult.score.categories,
+    };
+  } catch (error) {
+    console.error('Failed to get NIS2 compliance:', error);
+    return null;
+  }
+}
+
+// =============================================================================
 // Action Items Builder
-// ============================================================================
+// =============================================================================
 
 function buildActionItems(
   vendorStats: Awaited<ReturnType<typeof safeGetVendorStats>>,
@@ -252,12 +226,12 @@ function buildActionItems(
   return items;
 }
 
-// ============================================================================
+// =============================================================================
 // Main Page Component
-// ============================================================================
+// =============================================================================
 
 export default async function DashboardPage() {
-  // Fetch all data in parallel
+  // Fetch all data in parallel (both DORA and NIS2)
   const [
     user,
     vendorStats,
@@ -267,6 +241,7 @@ export default async function DashboardPage() {
     recentActivity,
     maturitySnapshot,
     taskStats,
+    nis2Compliance,
   ] = await Promise.all([
     safeGetCurrentUser(),
     safeGetVendorStats(),
@@ -276,23 +251,15 @@ export default async function DashboardPage() {
     safeGetRecentActivity(),
     safeGetMaturitySnapshot(),
     safeGetTaskStats(),
+    safeGetNIS2Compliance(),
   ]);
 
   const firstName = user?.fullName?.split(' ')[0] || '';
   const incidentStats = incidentStatsResult?.data;
 
-  // Calculate stats
+  // Calculate derived stats
   const totalVendors = vendorStats.total;
   const criticalRisks = vendorStats.by_risk.critical + vendorStats.by_risk.high;
-
-  // Calculate days to deadline (April 30, 2026)
-  const deadline = new Date('2026-04-30');
-  const today = new Date();
-  const daysToDeadline = Math.max(0, Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
-
-  // Compliance score from maturity snapshot
-  const snapshot = maturitySnapshot?.data;
-  const complianceScore = snapshot?.overall_readiness_percent ?? 0;
 
   // Calculate open incidents (all non-closed incidents)
   const openIncidents = incidentStats?.by_status
@@ -300,15 +267,6 @@ export default async function DashboardPage() {
         .filter(([status]) => status !== 'closed')
         .reduce((sum, [, count]) => sum + count, 0)
     : 0;
-
-  // Build pillar scores (use snapshot data if available, otherwise defaults)
-  const pillars = buildDORAPillars({
-    ictRisk: complianceScore > 0 ? Math.round(complianceScore * 0.9) : undefined,
-    incidents: incidentStats ? Math.round(100 - (openIncidents / Math.max(incidentStats.total, 1)) * 100) : undefined,
-    testing: undefined,
-    tprm: totalVendors > 0 ? Math.round(100 - (criticalRisks / totalVendors) * 100) : undefined,
-    infoSharing: undefined,
-  });
 
   // Build action items
   const actionItems = buildActionItems(
@@ -330,212 +288,28 @@ export default async function DashboardPage() {
   const completedSteps = onboardingSteps.filter(s => s.done).length;
   const isNewUser = completedSteps < 2;
 
-  // ============================================================================
-  // Onboarding View (New Users)
-  // ============================================================================
+  // Prepare props for client component
+  const clientProps: DashboardClientProps = {
+    firstName,
+    vendorStats,
+    documentStats,
+    incidentStats: incidentStats || null,
+    taskStats,
+    maturitySnapshot: maturitySnapshot?.data || null,
+    nis2Compliance: nis2Compliance ? {
+      overallPercentage: nis2Compliance.overallPercentage ?? 0,
+      categories: nis2Compliance.categories ?? {},
+    } : null,
+    pendingDeadlines,
+    recentActivity,
+    actionItems,
+    totalVendors,
+    criticalRisks,
+    openIncidents,
+    isNewUser,
+    onboardingSteps,
+    completedSteps,
+  };
 
-  if (isNewUser) {
-    return (
-      <div className="max-w-3xl mx-auto space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-2">
-            Welcome{firstName ? `, ${firstName}` : ''}!
-          </h1>
-          <p className="text-muted-foreground">
-            Let&apos;s get your compliance program set up.
-          </p>
-        </div>
-
-        <div className="p-6 bg-card rounded-lg border">
-          <div className="flex items-center justify-between text-sm mb-3">
-            <span className="text-muted-foreground">Setup Progress</span>
-            <span className="font-medium">{completedSteps} of {onboardingSteps.length} steps</span>
-          </div>
-          <div className="h-2 rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-500"
-              style={{ width: `${(completedSteps / onboardingSteps.length) * 100}%` }}
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            {onboardingSteps.map((step, i) => (
-              <div key={i} className="text-center">
-                <div className={`text-sm ${step.done ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                  {step.done ? '✓' : '○'} {step.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Start Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link
-            href="/vendors/new"
-            className="flex flex-col items-center gap-3 p-6 bg-card rounded-lg border hover:border-primary/50 hover:shadow-md transition-all"
-          >
-            <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
-              <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <span className="font-medium">Add First Vendor</span>
-            <span className="text-sm text-muted-foreground text-center">Start tracking your third parties</span>
-          </Link>
-          <Link
-            href="/documents"
-            className="flex flex-col items-center gap-3 p-6 bg-card rounded-lg border hover:border-primary/50 hover:shadow-md transition-all"
-          >
-            <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30">
-              <FileText className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-            </div>
-            <span className="font-medium">Upload Documents</span>
-            <span className="text-sm text-muted-foreground text-center">SOC 2 reports, contracts, policies</span>
-          </Link>
-          <Link
-            href="/incidents/new"
-            className="flex flex-col items-center gap-3 p-6 bg-card rounded-lg border hover:border-primary/50 hover:shadow-md transition-all"
-          >
-            <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/30">
-              <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-            </div>
-            <span className="font-medium">Report Incident</span>
-            <span className="text-sm text-muted-foreground text-center">Track ICT incidents</span>
-          </Link>
-        </div>
-
-        <div className="text-center p-6 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-          <p className="text-amber-800 dark:text-amber-200 font-medium">
-            {daysToDeadline} days until DORA deadline
-          </p>
-          <p className="text-amber-700 dark:text-amber-300 text-sm mt-1">
-            January 17, 2026
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // ============================================================================
-  // Full Dashboard (Existing Users)
-  // ============================================================================
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Welcome back{firstName ? `, ${firstName}` : ''}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Here&apos;s your compliance overview
-          </p>
-        </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-          <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
-            {daysToDeadline} days to DORA deadline
-          </span>
-        </div>
-      </div>
-
-      {/* KPI Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="p-4 bg-card rounded-lg border">
-          <div className="flex items-center gap-2 mb-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <span className="text-sm text-muted-foreground">Compliance Score</span>
-          </div>
-          <p className="text-2xl font-bold">{Math.round(complianceScore)}%</p>
-        </div>
-        <div className="p-4 bg-card rounded-lg border">
-          <div className="flex items-center gap-2 mb-2">
-            <Building2 className="h-5 w-5 text-blue-500" />
-            <span className="text-sm text-muted-foreground">Third Parties</span>
-          </div>
-          <p className="text-2xl font-bold">{totalVendors}</p>
-        </div>
-        <div className="p-4 bg-card rounded-lg border">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
-            <span className="text-sm text-muted-foreground">Risk Exposure</span>
-          </div>
-          <p className="text-2xl font-bold">{criticalRisks}</p>
-        </div>
-        <div className="p-4 bg-card rounded-lg border">
-          <div className="flex items-center gap-2 mb-2">
-            <FileText className="h-5 w-5 text-purple-500" />
-            <span className="text-sm text-muted-foreground">Documents</span>
-          </div>
-          <p className="text-2xl font-bold">{documentStats.total}</p>
-        </div>
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Compliance & Risk */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Compliance Gauge */}
-          <ComplianceGauge
-            score={complianceScore}
-            label="DORA Readiness"
-            pillars={pillars}
-            href="/compliance"
-          />
-
-          {/* Vendors by Risk */}
-          <VendorsByRiskCard
-            vendorStats={vendorStats}
-            totalVendors={totalVendors}
-          />
-        </div>
-
-        {/* Right Column - Actions & Deadlines */}
-        <div className="space-y-6">
-          {/* Action Required */}
-          <ActionRequired items={actionItems} maxItems={5} />
-
-          {/* Pending Deadlines */}
-          <PendingDeadlinesCard pendingDeadlines={pendingDeadlines} />
-        </div>
-      </div>
-
-      {/* Recent Activity - Full Width */}
-      <RecentActivityCard
-        recentActivity={recentActivity}
-        totalVendors={totalVendors}
-      />
-
-      {/* Quick Actions - Compact row */}
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href="/vendors/new"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium"
-        >
-          <Plus className="h-4 w-4" />
-          Add Vendor
-        </Link>
-        <Link
-          href="/incidents/new"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors text-sm font-medium"
-        >
-          <AlertTriangle className="h-4 w-4" />
-          Report Incident
-        </Link>
-        <Link
-          href="/documents"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors text-sm font-medium"
-        >
-          <FileText className="h-4 w-4" />
-          Upload Document
-        </Link>
-        <Link
-          href="/questionnaires"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors text-sm font-medium"
-        >
-          <ClipboardCheck className="h-4 w-4" />
-          Send Questionnaire
-        </Link>
-      </div>
-    </div>
-  );
+  return <DashboardClient {...clientProps} />;
 }

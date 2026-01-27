@@ -124,7 +124,7 @@ function CircularGauge({
 
 export function ComplianceGauge({
   score,
-  label = 'DORA Compliance',
+  label = 'Compliance',
   pillars,
   href,
   className,
@@ -253,9 +253,13 @@ export function ComplianceGaugeMini({
 }
 
 // ============================================================================
-// Sample Data Generator
+// Sample Data Generator (Deprecated)
 // ============================================================================
 
+/**
+ * @deprecated Use buildDORAPillars from '@/lib/compliance/pillar-builders' instead.
+ * This function is kept for backwards compatibility.
+ */
 export function getDefaultDORAPillars(scores?: {
   ictRisk?: number;
   incidents?: number;
