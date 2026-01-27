@@ -1,21 +1,24 @@
 /**
  * Incident Detail Page
  *
- * Full incident view with timeline, reports, and actions
+ * Full incident view with timeline, reports, edit, and actions.
+ * Edit functionality is integrated as a tab rather than a separate page.
  */
 
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Edit, Plus } from 'lucide-react';
+import { ChevronLeft, Edit, Plus, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getIncidentById, getIncidentReports, getIncidentEvents } from '@/lib/incidents/queries';
+import { getVendors } from '@/lib/vendors/queries';
 import { getReportTypeLabel, calculateDeadline } from '@/lib/incidents/types';
 import { DeleteIncidentButton } from '@/components/incidents/delete-incident-button';
 import { IncidentExportButton } from '@/components/incidents/incident-export-button';
 import { IncidentLifecycle } from '@/components/incidents/incident-lifecycle';
 import { IncidentStatusDropdown } from '@/components/incidents/incident-status-dropdown';
+import { IncidentEditForm } from '@/components/incidents/incident-edit-form';
 import {
   IncidentHeroCard,
   ImpactAssessmentCard,
@@ -43,15 +46,17 @@ export async function generateMetadata({ params }: IncidentDetailPageProps) {
 
 export default async function IncidentDetailPage({ params }: IncidentDetailPageProps) {
   const { id } = await params;
-  const [incidentResult, reportsResult, eventsResult] = await Promise.all([
+  const [incidentResult, reportsResult, eventsResult, vendorsResult] = await Promise.all([
     getIncidentById(id),
     getIncidentReports(id),
     getIncidentEvents(id),
+    getVendors(),
   ]);
 
   const incident = incidentResult.data;
   const reports = reportsResult.data;
   const events = eventsResult.data;
+  const vendors = vendorsResult.data || [];
 
   if (!incident) {
     notFound();
@@ -110,12 +115,6 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
             incidentRef={incident.incident_ref}
             classification={incident.classification}
           />
-          <Button variant="outline" asChild>
-            <Link href={`/incidents/${id}/edit`}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </Link>
-          </Button>
           <DeleteIncidentButton
             incidentId={incident.id}
             incidentRef={incident.incident_ref}
@@ -160,6 +159,10 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="reports">Reports ({reports.length})</TabsTrigger>
+          <TabsTrigger value="edit" className="flex items-center gap-2">
+            <Pencil className="h-4 w-4" />
+            Edit
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -181,6 +184,10 @@ export default async function IncidentDetailPage({ params }: IncidentDetailPageP
             reports={reports}
             nextReport={nextReport}
           />
+        </TabsContent>
+
+        <TabsContent value="edit" className="space-y-4">
+          <IncidentEditForm incident={incident} vendors={vendors} />
         </TabsContent>
       </Tabs>
     </div>
