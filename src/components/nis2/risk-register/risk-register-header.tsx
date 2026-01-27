@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Download, Target } from 'lucide-react';
+import { Plus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RiskStatusDot } from '@/components/ui/status-badge';
 import { cn } from '@/lib/utils';
@@ -32,12 +32,6 @@ export function RiskRegisterHeader({ summary }: RiskRegisterHeaderProps) {
           <Button variant="outline" size="sm" className="gap-2">
             <Download className="h-4 w-4" />
             Export
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/nis2/heat-map" className="gap-2">
-              <Target className="h-4 w-4" />
-              Heat Map
-            </Link>
           </Button>
           <Button asChild>
             <Link href="/nis2/risk-register/new" className="gap-2">
