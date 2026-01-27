@@ -1,11 +1,18 @@
 /**
  * Remediation Dashboard Page
  *
- * Dashboard for managing remediation plans and actions to close compliance gaps.
+ * Unified dashboard for managing remediation plans and actions.
+ * Includes Plans list, Kanban board, and My Actions views in tabs.
  */
 
 import { Suspense } from 'react';
-import { getRemediationPlans, getRemediationStats } from '@/lib/remediation/queries';
+import {
+  getRemediationPlans,
+  getRemediationStats,
+  getKanbanData,
+  getMyActions,
+} from '@/lib/remediation/queries';
+import { getCurrentUserId } from '@/lib/auth/organization';
 import { RemediationClient } from './remediation-client';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -15,9 +22,13 @@ export const metadata = {
 };
 
 async function RemediationContent() {
-  const [plansResult, stats] = await Promise.all([
+  const userId = await getCurrentUserId();
+
+  const [plansResult, stats, kanbanData, myActions] = await Promise.all([
     getRemediationPlans({ includeCompleted: false }),
     getRemediationStats(),
+    getKanbanData(),
+    userId ? getMyActions(userId) : Promise.resolve([]),
   ]);
 
   return (
@@ -25,6 +36,8 @@ async function RemediationContent() {
       initialPlans={plansResult.plans}
       initialTotal={plansResult.total}
       initialStats={stats}
+      initialKanbanData={kanbanData}
+      initialMyActions={myActions}
     />
   );
 }
