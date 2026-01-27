@@ -1,8 +1,9 @@
 /**
  * Questionnaires Dashboard Page
  *
- * NIS2 vendor security questionnaire management
- * Send, track, and review vendor responses
+ * NIS2 vendor security questionnaire management with tabbed interface:
+ * - Questionnaires: Send, track, and review vendor responses
+ * - Templates: Create and manage questionnaire templates
  */
 
 import { Suspense } from 'react';
@@ -17,15 +18,30 @@ import {
   Sparkles,
   FileText,
   FileEdit,
+  Settings,
+  MoreHorizontal,
+  Copy,
+  Trash2,
+  Pencil,
+  ClipboardList,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
-import { getQuestionnaires, getQuestionnaireStats } from '@/lib/nis2-questionnaire/queries';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { getQuestionnaires, getQuestionnaireStats, getTemplates } from '@/lib/nis2-questionnaire/queries';
 import { QuestionnaireList } from '@/components/questionnaires/company/questionnaire-list';
 import { SendQuestionnaireDialog } from '@/components/questionnaires/company/send-questionnaire-dialog';
+import { CreateTemplateDialog } from '@/components/questionnaires/company/create-template-dialog';
 
 export const metadata = {
   title: 'Questionnaires | NIS2 Comply',
@@ -319,14 +335,151 @@ function QuickActionsCard() {
             Send Questionnaire
           </Button>
         </SendQuestionnaireDialog>
-        <Button variant="outline" className="w-full justify-start" asChild>
-          <Link href="/questionnaires/templates">
-            <FileText className="mr-2 h-4 w-4" />
-            Manage Templates
-          </Link>
-        </Button>
+        <CreateTemplateDialog>
+          <Button variant="outline" className="w-full justify-start">
+            <Plus className="mr-2 h-4 w-4" />
+            New Template
+          </Button>
+        </CreateTemplateDialog>
       </CardContent>
     </Card>
+  );
+}
+
+// Templates List Section
+async function TemplatesList() {
+  const templates = await getTemplates();
+
+  if (!templates || templates.length === 0) {
+    return (
+      <Card className="border-dashed">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <FileText className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <CardTitle>No Templates Yet</CardTitle>
+          <CardDescription className="max-w-md mx-auto">
+            Create your first questionnaire template. We&apos;ll pre-populate it with NIS2 Article
+            21 security questions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center pb-6">
+          <CreateTemplateDialog>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create First Template
+            </Button>
+          </CreateTemplateDialog>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {templates.map((template) => (
+        <Card key={template.id} className="relative">
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  {template.name}
+                  {template.is_default && (
+                    <Badge variant="secondary" className="text-xs">
+                      Default
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription className="line-clamp-2">
+                  {template.description || 'No description'}
+                </CardDescription>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only">Actions</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/questionnaires/templates/${template.id}`}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Template
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-1">
+                {template.nis2_categories?.slice(0, 3).map((cat) => (
+                  <Badge key={cat} variant="outline" className="text-xs">
+                    {cat.replace('_', ' ')}
+                  </Badge>
+                ))}
+                {(template.nis2_categories?.length || 0) > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{(template.nis2_categories?.length || 0) - 3} more
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>~{template.estimated_completion_minutes} min</span>
+                <span>Used {template.times_used} times</span>
+              </div>
+
+              <Button variant="outline" className="w-full" asChild>
+                <Link href={`/questionnaires/templates/${template.id}`}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Configure Questions
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function TemplatesListSkeleton() {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {[...Array(3)].map((_, i) => (
+        <Card key={i}>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-48" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex gap-1">
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-5 w-20" />
+              </div>
+              <div className="flex justify-between">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+              <Skeleton className="h-9 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }
 
@@ -341,20 +494,12 @@ export default async function QuestionnairesPage() {
             NIS2 Article 21 security assessments for third-party vendors
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/questionnaires/templates">
-              <FileText className="mr-2 h-4 w-4" />
-              Templates
-            </Link>
+        <SendQuestionnaireDialog>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Send Questionnaire
           </Button>
-          <SendQuestionnaireDialog>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Send Questionnaire
-            </Button>
-          </SendQuestionnaireDialog>
-        </div>
+        </SendQuestionnaireDialog>
       </div>
 
       {/* Stats Cards */}
@@ -362,74 +507,108 @@ export default async function QuestionnairesPage() {
         <QuestionnaireStatsCards />
       </Suspense>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-        {/* Questionnaires List */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-medium">Active Questionnaires</h2>
-          <Suspense fallback={<QuestionnairesListSkeleton />}>
-            <QuestionnairesListSection />
-          </Suspense>
-        </div>
+      {/* Tabbed Content */}
+      <Tabs defaultValue="questionnaires" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="questionnaires" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Questionnaires
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Templates
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Sidebar */}
-        <div className="space-y-4">
-          <Suspense fallback={<Skeleton className="h-48" />}>
-            <PendingReviewSection />
-          </Suspense>
+        {/* Questionnaires Tab */}
+        <TabsContent value="questionnaires">
+          <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+            {/* Questionnaires List */}
+            <div className="space-y-4">
+              <h2 className="text-lg font-medium">Active Questionnaires</h2>
+              <Suspense fallback={<QuestionnairesListSkeleton />}>
+                <QuestionnairesListSection />
+              </Suspense>
+            </div>
 
-          <Suspense fallback={<Skeleton className="h-32" />}>
-            <DraftsSection />
-          </Suspense>
+            {/* Sidebar */}
+            <div className="space-y-4">
+              <Suspense fallback={<Skeleton className="h-48" />}>
+                <PendingReviewSection />
+              </Suspense>
 
-          <Suspense fallback={<Skeleton className="h-32" />}>
-            <AIStatsCard />
-          </Suspense>
+              <Suspense fallback={<Skeleton className="h-32" />}>
+                <DraftsSection />
+              </Suspense>
 
-          <QuickActionsCard />
+              <Suspense fallback={<Skeleton className="h-32" />}>
+                <AIStatsCard />
+              </Suspense>
 
-          {/* Info Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">How It Works</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
-                  1
-                </div>
-                <p className="text-muted-foreground">
-                  Send questionnaire to vendor via magic link
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
-                  2
-                </div>
-                <p className="text-muted-foreground">
-                  Vendor uploads SOC 2, ISO 27001, or policy docs
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
-                  3
-                </div>
-                <p className="text-muted-foreground">
-                  AI pre-fills answers, vendor confirms & submits
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
-                  4
-                </div>
-                <p className="text-muted-foreground">
-                  You review and approve the responses
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+              <QuickActionsCard />
+
+              {/* Info Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">How It Works</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex gap-3">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
+                      1
+                    </div>
+                    <p className="text-muted-foreground">
+                      Send questionnaire to vendor via magic link
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
+                      2
+                    </div>
+                    <p className="text-muted-foreground">
+                      Vendor uploads SOC 2, ISO 27001, or policy docs
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
+                      3
+                    </div>
+                    <p className="text-muted-foreground">
+                      AI pre-fills answers, vendor confirms & submits
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
+                      4
+                    </div>
+                    <p className="text-muted-foreground">
+                      You review and approve the responses
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Templates Tab */}
+        <TabsContent value="templates">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium">Questionnaire Templates</h2>
+              <CreateTemplateDialog>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Template
+                </Button>
+              </CreateTemplateDialog>
+            </div>
+            <Suspense fallback={<TemplatesListSkeleton />}>
+              <TemplatesList />
+            </Suspense>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
