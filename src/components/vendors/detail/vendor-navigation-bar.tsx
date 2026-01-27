@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Shield,
   Users,
-  Activity,
   FileText,
   ScrollText,
   Newspaper,
@@ -17,7 +16,6 @@ export type VendorNavSection =
   | 'contacts'
   | 'contracts'
   | 'documents'
-  | 'monitoring'
   | 'intelligence';
 
 interface NavItem {
@@ -31,14 +29,13 @@ interface VendorNavigationBarProps {
   onSectionChange: (section: VendorNavSection) => void;
 }
 
-// Simplified flat navigation - 7 core tabs
+// Simplified flat navigation - 6 core tabs
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'compliance', label: 'Compliance', icon: Shield },
   { id: 'contacts', label: 'Contacts', icon: Users },
   { id: 'contracts', label: 'Contracts', icon: ScrollText },
   { id: 'documents', label: 'Documents', icon: FileText },
-  { id: 'monitoring', label: 'Monitoring', icon: Activity },
   { id: 'intelligence', label: 'Intelligence', icon: Newspaper },
 ];
 

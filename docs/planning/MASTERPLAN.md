@@ -1,7 +1,7 @@
 # MASTERPLAN: Competitive Gap Analysis & Implementation Roadmap
 
-> **Last Updated:** January 25, 2026
-> **Status:** Phase 4 In Progress
+> **Last Updated:** January 27, 2026
+> **Status:** Phase 5 Complete
 > **Competitor Benchmark:** [3rdRisk](https://www.3rdrisk.com/)
 
 ---
@@ -14,6 +14,7 @@
 | Phase 2: High-Value Features | ✅ Complete | 4/4 |
 | Phase 3: Competitive Parity | ✅ Complete | 3/3 |
 | Phase 4: Competitive Advantage | ✅ Complete | 3/4 (4.4 deferred) |
+| Phase 5: External Data Enrichment | ✅ Complete | 1/1 |
 
 ---
 
@@ -190,6 +191,48 @@
 
 ---
 
+## Phase 5: External Data Enrichment ("Business Radar")
+
+**Goal:** Add business intelligence and news monitoring to match 3rdRisk's intelligence capabilities
+
+### Week 21: Business Intelligence Module
+
+- [x] **5.1 Business Intelligence Module** (5 days) ✅
+  - [x] Create migration `045_business_intelligence.sql` for `vendor_news_alerts`, `intelligence_sync_log`
+  - [x] Add intelligence fields to vendors table (news_monitoring_enabled, breach_exposure, sec_cik, etc.)
+  - [x] Create NewsAPI integration (`/lib/external/newsapi.ts`) with sentiment analysis
+  - [x] Create SEC EDGAR integration (`/lib/external/sec-edgar.ts`) for US company filings
+  - [x] Create HIBP integration (`/lib/external/hibp.ts`) for breach exposure checking
+  - [x] Create intelligence aggregator (`/lib/intelligence/aggregator.ts`)
+  - [x] Create Intelligence tab UI components (NewsFeedCard, BreachExposureCard, IntelligenceTab)
+  - [x] Add Intelligence tab to vendor detail page (replaces separate Monitoring tab)
+  - [x] Create API routes for intelligence sync and alerts
+
+**Data Sources Integrated:**
+| Provider | Cost | Use Case |
+|----------|------|----------|
+| NewsAPI.org | Free (100 req/day) | Company news with sentiment |
+| SEC EDGAR | Free | US company filings (10-K, 8-K, etc.) |
+| Have I Been Pwned | Free (non-commercial) | Breach exposure for domains |
+
+**Environment Variables Required:**
+```env
+NEWSAPI_KEY=           # Get from newsapi.org (free tier)
+HIBP_API_KEY=          # Optional - works without for basic checks
+# SEC EDGAR - free, no auth required
+```
+
+---
+
+## Cleanup Tasks
+
+- [x] **Remove Monitoring Tab** - Intelligence tab now replaces the separate Monitoring tab ✅
+  - [x] Remove `monitoring` from `VendorNavSection` type
+  - [x] Remove Monitoring tab content from vendor detail page
+  - [x] Legacy URL `?tab=monitoring` redirects to intelligence tab
+
+---
+
 ## Database Tables Created/To Create
 
 | Migration | Tables | Phase | Status |
@@ -203,7 +246,8 @@
 | 042 | `risk_domains`, `domain_assessment_criteria`, `vendor_domain_assessments` | 4 | ✅ Done |
 | 043 | `esg_categories`, `esg_metrics`, `vendor_esg_assessments`, `vendor_esg_certifications`, `vendor_esg_commitments`, `vendor_esg_history` | 4 | ✅ Done |
 | 044 | `gdpr_processing_activities`, `gdpr_dpias`, `gdpr_dpia_risks`, `gdpr_dpia_mitigations`, `gdpr_data_subject_requests`, `gdpr_breaches` | 4 | ✅ Done |
-| 045 | `integrations`, `integration_events` | 4 | ⏳ Pending |
+| 045 | `vendor_news_alerts`, `intelligence_sync_log`, vendor intelligence fields | 5 | ✅ Done |
+| 046 | `integrations`, `integration_events` | 4 | ⏳ Pending (deferred) |
 
 ---
 
@@ -338,7 +382,8 @@ src/
 - ✅ Multi-domain risk assessment
 - ✅ ESG/Sustainability module
 - ✅ GDPR module
-- ⬜ Integration framework
+- ✅ Business Intelligence / News Monitoring
+- ⬜ Integration framework (deferred)
 
 ---
 
@@ -358,7 +403,9 @@ src/
 | 2026-01-25 | Completed 3.3 Custom Dashboards (15 widgets, 2 templates) | 3 |
 | 2026-01-26 | Completed 4.3 GDPR Module (RoPA, DPIA, DSR, Breaches) | 4 |
 | 2026-01-26 | Deferred 4.4 Integration Framework (complex OAuth flows) | 4 |
-| 2026-01-26 | **All phases complete!** | - |
+| 2026-01-27 | Completed 5.1 Business Intelligence Module (NewsAPI, SEC EDGAR, HIBP) | 5 |
+| 2026-01-27 | Added Intelligence tab to vendor detail (replaces Monitoring) | 5 |
+| 2026-01-27 | **Phase 5 complete!** | - |
 
 ---
 
