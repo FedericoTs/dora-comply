@@ -34,6 +34,7 @@ import { VendorDORADashboard } from '@/components/vendors/vendor-dora-dashboard'
 import { VendorFrameworksTab } from '@/components/vendors/frameworks';
 import { VendorRiskAssessmentTab } from '@/components/vendors/risk-assessment';
 import { VendorTabsEnhanced } from './vendor-tabs-enhanced';
+import { VendorIntelligenceWrapper } from './vendor-intelligence';
 
 interface VendorDetailPageProps {
   params: Promise<{ id: string }>;
@@ -344,6 +345,14 @@ export default async function VendorDetailPage({ params }: VendorDetailPageProps
             monitoringEnabled={vendor.monitoring_enabled}
             alertThreshold={vendor.monitoring_alert_threshold}
             factors={vendor.external_score_factors as Array<{ name: string; score: number; grade: string; issueCount: number }> | null}
+          />
+        }
+        intelligenceContent={
+          <VendorIntelligenceWrapper
+            vendorId={vendor.id}
+            vendorName={vendor.name}
+            domain={vendor.monitoring_domain || undefined}
+            isMonitoringEnabled={vendor.news_monitoring_enabled || false}
           />
         }
         enrichmentContent={<VendorEnrichmentTab vendor={vendor} />}

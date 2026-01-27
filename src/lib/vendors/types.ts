@@ -162,6 +162,24 @@ export interface Vendor {
   last_monitoring_sync?: string | null;
   monitoring_alert_threshold?: number | null;
 
+  // Business Intelligence (from Migration 045)
+  news_monitoring_enabled?: boolean;
+  last_news_sync?: string | null;
+  news_keywords?: string[] | null;
+  news_alert_count?: number;
+  news_unread_count?: number;
+  breach_exposure_count?: number | null;
+  breach_exposure_checked_at?: string | null;
+  breach_domains?: string[] | null;
+  breach_severity?: string | null;
+  sec_cik?: string | null;
+  last_sec_filing_date?: string | null;
+  sec_filing_count?: number | null;
+  opencorporates_url?: string | null;
+  company_number?: string | null;
+  incorporation_date?: string | null;
+  company_status?: string | null;
+
   // CTPP Oversight (from Migration 017 - DORA Articles 33-44)
   is_ctpp?: boolean;
   ctpp_designation_date?: string | null;

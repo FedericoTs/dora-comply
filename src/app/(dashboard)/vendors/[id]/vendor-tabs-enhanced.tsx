@@ -30,6 +30,7 @@ interface VendorTabsEnhancedProps {
   contractsContent: ReactNode;
   documentsContent: ReactNode;
   monitoringContent: ReactNode;
+  intelligenceContent: ReactNode;
   // Legacy props (kept for compatibility, not displayed)
   enrichmentContent?: ReactNode;
   ctppContent?: ReactNode;
@@ -49,6 +50,7 @@ const tabToSection: Record<string, VendorNavSection> = {
   'contracts': 'contracts',
   'documents': 'documents',
   'monitoring': 'monitoring',
+  'intelligence': 'intelligence',
 };
 
 // Map VendorNavSection to URL tab values
@@ -59,6 +61,7 @@ const sectionToTab: Record<VendorNavSection, string> = {
   'contracts': 'contracts',
   'documents': 'documents',
   'monitoring': 'monitoring',
+  'intelligence': 'intelligence',
 };
 
 export function VendorTabsEnhanced({
@@ -71,6 +74,7 @@ export function VendorTabsEnhanced({
   contractsContent,
   documentsContent,
   monitoringContent,
+  intelligenceContent,
 }: VendorTabsEnhancedProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -136,6 +140,9 @@ export function VendorTabsEnhanced({
 
       case 'monitoring':
         return monitoringContent;
+
+      case 'intelligence':
+        return intelligenceContent;
 
       default:
         return summaryContent;
