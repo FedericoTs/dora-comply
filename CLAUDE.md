@@ -571,3 +571,26 @@ Before completing features:
 - ❌ Don't create one-off components - extend shadcn/ui
 - ❌ Don't skip error handling - wrap with boundaries
 - ❌ Don't use old Coral colors (#E07A5F) - use Emerald (#059669)
+
+---
+
+## Competitor Analysis Reference
+
+**Primary Competitor: 3rdRisk** - Enterprise TPRM platform for financial services and critical infrastructure.
+
+| Resource | URL | Purpose |
+|----------|-----|---------|
+| API Documentation | https://api.3rdrisk.com/ | Technical capabilities reference |
+| Support/Help Center | https://support.3rdrisk.com/en | Feature documentation, user guides |
+| Best Practices | https://www.3rdrisk.com/best-practices | Industry knowledge, compliance guidance |
+| Platform Overview | https://www.3rdrisk.com/platform | Core features and value proposition |
+
+**Key Differentiators to Study:**
+- Dashboard KPIs and metrics presentation
+- Framework-specific views (NIS2, DORA, ISO 27001)
+- Third-party risk scoring methodology
+- Vendor assessment workflows
+- Compliance gap visualization
+- Board reporting capabilities
+
+> Use these references when designing features to ensure competitive parity while maintaining our NIS2-first positioning.
