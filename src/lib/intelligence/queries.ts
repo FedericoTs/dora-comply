@@ -16,7 +16,10 @@ import {
   PaginatedAlerts,
   IntelligenceSource,
   IntelligenceAlertType,
+  VendorIntelligenceScore,
+  IntelligenceSeverity,
 } from './types';
+import { VendorRiskScore } from './risk-calculator';
 
 // =============================================================================
 // ALERTS QUERIES
@@ -580,6 +583,295 @@ export async function updateVendorIntelligenceFields(
 
   if (error) {
     console.error('Update vendor intelligence fields error:', error);
+    return false;
+  }
+
+  return true;
+}
+
+// =============================================================================
+// INTELLIGENCE SCORES
+// =============================================================================
+
+/**
+ * Get intelligence score for a vendor
+ */
+export async function getVendorIntelligenceScore(
+  vendorId: string
+): Promise<VendorIntelligenceScore | null> {
+  const supabase = await createClient();
+  const organizationId = await getCurrentUserOrganization();
+
+  if (!organizationId) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('vendor_intelligence_scores')
+    .select('*')
+    .eq('vendor_id', vendorId)
+    .eq('organization_id', organizationId)
+    .single();
+
+  if (error) {
+    if (error.code !== 'PGRST116') { // Not found is ok
+      console.error('Get intelligence score error:', error);
+    }
+    return null;
+  }
+
+  return data as VendorIntelligenceScore;
+}
+
+/**
+ * Save or update intelligence score for a vendor
+ */
+export async function saveVendorIntelligenceScore(
+  vendorId: string,
+  score: VendorRiskScore,
+  triggerEvent: string = 'manual'
+): Promise<boolean> {
+  const supabase = await createClient();
+  const organizationId = await getCurrentUserOrganization();
+
+  if (!organizationId) {
+    return false;
+  }
+
+  // Get existing score for trend calculation
+  const existing = await getVendorIntelligenceScore(vendorId);
+
+  const scoreData = {
+    organization_id: organizationId,
+    vendor_id: vendorId,
+    news_risk_score: score.newsRiskScore,
+    breach_risk_score: score.breachRiskScore,
+    filing_risk_score: score.filingRiskScore,
+    cyber_risk_score: score.cyberRiskScore,
+    critical_alert_count: score.criticalAlertCount,
+    high_alert_count: score.highAlertCount,
+    unresolved_alert_count: score.unresolvedAlertCount,
+    composite_score: score.compositeScore,
+    risk_level: score.riskLevel,
+    previous_score: existing?.composite_score || null,
+    score_trend: score.scoreTrend,
+    trend_change: score.trendChange,
+    last_calculated_at: score.calculatedAt,
+    calculation_version: score.version,
+    calculation_details: score.calculationDetails,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Upsert score
+  const { error: scoreError } = await supabase
+    .from('vendor_intelligence_scores')
+    .upsert(scoreData, {
+      onConflict: 'vendor_id',
+    });
+
+  if (scoreError) {
+    console.error('Save intelligence score error:', scoreError);
+    return false;
+  }
+
+  // Record history
+  const { error: historyError } = await supabase
+    .from('vendor_intelligence_history')
+    .insert({
+      organization_id: organizationId,
+      vendor_id: vendorId,
+      composite_score: score.compositeScore,
+      news_risk_score: score.newsRiskScore,
+      breach_risk_score: score.breachRiskScore,
+      filing_risk_score: score.filingRiskScore,
+      cyber_risk_score: score.cyberRiskScore,
+      risk_level: score.riskLevel,
+      trigger_event: triggerEvent,
+    });
+
+  if (historyError) {
+    console.error('Record history error:', historyError);
+    // Don't fail for history errors
+  }
+
+  // Update vendor quick-access fields
+  const { error: vendorError } = await supabase
+    .from('vendors')
+    .update({
+      intelligence_score: score.compositeScore,
+      intelligence_risk_level: score.riskLevel,
+      intelligence_updated_at: new Date().toISOString(),
+      intelligence_trend: score.scoreTrend,
+      critical_alerts_count: score.criticalAlertCount,
+      unresolved_alerts_count: score.unresolvedAlertCount,
+    })
+    .eq('id', vendorId)
+    .eq('organization_id', organizationId);
+
+  if (vendorError) {
+    console.error('Update vendor score fields error:', vendorError);
+    // Don't fail for vendor update errors
+  }
+
+  return true;
+}
+
+/**
+ * Get intelligence score history for a vendor
+ */
+export async function getIntelligenceHistory(
+  vendorId: string,
+  days: number = 90
+): Promise<Array<{
+  recorded_at: string;
+  composite_score: number;
+  risk_level: IntelligenceSeverity;
+  trigger_event?: string;
+}>> {
+  const supabase = await createClient();
+  const organizationId = await getCurrentUserOrganization();
+
+  if (!organizationId) {
+    return [];
+  }
+
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - days);
+
+  const { data, error } = await supabase
+    .from('vendor_intelligence_history')
+    .select('recorded_at, composite_score, risk_level, trigger_event')
+    .eq('vendor_id', vendorId)
+    .eq('organization_id', organizationId)
+    .gte('recorded_at', fromDate.toISOString())
+    .order('recorded_at', { ascending: true });
+
+  if (error) {
+    console.error('Get intelligence history error:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Get vendors with high/critical intelligence risk
+ */
+export async function getHighRiskVendors(
+  limit: number = 10
+): Promise<Array<{
+  id: string;
+  name: string;
+  intelligence_score: number;
+  intelligence_risk_level: IntelligenceSeverity;
+  intelligence_trend: string;
+  critical_alerts_count: number;
+}>> {
+  const supabase = await createClient();
+  const organizationId = await getCurrentUserOrganization();
+
+  if (!organizationId) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('vendors')
+    .select('id, name, intelligence_score, intelligence_risk_level, intelligence_trend, critical_alerts_count')
+    .eq('organization_id', organizationId)
+    .not('intelligence_score', 'is', null)
+    .order('intelligence_score', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Get high risk vendors error:', error);
+    return [];
+  }
+
+  return (data || []) as Array<{
+    id: string;
+    name: string;
+    intelligence_score: number;
+    intelligence_risk_level: IntelligenceSeverity;
+    intelligence_trend: string;
+    critical_alerts_count: number;
+  }>;
+}
+
+/**
+ * Get alerts requiring action
+ */
+export async function getAlertsRequiringAction(
+  vendorId?: string,
+  limit: number = 20
+): Promise<VendorNewsAlert[]> {
+  const supabase = await createClient();
+  const organizationId = await getCurrentUserOrganization();
+
+  if (!organizationId) {
+    return [];
+  }
+
+  let query = supabase
+    .from('vendor_news_alerts')
+    .select('*')
+    .eq('organization_id', organizationId)
+    .eq('requires_action', true)
+    .neq('action_status', 'resolved')
+    .neq('action_status', 'wont_fix')
+    .order('severity', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (vendorId) {
+    query = query.eq('vendor_id', vendorId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Get alerts requiring action error:', error);
+    return [];
+  }
+
+  return data as VendorNewsAlert[];
+}
+
+/**
+ * Update alert action status
+ */
+export async function updateAlertAction(
+  alertId: string,
+  update: {
+    requires_action?: boolean;
+    action_status?: 'pending' | 'in_progress' | 'resolved' | 'wont_fix';
+    action_notes?: string;
+    action_due_date?: string;
+    assigned_to?: string;
+  }
+): Promise<boolean> {
+  const supabase = await createClient();
+  const organizationId = await getCurrentUserOrganization();
+
+  if (!organizationId) {
+    return false;
+  }
+
+  const updateData: Record<string, unknown> = { ...update };
+
+  // If resolving, add resolved metadata
+  if (update.action_status === 'resolved' || update.action_status === 'wont_fix') {
+    updateData.resolved_at = new Date().toISOString();
+    // resolved_by would need user ID from auth
+  }
+
+  const { error } = await supabase
+    .from('vendor_news_alerts')
+    .update(updateData)
+    .eq('id', alertId)
+    .eq('organization_id', organizationId);
+
+  if (error) {
+    console.error('Update alert action error:', error);
     return false;
   }
 

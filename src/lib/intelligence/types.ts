@@ -46,6 +46,11 @@ export type IntelligenceSentiment = 'positive' | 'neutral' | 'negative';
 // =============================================================================
 
 /**
+ * Action status for alerts requiring remediation
+ */
+export type AlertActionStatus = 'pending' | 'in_progress' | 'resolved' | 'wont_fix';
+
+/**
  * Vendor news alert from database
  */
 export interface VendorNewsAlert {
@@ -68,6 +73,14 @@ export interface VendorNewsAlert {
   is_dismissed: boolean;
   read_at?: string;
   dismissed_at?: string;
+  // Action tracking
+  requires_action?: boolean;
+  action_due_date?: string;
+  action_status?: AlertActionStatus;
+  action_notes?: string;
+  assigned_to?: string;
+  resolved_at?: string;
+  resolved_by?: string;
   created_at: string;
   updated_at: string;
 }
@@ -140,11 +153,71 @@ export interface VendorIntelligenceFields {
 // =============================================================================
 
 /**
+ * Intelligence risk score from database
+ */
+export interface VendorIntelligenceScore {
+  id: string;
+  organization_id: string;
+  vendor_id: string;
+
+  // Component scores (0-100, higher = more risk)
+  news_risk_score: number;
+  breach_risk_score: number;
+  filing_risk_score: number;
+  cyber_risk_score: number;
+
+  // Alert counts
+  critical_alert_count: number;
+  high_alert_count: number;
+  unresolved_alert_count: number;
+
+  // Composite
+  composite_score: number;
+  risk_level: IntelligenceSeverity;
+
+  // Trend
+  previous_score: number | null;
+  score_trend: 'improving' | 'stable' | 'degrading';
+  trend_change: number;
+
+  // Weights
+  news_weight: number;
+  breach_weight: number;
+  filing_weight: number;
+  cyber_weight: number;
+
+  // Metadata
+  last_calculated_at: string;
+  calculation_version: string;
+  calculation_details?: Record<string, unknown>;
+
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * Combined intelligence data for a vendor
  */
 export interface VendorIntelligence {
   vendorId: string;
   vendorName: string;
+
+  // Risk Score (new unified metric)
+  riskScore?: {
+    composite: number;
+    level: IntelligenceSeverity;
+    trend: 'improving' | 'stable' | 'degrading';
+    trendChange: number;
+    components: {
+      news: number;
+      breach: number;
+      filing: number;
+      cyber: number;
+    };
+    criticalAlerts: number;
+    unresolvedAlerts: number;
+    lastCalculated?: string;
+  };
 
   // News
   news: {
