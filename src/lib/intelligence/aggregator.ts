@@ -8,7 +8,8 @@
 import { searchCompanyNewsOrMock, hasHighSeverityNews } from '@/lib/external/newsapi';
 import { calculateSeverity as newsCalculateSeverity } from '@/lib/external/newsapi-types';
 import { searchAndGetFilings, getFilingsOrMock } from '@/lib/external/sec-edgar';
-import { calculateFilingSeverity, FORM_TYPE_LABELS } from '@/lib/external/sec-edgar-types';
+import { secApiIo } from '@/lib/external/sec-api-io';
+import { calculateFilingSeverity, FORM_TYPE_LABELS, SECFilingsResult } from '@/lib/external/sec-edgar-types';
 import { checkDomainBreachesOrMock } from '@/lib/external/hibp';
 import {
   InsertVendorNewsAlert,
@@ -96,6 +97,8 @@ export async function syncVendorNews(
 
 /**
  * Sync SEC filings for a vendor
+ *
+ * Uses sec-api.io (premium) if configured, otherwise falls back to free SEC EDGAR
  */
 export async function syncVendorSECFilings(
   vendorId: string,
@@ -103,10 +106,23 @@ export async function syncVendorSECFilings(
   cik?: string
 ): Promise<{ alertsCreated: number; error?: string }> {
   try {
-    // Fetch filings
-    const filings = cik
-      ? await getFilingsOrMock(vendorName, { limit: 10 })
-      : await searchAndGetFilings(vendorName, { limit: 10 });
+    let filings: SECFilingsResult | null = null;
+
+    // Try sec-api.io first (premium API with better search)
+    if (secApiIo.isConfigured()) {
+      console.log('[SEC] Using sec-api.io (premium)');
+      filings = cik
+        ? await secApiIo.getFilingsByCik(cik, { limit: 10 })
+        : await secApiIo.searchByCompanyName(vendorName, { limit: 10 });
+    }
+
+    // Fall back to free SEC EDGAR API
+    if (!filings) {
+      console.log('[SEC] Using free SEC EDGAR API');
+      filings = cik
+        ? await getFilingsOrMock(vendorName, { limit: 10 })
+        : await searchAndGetFilings(vendorName, { limit: 10 });
+    }
 
     if (!filings) {
       return { alertsCreated: 0 }; // Not an error - may not be a US public company
