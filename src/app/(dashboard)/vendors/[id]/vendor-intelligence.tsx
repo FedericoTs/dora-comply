@@ -1,10 +1,35 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { IntelligenceTab } from '@/components/vendors/intelligence';
-import type { VendorIntelligence, VendorNewsAlert } from '@/lib/intelligence/types';
+import type { VendorIntelligence } from '@/lib/intelligence/types';
 import type { DomainBreachResult } from '@/lib/external/hibp-types';
 import type { SECFilingsResult } from '@/lib/external/sec-edgar-types';
+import type { IntelligenceSeverity } from '@/lib/intelligence/types';
+
+// Risk score data type matching the API response
+interface RiskScoreData {
+  composite: number;
+  level: IntelligenceSeverity;
+  trend: 'improving' | 'stable' | 'degrading';
+  trendChange: number;
+  components: {
+    news: number;
+    breach: number;
+    filing: number;
+    cyber: number;
+  };
+  weights: {
+    news: number;
+    breach: number;
+    filing: number;
+    cyber: number;
+  };
+  criticalAlerts: number;
+  highAlerts: number;
+  unresolvedAlerts: number;
+  lastCalculated?: string;
+}
 
 interface VendorIntelligenceWrapperProps {
   vendorId: string;
@@ -20,10 +45,17 @@ export function VendorIntelligenceWrapper({
   isMonitoringEnabled = false,
 }: VendorIntelligenceWrapperProps) {
   const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(true);
   const [monitoring, setMonitoring] = useState(isMonitoringEnabled);
   const [intelligence, setIntelligence] = useState<VendorIntelligence | null>(null);
+  const [riskScore, setRiskScore] = useState<RiskScoreData | null>(null);
   const [breachData, setBreachData] = useState<DomainBreachResult | null>(null);
   const [secFilings, setSecFilings] = useState<SECFilingsResult | null>(null);
+
+  // Fetch intelligence data on mount
+  useEffect(() => {
+    handleRefreshIntelligence();
+  }, [vendorId]);
 
   const handleToggleMonitoring = async (enabled: boolean) => {
     try {
@@ -43,31 +75,41 @@ export function VendorIntelligenceWrapper({
 
   const handleSync = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch(`/api/intelligence/${vendorId}/sync`, {
         method: 'POST',
       });
 
       if (response.ok) {
         const data = await response.json();
-        // Refresh the intelligence data
+        // Update risk score from sync response if available
+        if (data.riskScore) {
+          setRiskScore(data.riskScore);
+        }
+        // Refresh the full intelligence data
         await handleRefreshIntelligence();
       }
     } catch (error) {
       console.error('Failed to sync intelligence:', error);
+      setIsLoading(false);
     }
   };
 
   const handleRefreshIntelligence = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch(`/api/intelligence/${vendorId}`);
       if (response.ok) {
         const data = await response.json();
         setIntelligence(data.intelligence);
+        setRiskScore(data.riskScore);
         setBreachData(data.breachData);
         setSecFilings(data.secFilings);
       }
     } catch (error) {
       console.error('Failed to refresh intelligence:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -141,9 +183,11 @@ export function VendorIntelligenceWrapper({
       vendorName={vendorName}
       domain={domain}
       intelligence={intelligence}
+      riskScore={riskScore}
       breachData={breachData}
       secFilings={secFilings}
       isMonitoringEnabled={monitoring}
+      isLoadingScore={isLoading}
       onToggleMonitoring={handleToggleMonitoring}
       onSync={handleSync}
       onMarkRead={handleMarkRead}
