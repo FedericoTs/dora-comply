@@ -23,10 +23,38 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NewsAlertItem } from './news-alert-item';
 import { BreachExposureCard } from './breach-exposure-card';
+import { RiskScoreCard } from './risk-score-card';
 import { cn } from '@/lib/utils';
-import type { VendorIntelligence, VendorNewsAlert } from '@/lib/intelligence/types';
+import type { VendorIntelligence, VendorNewsAlert, IntelligenceSeverity } from '@/lib/intelligence/types';
 import type { DomainBreachResult } from '@/lib/external/hibp-types';
 import type { SECFilingsResult } from '@/lib/external/sec-edgar-types';
+
+// =============================================================================
+// RISK SCORE TYPES
+// =============================================================================
+
+interface RiskScoreData {
+  composite: number;
+  level: IntelligenceSeverity;
+  trend: 'improving' | 'stable' | 'degrading';
+  trendChange: number;
+  components: {
+    news: number;
+    breach: number;
+    filing: number;
+    cyber: number;
+  };
+  weights: {
+    news: number;
+    breach: number;
+    filing: number;
+    cyber: number;
+  };
+  criticalAlerts: number;
+  highAlerts: number;
+  unresolvedAlerts: number;
+  lastCalculated?: string;
+}
 
 // =============================================================================
 // TYPES
@@ -37,9 +65,11 @@ interface IntelligenceTabProps {
   vendorName: string;
   domain?: string;
   intelligence?: VendorIntelligence | null;
+  riskScore?: RiskScoreData | null;
   breachData?: DomainBreachResult | null;
   secFilings?: SECFilingsResult | null;
   isMonitoringEnabled?: boolean;
+  isLoadingScore?: boolean;
   onToggleMonitoring?: (enabled: boolean) => Promise<void>;
   onSync?: () => Promise<void>;
   onMarkRead?: (alertId: string) => Promise<void>;
@@ -56,9 +86,11 @@ export function IntelligenceTab({
   vendorName,
   domain,
   intelligence,
+  riskScore,
   breachData,
   secFilings,
   isMonitoringEnabled = false,
+  isLoadingScore = false,
   onToggleMonitoring,
   onSync,
   onMarkRead,
@@ -194,6 +226,13 @@ export function IntelligenceTab({
           </CardContent>
         </Card>
       )}
+
+      {/* Unified Risk Score - Prominent Display */}
+      <RiskScoreCard
+        score={riskScore || null}
+        vendorName={vendorName}
+        isLoading={isLoadingScore}
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getVendorAlerts } from '@/lib/intelligence/queries';
+import { getVendorIntelligenceScore } from '@/lib/intelligence/queries';
 import { getVendorIntelligence } from '@/lib/intelligence/aggregator';
 import { checkDomainBreachesOrMock } from '@/lib/external/hibp';
 import { searchAndGetFilings } from '@/lib/external/sec-edgar';
@@ -27,6 +27,31 @@ export async function GET(
     // Get combined intelligence
     const intelligence = await getVendorIntelligence(vendorId, vendor.name);
 
+    // Get risk score from database
+    const scoreData = await getVendorIntelligenceScore(vendorId);
+    const riskScore = scoreData ? {
+      composite: scoreData.composite_score,
+      level: scoreData.risk_level,
+      trend: scoreData.score_trend,
+      trendChange: scoreData.trend_change,
+      components: {
+        news: scoreData.news_risk_score,
+        breach: scoreData.breach_risk_score,
+        filing: scoreData.filing_risk_score,
+        cyber: scoreData.cyber_risk_score,
+      },
+      weights: {
+        news: scoreData.news_weight,
+        breach: scoreData.breach_weight,
+        filing: scoreData.filing_weight,
+        cyber: scoreData.cyber_weight,
+      },
+      criticalAlerts: scoreData.critical_alert_count,
+      highAlerts: scoreData.high_alert_count,
+      unresolvedAlerts: scoreData.unresolved_alert_count,
+      lastCalculated: scoreData.last_calculated_at,
+    } : null;
+
     // Get breach data if domain available
     let breachData = null;
     if (vendor.monitoring_domain) {
@@ -45,6 +70,7 @@ export async function GET(
 
     return NextResponse.json({
       intelligence,
+      riskScore,
       breachData,
       secFilings,
     });
