@@ -181,6 +181,7 @@ export async function createVendor(
     organization_id: organizationId,
     // Use GLEIF name if available, otherwise user input
     name: (gleifEnrichment.name as string) || data.name.trim(),
+    website: data.website || null, // Domain for intelligence monitoring
     lei: data.lei?.toUpperCase() || null,
     tier: data.tier,
     status: 'pending' as const, // New vendors start as pending
@@ -188,7 +189,9 @@ export async function createVendor(
     // Use GLEIF headquarters country if available
     headquarters_country: (gleifEnrichment.headquarters_country as string) || data.headquarters_country?.toUpperCase() || null,
     jurisdiction: (gleifEnrichment.jurisdiction as string) || null,
+    industry: data.industry || null,
     service_types: data.service_types || [],
+    applicable_frameworks: data.applicable_frameworks || [],
     supports_critical_function: data.supports_critical_function || false,
     critical_functions: data.critical_functions || [],
     is_intra_group: data.is_intra_group || false,
@@ -1154,13 +1157,16 @@ function mapVendorFromDatabase(row: Record<string, unknown>): Vendor {
     id: row.id as string,
     organization_id: row.organization_id as string,
     name: row.name as string,
+    website: row.website as string | null,
     lei: row.lei as string | null,
     tier: row.tier as Vendor['tier'],
     status: row.status as Vendor['status'],
     provider_type: row.provider_type as Vendor['provider_type'],
     headquarters_country: row.headquarters_country as string | null,
     jurisdiction: row.jurisdiction as string | null,
+    industry: row.industry as Vendor['industry'],
     service_types: (row.service_types as string[]) || [],
+    applicable_frameworks: (row.applicable_frameworks as Vendor['applicable_frameworks']) || [],
     supports_critical_function: row.supports_critical_function as boolean,
     critical_functions: (row.critical_functions as string[]) || [],
     is_intra_group: row.is_intra_group as boolean,

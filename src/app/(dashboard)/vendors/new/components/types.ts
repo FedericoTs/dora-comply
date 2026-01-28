@@ -1,7 +1,7 @@
 /**
  * Add Vendor Wizard Types and Constants
  *
- * Simplified 2-step wizard: Basic Info → Risk Profile
+ * Simplified 2-step wizard: Identity & Contact → Risk & Compliance
  */
 
 import { Building2, Shield, type LucideIcon } from 'lucide-react';
@@ -18,8 +18,8 @@ export interface StepConfig {
 }
 
 export const WIZARD_STEPS: StepConfig[] = [
-  { id: 1, title: 'Basic Info', description: 'Name and LEI lookup', icon: Building2, time: '1 min', requiredFields: 1, optionalFields: 1 },
-  { id: 2, title: 'Risk Profile', description: 'Classification and details', icon: Shield, time: '1 min', requiredFields: 1, optionalFields: 7 },
+  { id: 1, title: 'Identity & Contact', description: 'Name, website, and company details', icon: Building2, time: '1 min', requiredFields: 2, optionalFields: 4 },
+  { id: 2, title: 'Risk & Compliance', description: 'Classification and frameworks', icon: Shield, time: '1 min', requiredFields: 1, optionalFields: 6 },
 ];
 
 export const TOTAL_TIME = '~2 min';

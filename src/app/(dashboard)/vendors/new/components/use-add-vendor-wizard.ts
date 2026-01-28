@@ -23,12 +23,23 @@ export function useAddVendorWizard() {
     resolver: zodResolver(createVendorSchema),
     mode: 'onTouched',
     defaultValues: {
+      // Step 1: Identity & Contact
       name: '',
+      website: '',
       lei: '',
+      headquarters_country: '',
+      industry: undefined,
+      primary_contact: {
+        name: '',
+        email: '',
+        phone: '',
+        title: '',
+      },
+      // Step 2: Risk & Compliance
       tier: 'standard',
       provider_type: undefined,
-      headquarters_country: '',
       service_types: [],
+      applicable_frameworks: [],
       supports_critical_function: false,
       critical_functions: [],
       is_intra_group: false,
@@ -91,8 +102,8 @@ export function useAddVendorWizard() {
   // Navigation with validation (2-step wizard)
   const nextStep = useCallback(async () => {
     const stepFields: Record<number, (keyof CreateVendorFormInput)[]> = {
-      1: ['name'],
-      2: ['tier'], // Only tier is required in Risk Profile step
+      1: ['name', 'website'], // Name and website are required in Identity & Contact
+      2: ['tier'], // Only tier is required in Risk & Compliance step
     };
 
     const fieldsToValidate = stepFields[currentStep] || [];

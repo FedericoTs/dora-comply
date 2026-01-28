@@ -45,6 +45,28 @@ export type ContactType =
   | 'commercial'
   | 'escalation';
 
+export type Industry =
+  | 'financial_services'
+  | 'healthcare'
+  | 'technology'
+  | 'manufacturing'
+  | 'retail'
+  | 'energy'
+  | 'telecommunications'
+  | 'transportation'
+  | 'government'
+  | 'education'
+  | 'professional_services'
+  | 'other';
+
+export type ComplianceFramework =
+  | 'nis2'
+  | 'dora'
+  | 'soc2'
+  | 'iso27001'
+  | 'gdpr'
+  | 'hipaa';
+
 // ============================================
 // CTPP (Critical Third-Party Provider) TYPES
 // Per DORA Articles 33-44
@@ -104,6 +126,7 @@ export interface Vendor {
 
   // Basic info
   name: string;
+  website?: string | null; // Domain for intelligence monitoring
   lei?: string | null;
   tier: VendorTier;
   status: VendorStatus;
@@ -112,9 +135,13 @@ export interface Vendor {
   provider_type?: ProviderType | null;
   headquarters_country?: string | null;
   jurisdiction?: string | null;
+  industry?: Industry | null;
   service_types: string[];
 
-  // DORA specific
+  // Multi-framework compliance
+  applicable_frameworks?: ComplianceFramework[];
+
+  // DORA specific (conditional on 'dora' in applicable_frameworks)
   supports_critical_function: boolean;
   critical_functions: string[];
   is_intra_group: boolean;
@@ -495,6 +522,56 @@ export const STATUS_INFO: Record<VendorStatus, { label: string; color: string }>
   pending: { label: 'Pending', color: 'bg-warning/10 text-warning' },
   inactive: { label: 'Inactive', color: 'bg-muted text-muted-foreground' },
   offboarding: { label: 'Offboarding', color: 'bg-error/10 text-error' },
+};
+
+// Industry labels for UI
+export const INDUSTRY_LABELS: Record<Industry, string> = {
+  financial_services: 'Financial Services',
+  healthcare: 'Healthcare',
+  technology: 'Technology',
+  manufacturing: 'Manufacturing',
+  retail: 'Retail & E-commerce',
+  energy: 'Energy & Utilities',
+  telecommunications: 'Telecommunications',
+  transportation: 'Transportation & Logistics',
+  government: 'Government & Public Sector',
+  education: 'Education',
+  professional_services: 'Professional Services',
+  other: 'Other',
+};
+
+// Compliance framework labels and info for UI
+export const FRAMEWORK_INFO: Record<ComplianceFramework, { label: string; description: string; color: string }> = {
+  nis2: {
+    label: 'NIS2',
+    description: 'EU Network and Information Security Directive',
+    color: 'bg-blue-500/10 text-blue-700 border-blue-500',
+  },
+  dora: {
+    label: 'DORA',
+    description: 'EU Digital Operational Resilience Act',
+    color: 'bg-purple-500/10 text-purple-700 border-purple-500',
+  },
+  soc2: {
+    label: 'SOC 2',
+    description: 'Service Organization Control Type 2',
+    color: 'bg-emerald-500/10 text-emerald-700 border-emerald-500',
+  },
+  iso27001: {
+    label: 'ISO 27001',
+    description: 'Information Security Management System',
+    color: 'bg-orange-500/10 text-orange-700 border-orange-500',
+  },
+  gdpr: {
+    label: 'GDPR',
+    description: 'EU General Data Protection Regulation',
+    color: 'bg-cyan-500/10 text-cyan-700 border-cyan-500',
+  },
+  hipaa: {
+    label: 'HIPAA',
+    description: 'US Health Insurance Portability and Accountability Act',
+    color: 'bg-pink-500/10 text-pink-700 border-pink-500',
+  },
 };
 
 // ============================================

@@ -22,6 +22,7 @@ export interface SmartImportScanResult {
   scan?: DocumentScanResult;
   suggestedVendor?: {
     name: string;
+    website?: string;
     providerType?: string;
     headquartersCountry?: string;
     serviceTypes?: string[];
@@ -209,6 +210,7 @@ export async function completeSmartImport(
   file: File,
   vendorData: {
     name: string;
+    website?: string;
     tier?: 'critical' | 'important' | 'standard';
     providerType?: string;
     headquartersCountry?: string;
@@ -231,10 +233,12 @@ export async function completeSmartImport(
     // Step 1: Create the vendor
     const vendorFormData: CreateVendorFormData = {
       name: vendorData.name,
+      website: vendorData.website || '', // Domain for intelligence monitoring
       tier: vendorData.tier || 'standard',
       provider_type: vendorData.providerType as CreateVendorFormData['provider_type'],
       headquarters_country: vendorData.headquartersCountry || '',
       service_types: (vendorData.serviceTypes || []) as CreateVendorFormData['service_types'],
+      applicable_frameworks: [], // Will be configured after import
       supports_critical_function: vendorData.supportsCriticalFunction || false,
       critical_functions: [],
       is_intra_group: false,

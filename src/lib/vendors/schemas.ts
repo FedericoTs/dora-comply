@@ -151,29 +151,74 @@ export const vendorContactSchema = z.object({
 });
 
 // ============================================
+// INDUSTRY SCHEMA
+// ============================================
+
+export const industrySchema = z.enum([
+  'financial_services',
+  'healthcare',
+  'technology',
+  'manufacturing',
+  'retail',
+  'energy',
+  'telecommunications',
+  'transportation',
+  'government',
+  'education',
+  'professional_services',
+  'other',
+]);
+
+// ============================================
+// COMPLIANCE FRAMEWORK SCHEMA
+// ============================================
+
+export const complianceFrameworkSchema = z.enum([
+  'nis2',
+  'dora',
+  'soc2',
+  'iso27001',
+  'gdpr',
+  'hipaa',
+]);
+
+// ============================================
 // CREATE VENDOR SCHEMA
 // ============================================
 
 export const createVendorSchema = z.object({
-  // Step 1: Basic Info
+  // Step 1: Identity & Contact
   name: z
     .string()
     .min(1, 'Vendor name is required')
     .max(500, 'Name must be less than 500 characters')
     .trim(),
+  website: z
+    .string()
+    .min(1, 'Website is required for monitoring')
+    .max(500)
+    .trim()
+    .transform((val) => {
+      // Clean up URL - remove protocol for storage, will be used as domain
+      return val.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+    }),
   lei: leiSchema,
-
-  // Step 2: Classification
-  tier: vendorTierSchema,
-  provider_type: providerTypeSchema.optional(),
   headquarters_country: z
     .string()
     .length(2, 'Country code must be 2 characters (ISO 3166-1)')
     .optional()
     .or(z.literal('')),
+  industry: industrySchema.optional(),
+
+  // Step 2: Risk & Compliance
+  tier: vendorTierSchema,
+  provider_type: providerTypeSchema.optional(),
   service_types: z.array(serviceTypeSchema).default([]),
 
-  // Step 3: DORA Specifics
+  // Framework Selection
+  applicable_frameworks: z.array(complianceFrameworkSchema).default([]),
+
+  // DORA-specific (conditional - only relevant if 'dora' in applicable_frameworks)
   supports_critical_function: z.boolean().default(false),
   critical_functions: z.array(z.string()).default([]),
   is_intra_group: z.boolean().default(false),
@@ -302,30 +347,26 @@ export type CreateVendorContactFormData = z.infer<typeof createVendorContactSche
 // ============================================
 
 /**
- * Validate only Step 1 fields (name and LEI lookup)
+ * Validate Step 1 fields (Identity & Contact)
  */
 export const step1Schema = createVendorSchema.pick({
   name: true,
+  website: true,
   lei: true,
+  headquarters_country: true,
+  industry: true,
+  primary_contact: true,
 });
 
 /**
- * Validate Step 2 fields (classification)
+ * Validate Step 2 fields (Risk & Compliance)
  */
 export const step2Schema = createVendorSchema.pick({
   tier: true,
   provider_type: true,
-  headquarters_country: true,
   service_types: true,
-});
-
-/**
- * Validate Step 3 fields (DORA specifics)
- */
-export const step3Schema = createVendorSchema.pick({
+  applicable_frameworks: true,
   supports_critical_function: true,
-  critical_functions: true,
   is_intra_group: true,
-  primary_contact: true,
   notes: true,
 });
