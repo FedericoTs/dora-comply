@@ -200,7 +200,8 @@ export const createVendorSchema = z.object({
     .trim()
     .transform((val) => {
       // Clean up URL - remove protocol for storage, will be used as domain
-      return val.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+      // Use 'i' flag for case-insensitive protocol matching
+      return val.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').toLowerCase();
     }),
   lei: leiSchema,
   headquarters_country: z
